@@ -1,0 +1,18 @@
+# Gom Jabbar — notes for agent sessions
+
+Installable pain diary PWA (Svelte 5, Vite, Dexie), Italian first, for one Android user. `SPEC.md` is the source of truth for behaviour: update it when behaviour changes. `CHECKLIST.md` is the manual phone pass before telling anyone to update.
+
+## Commands
+`npm run check` (svelte-check + tsc), `npm test` (vitest), `npm run build`, `npm run size` (150 KB gzipped JS gate). CI runs all four on push to `main`, then deploys to GitHub Pages. `npm test` can print all green and still exit non-zero on unhandled errors: check the exit code, not the summary line.
+
+## Conventions and traps
+- Anything handed to Dexie must be a plain object. Svelte `$state` deep proxies cannot be structured-cloned by IndexedDB. Live-query results (`lib/live.svelte.ts`) and objects that flow back to the db use `$state.raw`; form drafts are copied via spreads in `lib/draft.ts`.
+- Body region ids (`lib/regions.ts`) are stored in user data. Add regions, never rename or remove them.
+- Every i18n key must exist in both `src/i18n/it.json` and `en.json` (a test enforces it). Italian first, terse, informal.
+- No confirmation dialogs anywhere. Destructive actions get an undo toast (`lib/toast.svelte.ts`).
+- Schema change: bump the Dexie version in `lib/db.ts` with an upgrade function and a migration test; keep `parseImport` in `lib/backup.ts` accepting older export files, bump `EXPORT_VERSION` only if the export shape changes.
+- No chart or UI libraries. Charts and the body map are hand-written SVG; colours come from the intensity ramp in `lib/color.ts`.
+- jsdom lacks `scrollTo` and `matchMedia`: guard or avoid them in code that runs under tests.
+
+## Verifying UI
+Screenshot in Pixel 7 emulation with `playwright-core` using the installed Chrome (`chromium.launch({ channel: 'chrome' })`) against `npm run preview`. Block service workers in the context. Seed data through the app's own Settings → Importa with the output of `node scripts/seed.mjs`. Do not use Chrome's `--screenshot` flag: it hangs and its minimum window width fakes overflow bugs. Playwright download paths have no extension; `saveAs` before opening a downloaded file.
