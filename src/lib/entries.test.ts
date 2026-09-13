@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { resetDb } from './db'
-import { addEntry, updateEntry, deleteEntry, restoreEntry, endEpisode, activeEpisodes, lastEntry, repeatEntry, durationMs, makeEntry } from './entries'
+import { addEntry, updateEntry, deleteEntry, restoreEntry, endEpisode, activeEpisodes, lastEntry, repeatEntry, durationMs, makeEntry, updateEpisodeIntensity } from './entries'
 import { draftFromEntry, draftToInput, emptyDraft } from './draft'
 
 let db: ReturnType<typeof resetDb>
@@ -40,6 +40,18 @@ describe('entries', () => {
     expect(durationMs(ended!)).toBe(2.5 * 3600_000)
     expect(await activeEpisodes()).toEqual([])
     expect(durationMs(makeEntry({}))).toBeNull()
+  })
+
+  it('records intensity updates on an episode', async () => {
+    const e = await addEntry({ ongoing: true, areas: [{ regions: ['thigh.l'], intensity: 7 }] })
+    const u = await updateEpisodeIntensity(e.id, 4, '2026-01-01T12:00:00.000Z')
+    expect(u?.readings.pain).toBe(4)
+    expect(u?.areas[0].intensity).toBe(4)
+    expect(u?.history).toEqual([{ at: '2026-01-01T12:00:00.000Z', pain: 4 }])
+    const two = await addEntry({ ongoing: true, areas: [{ regions: ['thigh.l'], intensity: 7 }, { regions: ['chest'], intensity: 2 }] })
+    const v = await updateEpisodeIntensity(two.id, 9)
+    expect(v?.readings.pain).toBe(9)
+    expect(v?.areas.map((a) => a.intensity)).toEqual([7, 2])
   })
 
   it('updates, deletes and restores', async () => {

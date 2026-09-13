@@ -98,6 +98,14 @@ export function mirrorId(id: string): string | null {
 export const LEG_IDS = REGIONS.filter((r) => r.group === 'leg' || r.group === 'hip').map((r) => r.id)
 export const ARM_IDS = REGIONS.filter((r) => r.group === 'arm').map((r) => r.id)
 
+/** All regions in the same group and on the same side as `id` (whole limb, whole torso, whole head), both views. */
+export function limbOf(id: string): string[] {
+  const def = REGION_BY_ID[id]
+  if (!def) return [id]
+  const groups: Group[] = def.group === 'hip' ? ['hip', 'leg'] : def.group === 'leg' ? ['hip', 'leg'] : [def.group]
+  return [...new Set(REGIONS.filter((r) => groups.includes(r.group) && r.side === def.side).map((r) => r.id))].sort()
+}
+
 export function isFullBody(regions: string[]): boolean {
   return regions.includes(FULL_BODY)
 }

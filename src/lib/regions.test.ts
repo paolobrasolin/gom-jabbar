@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { VIEWBOX, REGIONS, regionsFor, mirrorId, toggleRegion, toggleSet, toggleFullBody, summarizeRegions, LEG_IDS, ARM_IDS, FULL_BODY } from './regions'
+import { VIEWBOX, REGIONS, regionsFor, limbOf, mirrorId, toggleRegion, toggleSet, toggleFullBody, summarizeRegions, LEG_IDS, ARM_IDS, FULL_BODY } from './regions'
 
 describe('regions', () => {
   it('has front and back views with sided regions', () => {
@@ -43,6 +43,17 @@ describe('regions', () => {
     expect(toggleFullBody(['thigh.l'])).toEqual([FULL_BODY])
     expect(toggleFullBody([FULL_BODY])).toEqual([])
     expect(toggleRegion([FULL_BODY], 'thigh.l', true)).toEqual([FULL_BODY])
+  })
+
+  it('limbOf selects the whole limb on one side, both views', () => {
+    const leg = limbOf('thigh.l')
+    expect(leg).toContain('hip.l')
+    expect(leg).toContain('calf.l')
+    expect(leg).toContain('foot.l')
+    expect(leg).not.toContain('thigh.r')
+    expect(limbOf('shoulder.r')).toEqual(expect.arrayContaining(['hand.r', 'forearm.back.r']))
+    expect(limbOf('chest')).toEqual(['abdomen', 'chest'])
+    expect(limbOf('neck.back')).toEqual(['head', 'head.back', 'neck', 'neck.back'])
   })
 
   it('summarizes into coarse groups with sides', () => {

@@ -70,8 +70,16 @@
   "help.tap": "Tocca le zone che fanno male sulle due figure. Con «Entrambi i lati» acceso, toccare una gamba seleziona anche l'altra.",
   "help.level": "Trascina il cursore per l'intensità: il numero è nel pallino.",
   "help.areas": "Zone con intensità diverse? Tocca «+ Altra zona», poi tocca le altre zone e regola il cursore. Il cursore agisce sempre sulla zona evidenziata.",
-  "help.ongoing": "«In corso» segna un episodio che continua: resterà in alto finché non lo termini.",
+  "help.ongoing": "«In corso» segna un episodio che continua: resterà in alto finché non lo termini. Toccalo per aggiornare l'intensità.",
   "help.time": "Stai registrando qualcosa di prima? Scegli quando con i bottoni del tempo.",
   "help.undo": "Ogni salvataggio, modifica o eliminazione si può annullare subito dal messaggio in basso.",
-  "help.edit": "Nel Diario tocca una voce per modificarla o eliminarla."
+  "help.edit": "Nel Diario tocca una voce per modificarla o eliminarla.",
+  "episode.updated": "Intensità aggiornata",
+  "episode.update": "Aggiorna",
+  "episode.levelNow": "Adesso è",
+  "log.today": "Oggi",
+  "log.todayEmpty": "niente ancora",
+  "log.noArea": "Nessuna zona: tocca le figure",
+  "help.limb": "Tieni premuta una zona per selezionare tutto l'arto.",
+  "episode.edit": "Modifica la voce"
 }

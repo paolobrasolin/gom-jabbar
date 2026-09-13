@@ -72,6 +72,20 @@ export async function reopenEpisode(id: string): Promise<Entry | undefined> {
   return updateEntry(id, { ongoing: true, endedAt: null })
 }
 
+/** Record a new overall level on an ongoing episode. A single area follows it; several keep their initial split. */
+export async function updateEpisodeIntensity(id: string, pain: number, at: string = now()): Promise<Entry | undefined> {
+  const e = await db.entries.get(id)
+  if (!e) return undefined
+  const areas = e.areas.length === 1 ? [{ ...e.areas[0], intensity: pain }] : e.areas
+  await db.entries.update(id, {
+    readings: { ...e.readings, [PAIN]: pain },
+    areas,
+    history: [...(e.history ?? []), { at, pain }],
+    updatedAt: now(),
+  })
+  return db.entries.get(id)
+}
+
 export function activeEpisodes(): Promise<Entry[]> {
   return db.entries.filter((e) => e.ongoing).sortBy('at')
 }

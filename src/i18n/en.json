@@ -70,8 +70,16 @@
   "help.tap": "Tap the areas that hurt on the two figures. With “Both sides” on, tapping one leg also selects the other.",
   "help.level": "Drag the slider for intensity: the number sits in the knob.",
   "help.areas": "Different levels in different places? Tap “+ Another area”, then tap the other areas and adjust the slider. The slider always acts on the highlighted area.",
-  "help.ongoing": "“Ongoing” marks an episode that is still going: it stays at the top until you end it.",
+  "help.ongoing": "“Ongoing” marks an episode that is still going: it stays at the top until you end it. Tap it to update the level.",
   "help.time": "Logging something from earlier? Pick when with the time buttons.",
   "help.undo": "Every save, edit or delete can be undone right away from the message at the bottom.",
-  "help.edit": "In the Diary, tap an entry to edit or delete it."
+  "help.edit": "In the Diary, tap an entry to edit or delete it.",
+  "episode.updated": "Level updated",
+  "episode.update": "Update",
+  "episode.levelNow": "Right now it is",
+  "log.today": "Today",
+  "log.todayEmpty": "nothing yet",
+  "log.noArea": "No area: tap the figures",
+  "help.limb": "Press and hold an area to select the whole limb.",
+  "episode.edit": "Edit entry"
 }
