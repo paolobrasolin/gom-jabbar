@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { REGIONS, regionsFor, mirrorId, toggleRegion, toggleSet, toggleFullBody, summarizeRegions, LEG_IDS, ARM_IDS, FULL_BODY } from './regions'
+import { VIEWBOX, REGIONS, regionsFor, mirrorId, toggleRegion, toggleSet, toggleFullBody, summarizeRegions, LEG_IDS, ARM_IDS, FULL_BODY } from './regions'
 
 describe('regions', () => {
   it('has front and back views with sided regions', () => {
@@ -13,10 +13,10 @@ describe('regions', () => {
     const r = regionsFor('front').find((x) => x.id === 'thigh.r')!
     const l = regionsFor('front').find((x) => x.id === 'thigh.l')!
     const cx = (s: typeof r.shape) => (s.kind === 'rect' ? s.x + s.w / 2 : s.cx)
-    expect(cx(r.shape)).toBeLessThan(100)
-    expect(cx(l.shape)).toBeGreaterThan(100)
+    expect(cx(r.shape)).toBeLessThan(VIEWBOX.w / 2)
+    expect(cx(l.shape)).toBeGreaterThan(VIEWBOX.w / 2)
     const br = regionsFor('back').find((x) => x.id === 'calf.r')!
-    expect(cx(br.shape)).toBeGreaterThan(100)
+    expect(cx(br.shape)).toBeGreaterThan(VIEWBOX.w / 2)
   })
 
   it('mirrors ids', () => {

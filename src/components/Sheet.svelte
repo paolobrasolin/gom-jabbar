@@ -37,7 +37,7 @@
   }
   .handle { width: 40px; height: 4px; border-radius: 2px; background: var(--ink-3); margin: 0 auto 8px; flex: none; }
   .title { font-size: 18px; font-weight: 700; margin-bottom: 8px; flex: none; }
-  .content { --map-h: min(30dvh, 300px); overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .content { --map-h: 32dvh; --map-min: 32dvh; --map-max: 32dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
   @keyframes up { from { transform: translateY(40px); } }
   @keyframes fade { from { opacity: 0; } }
 </style>

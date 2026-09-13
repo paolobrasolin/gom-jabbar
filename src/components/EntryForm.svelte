@@ -169,11 +169,11 @@
 </div>
 
 <style>
-  .form { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .form { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1; }
   .form > * { min-width: 0; }
   .tools, .time, .areas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; }
   .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar { display: none; }
-  .map { height: var(--map-h, min(36dvh, 360px)); }
+  .map { flex: 1 1 var(--map-h, 300px); min-height: var(--map-min, 300px); max-height: var(--map-max, 520px); }
   .details { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
   .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .chip:disabled { opacity: 0.4; }
