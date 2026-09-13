@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { VIEWBOX, REGIONS, regionsFor, limbOf, mirrorId, toggleRegion, toggleSet, toggleFullBody, summarizeRegions, LEG_IDS, ARM_IDS, FULL_BODY } from './regions'
+import { VIEWBOX, REGIONS, regionsFor, limbOf, shapeCenter, pathFor, shapeArea, mirrorId, toggleRegion, toggleSet, toggleFullBody, summarizeRegions, LEG_IDS, ARM_IDS, FULL_BODY } from './regions'
 
 describe('regions', () => {
   it('has front and back views with sided regions', () => {
@@ -12,11 +12,19 @@ describe('regions', () => {
   it('front view puts the figure right side on the viewer left', () => {
     const r = regionsFor('front').find((x) => x.id === 'thigh.r')!
     const l = regionsFor('front').find((x) => x.id === 'thigh.l')!
-    const cx = (s: typeof r.shape) => (s.kind === 'rect' ? s.x + s.w / 2 : s.cx)
+    const cx = (s: typeof r.shape) => shapeCenter(s)[0]
     expect(cx(r.shape)).toBeLessThan(VIEWBOX.w / 2)
     expect(cx(l.shape)).toBeGreaterThan(VIEWBOX.w / 2)
     const br = regionsFor('back').find((x) => x.id === 'calf.r')!
     expect(cx(br.shape)).toBeGreaterThan(VIEWBOX.w / 2)
+  })
+
+  it('builds closed paths and areas for every shape', () => {
+    for (const r of REGIONS) {
+      expect(pathFor(r.shape)).toMatch(/^M .* Z$/)
+      expect(shapeArea(r.shape)).toBeGreaterThan(100)
+    }
+    expect(shapeArea({ kind: 'poly', points: [[0, 0], [10, 0], [10, 10], [0, 10]], r: 2 })).toBe(100)
   })
 
   it('mirrors ids', () => {
@@ -51,7 +59,7 @@ describe('regions', () => {
     expect(leg).toContain('calf.l')
     expect(leg).toContain('foot.l')
     expect(leg).not.toContain('thigh.r')
-    expect(limbOf('shoulder.r')).toEqual(expect.arrayContaining(['hand.r', 'forearm.back.r']))
+    expect(limbOf('shoulder.r')).toEqual(expect.arrayContaining(['hand.r', 'elbow.r', 'forearm.back.r']))
     expect(limbOf('chest')).toEqual(['abdomen', 'chest'])
     expect(limbOf('neck.back')).toEqual(['head', 'head.back', 'neck', 'neck.back'])
   })

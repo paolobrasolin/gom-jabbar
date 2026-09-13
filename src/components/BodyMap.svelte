@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { regionsFor, shapeArea, VIEWBOX, type View, type RegionDef } from '../lib/regions'
+  import { regionsFor, shapeArea, pathFor, VIEWBOX, type View, type RegionDef } from '../lib/regions'
   import { intensityColor } from '../lib/color'
   import { isFull, type Area } from '../lib/areas'
 
@@ -52,17 +52,12 @@
     }
     onToggle?.(id)
   }
-  const C = VIEWBOX.w / 2
   /** Hit layer: smallest regions drawn last so they win over big neighbours. */
   const hits = (view: View): RegionDef[] => [...regionsFor(view)].sort((a, b) => shapeArea(b.shape) - shapeArea(a.shape))
 </script>
 
 {#snippet shape(r: RegionDef, cls: string, extra: Record<string, unknown>)}
-  {#if r.shape.kind === 'rect'}
-    <rect class={cls} x={r.shape.x} y={r.shape.y} width={r.shape.w} height={r.shape.h} rx={r.shape.rx} {...extra} />
-  {:else}
-    <ellipse class={cls} cx={r.shape.cx} cy={r.shape.cy} rx={r.shape.rx} ry={r.shape.ry} {...extra} />
-  {/if}
+  <path class={cls} d={pathFor(r.shape)} {...extra} />
 {/snippet}
 
 <div class="maps" class:readonly>
@@ -74,11 +69,6 @@
             {@const color = full ? fullColor : fill.get(r.id)}
             {@render shape(r, `region${color ? ' on' : ''}${outlined.has(r.id) ? ' hi' : ''}`, { 'data-region': r.id, style: color ? `fill:${color}` : undefined })}
           {/each}
-          {#if view === 'front'}
-            <circle class="deco" cx={C - 8} cy="24" r="2.6" /><circle class="deco" cx={C + 8} cy="24" r="2.6" />
-          {:else}
-            <ellipse class="deco hair" cx={C} cy="17" rx="23" ry="15" /><ellipse class="deco hair" cx={C} cy="50" rx="7" ry="10" />
-          {/if}
         </g>
         {#if !readonly}
           <g class="hits">
@@ -136,8 +126,6 @@
     flex: none;
   }
   .paint { pointer-events: none; }
-  .deco { fill: var(--bg); }
-  .deco.hair { fill: var(--ink); opacity: 0.22; }
   svg { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .region {
     fill: var(--surface-2);
