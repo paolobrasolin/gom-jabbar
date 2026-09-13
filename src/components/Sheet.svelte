@@ -32,7 +32,7 @@
     background: var(--bg);
     border-radius: 20px 20px 0 0;
     box-shadow: var(--shadow);
-    padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+    padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
     animation: up 0.18s ease-out;
   }
   .handle { width: 40px; height: 4px; border-radius: 2px; background: var(--ink-3); margin: 0 auto 8px; flex: none; }

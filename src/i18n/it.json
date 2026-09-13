@@ -4,7 +4,6 @@
   "tab.diary": "Diario",
   "tab.trends": "Andamento",
   "tab.settings": "Impostazioni",
-  "log.hint": "Tocca le zone, scegli l'intensità, salva.",
   "log.save": "Salva",
   "log.repeatLast": "Ripeti ultimo",
   "log.saved": "Salvato",
@@ -66,5 +65,13 @@
   "common.save": "Salva",
   "common.close": "Chiudi",
   "common.done": "Fatto",
-  "log.addArea": "Altra zona"
+  "log.addArea": "Altra zona",
+  "settings.help": "Come si usa",
+  "help.tap": "Tocca le zone che fanno male sulle due figure. Con «Entrambi i lati» acceso, toccare una gamba seleziona anche l'altra.",
+  "help.level": "Trascina il cursore per l'intensità: il numero è nel pallino.",
+  "help.areas": "Zone con intensità diverse? Tocca «+ Altra zona», poi tocca le altre zone e regola il cursore. Il cursore agisce sempre sulla zona evidenziata.",
+  "help.ongoing": "«In corso» segna un episodio che continua: resterà in alto finché non lo termini.",
+  "help.time": "Stai registrando qualcosa di prima? Scegli quando con i bottoni del tempo.",
+  "help.undo": "Ogni salvataggio, modifica o eliminazione si può annullare subito dal messaggio in basso.",
+  "help.edit": "Nel Diario tocca una voce per modificarla o eliminarla."
 }

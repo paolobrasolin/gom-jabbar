@@ -2,6 +2,7 @@
   import BodyMap from './BodyMap.svelte'
   import IntensitySlider from './IntensitySlider.svelte'
   import EntrySummary from './EntrySummary.svelte'
+  import { regionText } from '../lib/summary'
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
@@ -16,7 +17,7 @@
     draft = $bindable(),
     symptoms = [],
     tags = [],
-    detailsOpen = $bindable(false),
+    detailsOpen = false,
   }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[]; detailsOpen?: boolean } = $props()
 
   let showPicker = $state(false)
@@ -30,7 +31,11 @@
   const otherSymptoms = $derived(symptoms.filter((s) => s.enabled && s.id !== PAIN))
   const groups: TagGroup[] = ['intervention', 'context', 'medication']
   const tagsByGroup = $derived(groups.map((g) => ({ g, items: tags.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
-  const painLabel = $derived(tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' }))
+  const painLabel = $derived.by(() => {
+    const base = tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' })
+    const cur = draft.areas[draft.cur]
+    return draft.areas.length > 1 && cur?.regions.length ? `${base} · ${regionText(cur.regions, t)}` : base
+  })
 
   type TimeChoice = { key: string; label: string; iso: string | null }
   const timeChoices = $derived.by((): TimeChoice[] => {
@@ -115,6 +120,10 @@
   {/if}
 
   <div class="chips time">
+    <button class="chip small ongoing" aria-pressed={draft.ongoing} onclick={() => (draft.ongoing = !draft.ongoing)}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+      {t('log.ongoing')}
+    </button>
     {#each timeChoices as c (c.key)}
       <button
         class="chip small"
@@ -136,17 +145,6 @@
   {/if}
 
   <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
-
-  <div class="row">
-    <label class="switch grow">
-      <input type="checkbox" checked={draft.ongoing} onchange={(e) => (draft.ongoing = (e.target as HTMLInputElement).checked)} />
-      <span class="knob"></span>
-      <span>{t('log.ongoing')}</span>
-    </label>
-    <button class="chip outline" aria-expanded={detailsOpen} onclick={() => (detailsOpen = !detailsOpen)}>
-      {t('log.details')} {detailsOpen ? '▴' : '▾'}
-    </button>
-  </div>
 
   {#if detailsOpen}
     <div class="details">
@@ -171,9 +169,11 @@
 <style>
   .form { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1; }
   .form > * { min-width: 0; }
-  .tools, .time, .areas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; }
+  .ongoing { border-color: var(--border); }
+  .ongoing[aria-pressed='true'] { border-color: transparent; }
+  .tools, .time, .areas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
   .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar { display: none; }
-  .map { flex: 1 1 var(--map-h, 300px); min-height: var(--map-min, 300px); max-height: var(--map-max, 520px); }
+  .map { flex: 1 1 var(--map-h, 320px); min-height: var(--map-min, 320px); max-height: var(--map-max, 640px); }
   .details { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
   .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .chip:disabled { opacity: 0.4; }

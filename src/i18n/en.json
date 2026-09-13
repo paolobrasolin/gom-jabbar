@@ -4,7 +4,6 @@
   "tab.diary": "Diary",
   "tab.trends": "Trends",
   "tab.settings": "Settings",
-  "log.hint": "Tap the areas, pick the intensity, save.",
   "log.save": "Save",
   "log.repeatLast": "Repeat last",
   "log.saved": "Saved",
@@ -66,5 +65,13 @@
   "common.save": "Save",
   "common.close": "Close",
   "common.done": "Done",
-  "log.addArea": "Another area"
+  "log.addArea": "Another area",
+  "settings.help": "How to use it",
+  "help.tap": "Tap the areas that hurt on the two figures. With “Both sides” on, tapping one leg also selects the other.",
+  "help.level": "Drag the slider for intensity: the number sits in the knob.",
+  "help.areas": "Different levels in different places? Tap “+ Another area”, then tap the other areas and adjust the slider. The slider always acts on the highlighted area.",
+  "help.ongoing": "“Ongoing” marks an episode that is still going: it stays at the top until you end it.",
+  "help.time": "Logging something from earlier? Pick when with the time buttons.",
+  "help.undo": "Every save, edit or delete can be undone right away from the message at the bottom.",
+  "help.edit": "In the Diary, tap an entry to edit or delete it."
 }

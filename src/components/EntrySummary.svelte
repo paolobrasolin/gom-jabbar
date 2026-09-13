@@ -1,20 +1,12 @@
 <script lang="ts">
   import { t, tl } from '../i18n/index.svelte'
-  import { summarizeRegions } from '../lib/regions'
+  import { regionText as rt } from '../lib/summary'
   import type { Area } from '../lib/areas'
   import type { Tag } from '../lib/types'
 
   let { areas, tags = [], tagDefs = [] }: { areas: Area[]; tags?: string[]; tagDefs?: Tag[] } = $props()
 
-  function regionText(regions: string[]): string {
-    return summarizeRegions(regions)
-      .map((s) => {
-        if (s.group === 'full') return t('region.full')
-        if (s.group === 'head' || s.group === 'torso' || s.group === 'back') return t(`region.${s.group}`)
-        return t(`region.${s.group}.${s.side === 'none' ? 'both' : s.side}`)
-      })
-      .join(', ')
-  }
+  const regionText = (regions: string[]) => rt(regions, t)
   const parts = $derived(areas.filter((a) => a.regions.length).map((a) => (areas.length > 1 ? `${regionText(a.regions)} ${a.intensity}` : regionText(a.regions))))
   const tagText = $derived(
     tags
