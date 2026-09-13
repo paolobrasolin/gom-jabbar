@@ -38,7 +38,6 @@
     saving = true
     try {
       prefs.ongoing = draft.ongoing
-      prefs.hintDismissed = true
       savePrefs()
       const entry = await addEntry(draftToInput(draft))
       haptic(20)
@@ -81,14 +80,13 @@
     </div>
   {/if}
 
-  {#if count.value === 0 && !prefs.hintDismissed}
-    <p class="small muted hint">{t('log.hint')}</p>
-  {/if}
-
-  <EntryForm bind:draft bind:detailsOpen symptoms={symptoms.value} tags={tags.value} />
+  <EntryForm bind:draft {detailsOpen} symptoms={symptoms.value} tags={tags.value} />
 
   <div class="actions">
     <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
+    <button class="btn" class:active={detailsOpen} aria-expanded={detailsOpen} onclick={() => (detailsOpen = !detailsOpen)}>
+      {t('log.details')} {detailsOpen ? '▴' : '▾'}
+    </button>
     <button class="btn" onclick={repeatLast} disabled={count.value <= 0} aria-label={t('log.repeatLast')} title={t('log.repeatLast')}>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" />
@@ -101,7 +99,6 @@
   .log { padding-bottom: 8px; }
   .episodes { display: flex; flex-direction: column; gap: 8px; }
   .episode { padding: 10px 12px; }
-  .hint { text-align: center; }
   .actions {
     position: sticky;
     bottom: 0;
@@ -112,5 +109,6 @@
     margin-top: auto;
   }
   .actions .btn.primary { min-height: 56px; font-size: 18px; }
-  .actions .btn:not(.primary) { width: 56px; min-height: 56px; padding: 0; }
+  .actions .btn:not(.primary) { min-height: 56px; padding: 0 14px; }
+  .actions .btn.active { box-shadow: inset 0 0 0 1.5px var(--ink-2); }
 </style>

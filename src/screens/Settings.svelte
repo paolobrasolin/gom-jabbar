@@ -40,6 +40,15 @@
     </div>
   </div>
 
+  <div class="card">
+    <p class="small muted label">{t('settings.help')}</p>
+    <ul class="help">
+      {#each ['tap', 'level', 'areas', 'ongoing', 'time', 'undo', 'edit'] as k (k)}
+        <li>{t(`help.${k}`)}</li>
+      {/each}
+    </ul>
+  </div>
+
   <div class="card small muted">
     <p>{t('settings.entriesCount', { n: count.value })}</p>
     <p>{t('settings.dataNote')}</p>
@@ -47,5 +56,6 @@
 </div>
 
 <style>
+  .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
 </style>

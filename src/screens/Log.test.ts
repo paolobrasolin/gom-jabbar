@@ -32,7 +32,7 @@ describe('Log fast path', () => {
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
     await fireEvent.click(screen.getByRole('button', { name: '+ Altra zona' }))
     await fireEvent.click(screen.getByRole('button', { name: 'shoulder.l' }))
-    await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '3' } })
+    await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '3' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
@@ -53,7 +53,7 @@ describe('Log fast path', () => {
   it('ongoing entry shows as active episode and can be ended', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Tutto il corpo' }))
-    await fireEvent.click(screen.getByLabelText('In corso'))
+    await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     const endBtn = await screen.findByRole('button', { name: 'Termina adesso' })
     expect(screen.getByText('tutto il corpo')).toBeInTheDocument()

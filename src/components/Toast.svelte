@@ -22,8 +22,8 @@
 <style>
   .toast {
     position: fixed;
-    left: 16px;
-    right: 16px;
+    left: 12px;
+    right: 12px;
     bottom: calc(72px + env(safe-area-inset-bottom));
     z-index: 50;
     display: flex;
