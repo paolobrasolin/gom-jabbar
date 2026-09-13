@@ -15,7 +15,7 @@ export type RegionDef = {
   shape: Shape
 }
 
-export const VIEWBOX = { w: 200, h: 430 }
+export const VIEWBOX = { w: 170, h: 360 }
 
 const rect = (x: number, y: number, w: number, h: number, rx = 8): Shape => ({ kind: 'rect', x, y, w, h, rx })
 const ell = (cx: number, cy: number, rx: number, ry: number): Shape => ({ kind: 'ellipse', cx, cy, rx, ry })
@@ -24,41 +24,43 @@ function mirror(s: Shape): Shape {
   return s.kind === 'rect' ? { ...s, x: VIEWBOX.w - s.x - s.w } : { ...s, cx: VIEWBOX.w - s.cx }
 }
 
-/** Base shapes drawn on the viewer's left (x < 100). Sided ones get mirrored. */
+/** Base shapes drawn on the viewer's left (x < 85). Sided ones get mirrored. Stocky on purpose: tap targets. */
 type Base = { id: string; group: Group; shape: Shape; sided?: boolean }
 
+const C = VIEWBOX.w / 2
+
 const FRONT: Base[] = [
-  { id: 'head', group: 'head', shape: ell(100, 34, 22, 26) },
-  { id: 'neck', group: 'head', shape: rect(88, 60, 24, 14, 4) },
-  { id: 'shoulder', group: 'arm', shape: ell(66, 84, 18, 12), sided: true },
-  { id: 'chest', group: 'torso', shape: rect(76, 74, 48, 44) },
-  { id: 'abdomen', group: 'torso', shape: rect(76, 120, 48, 44) },
-  { id: 'upperarm', group: 'arm', shape: rect(44, 94, 22, 56, 10), sided: true },
-  { id: 'forearm', group: 'arm', shape: rect(40, 152, 22, 56, 10), sided: true },
-  { id: 'hand', group: 'arm', shape: ell(50, 226, 13, 18), sided: true },
-  { id: 'hip', group: 'hip', shape: rect(70, 166, 29, 30), sided: true },
-  { id: 'thigh', group: 'leg', shape: rect(70, 198, 28, 76, 10), sided: true },
-  { id: 'knee', group: 'leg', shape: ell(84, 284, 15, 12), sided: true },
-  { id: 'shin', group: 'leg', shape: rect(72, 298, 24, 78, 10), sided: true },
-  { id: 'ankle', group: 'leg', shape: ell(84, 386, 12, 9), sided: true },
-  { id: 'foot', group: 'leg', shape: rect(68, 397, 30, 22, 8), sided: true },
+  { id: 'head', group: 'head', shape: ell(C, 26, 24, 25) },
+  { id: 'neck', group: 'head', shape: rect(C - 17, 52, 34, 18, 6) },
+  { id: 'shoulder', group: 'arm', shape: ell(46, 82, 20, 13), sided: true },
+  { id: 'chest', group: 'torso', shape: rect(C - 27, 72, 54, 46) },
+  { id: 'abdomen', group: 'torso', shape: rect(C - 27, 120, 54, 42) },
+  { id: 'upperarm', group: 'arm', shape: rect(18, 96, 26, 50, 11), sided: true },
+  { id: 'forearm', group: 'arm', shape: rect(14, 148, 26, 50, 11), sided: true },
+  { id: 'hand', group: 'arm', shape: ell(27, 218, 15, 18), sided: true },
+  { id: 'hip', group: 'hip', shape: rect(C - 29, 164, 28, 30), sided: true },
+  { id: 'thigh', group: 'leg', shape: rect(C - 31, 196, 30, 60, 11), sided: true },
+  { id: 'knee', group: 'leg', shape: ell(C - 16, 268, 16, 11), sided: true },
+  { id: 'shin', group: 'leg', shape: rect(C - 29, 280, 26, 42, 11), sided: true },
+  { id: 'ankle', group: 'leg', shape: ell(C - 16, 330, 14, 9), sided: true },
+  { id: 'foot', group: 'leg', shape: rect(C - 35, 340, 34, 20, 7), sided: true },
 ]
 
 const BACK: Base[] = [
-  { id: 'head.back', group: 'head', shape: ell(100, 34, 22, 26) },
-  { id: 'neck.back', group: 'head', shape: rect(88, 60, 24, 14, 4) },
-  { id: 'shoulder.back', group: 'arm', shape: ell(66, 84, 18, 12), sided: true },
-  { id: 'upperback', group: 'back', shape: rect(76, 74, 48, 50) },
-  { id: 'lowerback', group: 'back', shape: rect(76, 126, 48, 38) },
-  { id: 'upperarm.back', group: 'arm', shape: rect(44, 94, 22, 56, 10), sided: true },
-  { id: 'forearm.back', group: 'arm', shape: rect(40, 152, 22, 56, 10), sided: true },
-  { id: 'hand', group: 'arm', shape: ell(50, 226, 13, 18), sided: true },
-  { id: 'buttock', group: 'hip', shape: rect(70, 166, 29, 30), sided: true },
-  { id: 'thigh.back', group: 'leg', shape: rect(70, 198, 28, 76, 10), sided: true },
-  { id: 'knee.back', group: 'leg', shape: ell(84, 284, 15, 12), sided: true },
-  { id: 'calf', group: 'leg', shape: rect(72, 298, 24, 78, 10), sided: true },
-  { id: 'heel', group: 'leg', shape: ell(84, 386, 12, 9), sided: true },
-  { id: 'foot.back', group: 'leg', shape: rect(68, 397, 30, 22, 8), sided: true },
+  { id: 'head.back', group: 'head', shape: ell(C, 26, 24, 25) },
+  { id: 'neck.back', group: 'head', shape: rect(C - 17, 52, 34, 18, 6) },
+  { id: 'shoulder.back', group: 'arm', shape: ell(46, 82, 20, 13), sided: true },
+  { id: 'upperback', group: 'back', shape: rect(C - 27, 72, 54, 50) },
+  { id: 'lowerback', group: 'back', shape: rect(C - 27, 124, 54, 38) },
+  { id: 'upperarm.back', group: 'arm', shape: rect(18, 96, 26, 50, 11), sided: true },
+  { id: 'forearm.back', group: 'arm', shape: rect(14, 148, 26, 50, 11), sided: true },
+  { id: 'hand', group: 'arm', shape: ell(27, 218, 15, 18), sided: true },
+  { id: 'buttock', group: 'hip', shape: rect(C - 29, 164, 28, 30), sided: true },
+  { id: 'thigh.back', group: 'leg', shape: rect(C - 31, 196, 30, 60, 11), sided: true },
+  { id: 'knee.back', group: 'leg', shape: ell(C - 16, 268, 16, 11), sided: true },
+  { id: 'calf', group: 'leg', shape: rect(C - 29, 280, 26, 42, 11), sided: true },
+  { id: 'heel', group: 'leg', shape: ell(C - 16, 330, 14, 9), sided: true },
+  { id: 'foot.back', group: 'leg', shape: rect(C - 35, 340, 34, 20, 7), sided: true },
 ]
 
 function expand(bases: Base[], view: View): RegionDef[] {
@@ -81,6 +83,10 @@ export const ALL_REGION_IDS = REGIONS.map((r) => r.id)
 
 export function regionsFor(view: View): RegionDef[] {
   return REGIONS.filter((r) => r.view === view)
+}
+
+export function shapeArea(s: Shape): number {
+  return s.kind === 'rect' ? s.w * s.h : Math.PI * s.rx * s.ry
 }
 
 export function mirrorId(id: string): string | null {
