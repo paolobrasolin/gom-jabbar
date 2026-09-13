@@ -9,6 +9,8 @@
   import { formatDuration, formatTime } from '../lib/time'
   import { PAIN, type Entry, type Symptom, type Tag } from '../lib/types'
   import { intensityColor, intensityInk } from '../lib/color'
+  import { shareOrDownload, exportFilename } from '../lib/backup'
+  import { showToast } from '../lib/toast.svelte'
 
   let { days, from, entries, tags, symptoms, onclose }: { days: number; from: Date; entries: Entry[]; tags: Tag[]; symptoms: Symptom[]; onclose: () => void } = $props()
 
@@ -30,15 +32,41 @@
     document.body.classList.add('printing')
     return () => document.body.classList.remove('printing')
   })
+
+  let article = $state<HTMLElement | undefined>()
+
+  /** The report as one HTML file: the page markup plus every stylesheet rule, so it opens and prints anywhere. */
+  function standaloneHtml(): string {
+    let css = ''
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        css += Array.from(sheet.cssRules).map((r) => r.cssText).join('\n')
+      } catch {
+        /* cross-origin sheet: none expected */
+      }
+    }
+    const lang = document.documentElement.lang || 'it'
+    return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${t('report.title')}</title><style>${css}</style></head><body class="printing"><div class="report" style="position:static;overflow:visible">${article?.outerHTML ?? ''}</div></body></html>`
+  }
+
+  async function share() {
+    try {
+      await shareOrDownload(exportFilename('html'), standaloneHtml(), 'text/html')
+      showToast(t('report.shared'))
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') showToast(t('backup.failed'))
+    }
+  }
 </script>
 
 <div class="report">
   <div class="toolbar no-print">
     <button class="btn" onclick={onclose}>{t('common.close')}</button>
+    <button class="btn" onclick={share}>{t('report.share')}</button>
     <button class="btn primary grow" onclick={() => window.print()}>{t('report.print')}</button>
   </div>
 
-  <article class="page">
+  <article class="page" bind:this={article}>
     <header>
       <h1>{t('report.title')}</h1>
       <p class="muted">{t('report.range', { a: fmtDate(from), b: fmtDate(to) })} · {t('report.generated', { d: fmtDate(new Date()) })}</p>

@@ -3,16 +3,29 @@
 
   let { open = $bindable(false), title = '', children }: { open?: boolean; title?: string; children: Snippet } = $props()
 
+  let panel = $state<HTMLDivElement | undefined>()
+  let returnTo: Element | null = null
+
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape') open = false
   }
+  // Move focus into the sheet when it opens and give it back when it closes.
+  $effect(() => {
+    if (open && panel) {
+      returnTo = document.activeElement
+      panel.focus()
+      return () => {
+        if (returnTo instanceof HTMLElement) returnTo.focus()
+      }
+    }
+  })
 </script>
 
 <svelte:window onkeydown={onKey} />
 
 {#if open}
   <div class="backdrop" onclick={() => (open = false)} role="presentation"></div>
-  <div class="sheet" role="dialog" aria-modal="true" aria-label={title}>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" bind:this={panel}>
     <div class="handle"></div>
     {#if title}<h2 class="title">{title}</h2>{/if}
     <div class="content">{@render children()}</div>
@@ -25,6 +38,7 @@
     background: rgba(0, 0, 0, 0.45);
     animation: fade 0.15s;
   }
+  .sheet:focus { outline: none; }
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 41;
     max-height: 92dvh;

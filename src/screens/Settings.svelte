@@ -157,6 +157,8 @@
       {/each}
     </ul>
   </div>
+
+  <p class="small muted center">{t('settings.version', { v: __APP_VERSION__ })}</p>
 </div>
 
 <Sheet bind:open={vocabOpen} title={vocab === 'tags' ? t('settings.vocab.tags') : t('settings.vocab.symptoms')}>
@@ -179,4 +181,5 @@
   .top { margin-top: 10px; }
   .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
   .chip:disabled { opacity: 0.5; }
+  .center { text-align: center; }
 </style>

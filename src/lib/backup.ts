@@ -23,7 +23,7 @@ export async function buildExport(): Promise<ExportFile> {
   return { app: 'gom-jabbar', version: EXPORT_VERSION, exportedAt: new Date().toISOString(), vocabulary: { symptoms, tags }, entries }
 }
 
-export function exportFilename(kind: 'json' | 'csv', d = new Date()): string {
+export function exportFilename(kind: 'json' | 'csv' | 'html', d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `gom-jabbar-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.${kind}`
 }

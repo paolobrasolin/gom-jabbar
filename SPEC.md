@@ -216,6 +216,8 @@ A print-styled HTML page (A4, print CSS), opened for a date range from Trends. T
 
 No library; the report is a full-screen overlay in a fixed light palette with a Print / PDF button that calls `window.print()`; `@media print` hides the app behind it. The chronological list contains episodes and entries with notes, not every entry.
 
+A **Condividi file** button shares the report as a single self-contained HTML file (markup plus every stylesheet rule), which opens and prints anywhere. This is the path on iOS home-screen apps, where `window.print()` is unreliable.
+
 ## 8. Export format
 
 ```json
@@ -245,6 +247,7 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 ## 10. Design rules
 
 - Touch targets ≥ 48px. All primary controls in the bottom 60% of the screen.
+- Every body region has a human accessible name ("Coscia sx", "Left thigh"); focus is visible on all controls; sheets take focus on open and give it back on close.
 - Dark mode via `prefers-color-scheme`, overridable.
 - Intensity colour ramp: neutral at 0, warm at 10, perceptually even, readable in both themes and by colour-blind users (ramp plus the number, never colour alone).
 - No spinners, no splash beyond the PWA one, no onboarding screens. First run shows the log screen with a single dismissable hint line.
@@ -255,7 +258,8 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 
 - **Unit (Vitest)**: data layer on `fake-indexeddb` (CRUD, episodes, migrations), stats and correlation functions, export/import round trip and merge semantics, region helpers (mirror, limb shortcuts, full body), area operations, i18n key parity.
 - **Component (Testing Library)**: the fast path (select region, set intensity, save, entry appears), undo, repeat last, episode end.
-- **Manual checklist** before each release: install on Android, install on iOS, offline launch, share export, import, print report.
+- **Manual checklist** before each release: see `CHECKLIST.md`.
+- **Bundle size gate**: `npm run size` fails the build above 150 KB gzipped JS; it runs in CI.
 - No e2e framework in v1.
 
 ## 12. Milestones
