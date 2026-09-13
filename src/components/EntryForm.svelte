@@ -1,0 +1,187 @@
+<script lang="ts">
+  import BodyMap from './BodyMap.svelte'
+  import IntensitySlider from './IntensitySlider.svelte'
+  import EntrySummary from './EntrySummary.svelte'
+  import { t, tl, locale } from '../i18n/index.svelte'
+  import { prefs, savePrefs } from '../lib/prefs.svelte'
+  import { intensityColor, intensityInk } from '../lib/color'
+  import { PAIN, type Symptom, type Tag, type TagGroup } from '../lib/types'
+  import { LEG_IDS, ARM_IDS } from '../lib/regions'
+  import { isFull, tapRegion, tapSet, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
+  import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
+  import type { EntryDraft } from '../lib/draft'
+  import { haptic } from '../lib/toast.svelte'
+
+  let {
+    draft = $bindable(),
+    symptoms = [],
+    tags = [],
+    detailsOpen = $bindable(false),
+  }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[]; detailsOpen?: boolean } = $props()
+
+  let showPicker = $state(false)
+
+  /** Brush = the level the slider shows: the current area's, or the entry-level pain when there are no areas. */
+  const brush = $derived(draft.areas[draft.cur]?.intensity ?? draft.readings[PAIN] ?? 0)
+  const full = $derived(isFull(draft.areas))
+  const curRegions = $derived(draft.areas[draft.cur]?.regions ?? [])
+  const legsOn = $derived(!full && LEG_IDS.every((id) => curRegions.includes(id)))
+  const armsOn = $derived(!full && ARM_IDS.every((id) => curRegions.includes(id)))
+  const otherSymptoms = $derived(symptoms.filter((s) => s.enabled && s.id !== PAIN))
+  const groups: TagGroup[] = ['intervention', 'context', 'medication']
+  const tagsByGroup = $derived(groups.map((g) => ({ g, items: tags.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
+  const painLabel = $derived(tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' }))
+
+  type TimeChoice = { key: string; label: string; iso: string | null }
+  const timeChoices = $derived.by((): TimeChoice[] => {
+    const now = new Date()
+    return [
+      { key: 'now', label: t('time.now'), iso: null },
+      { key: 'h1', label: t('time.hoursAgo', { n: 1 }), iso: hoursAgo(1, now).toISOString() },
+      { key: 'h3', label: t('time.hoursAgo', { n: 3 }), iso: hoursAgo(3, now).toISOString() },
+      { key: 'morning', label: t('time.thisMorning'), iso: thisMorning(now).toISOString() },
+      { key: 'night', label: t('time.lastNight'), iso: lastNight(now).toISOString() },
+    ]
+  })
+  const activeTimeKey = $derived.by(() => {
+    if (draft.at === null) return 'now'
+    const m = timeChoices.find((c) => c.iso && Math.abs(Date.parse(c.iso) - Date.parse(draft.at!)) < 60_000)
+    return m?.key ?? 'custom'
+  })
+  const customLabel = $derived(
+    draft.at ? `${formatDay(draft.at, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') })} ${formatTime(draft.at, locale())}` : '',
+  )
+
+  function apply(next: { areas: EntryDraft['areas']; cur: number }) {
+    draft.areas = next.areas
+    draft.cur = next.cur
+    draft.readings = { ...draft.readings, [PAIN]: overallPain(draft.areas, brush) }
+  }
+  function onRegion(id: string) {
+    apply(tapRegion({ areas: draft.areas, cur: draft.cur }, id, prefs.mirror, brush))
+    haptic(6)
+  }
+  function onSet(ids: string[]) {
+    apply(tapSet({ areas: draft.areas, cur: draft.cur }, ids, brush))
+  }
+  function onFull() {
+    apply(toggleFull({ areas: draft.areas, cur: draft.cur }, brush))
+  }
+  function onSlider(v: number) {
+    if (draft.areas.length) apply(setIntensity({ areas: draft.areas, cur: draft.cur }, v))
+    else draft.readings = { ...draft.readings, [PAIN]: v }
+  }
+  function setMirror(v: boolean) {
+    prefs.mirror = v
+    savePrefs()
+  }
+  function toggleTag(id: string) {
+    draft.tags = draft.tags.includes(id) ? draft.tags.filter((x) => x !== id) : [...draft.tags, id]
+  }
+  function setReading(id: string, v: number) {
+    draft.readings = { ...draft.readings, [id]: v }
+  }
+</script>
+
+<div class="form">
+  <div class="chips tools">
+    <button class="chip small" aria-pressed={prefs.mirror} onclick={() => setMirror(!prefs.mirror)}>{t('log.mirror')}</button>
+    <button class="chip small" aria-pressed={full} onclick={onFull}>{t('log.fullBody')}</button>
+    <button class="chip small" aria-pressed={legsOn} disabled={full} onclick={() => onSet(LEG_IDS)}>{t('log.legs')}</button>
+    <button class="chip small" aria-pressed={armsOn} disabled={full} onclick={() => onSet(ARM_IDS)}>{t('log.arms')}</button>
+  </div>
+
+  <div class="map">
+    <BodyMap areas={draft.areas} cur={draft.cur} onToggle={onRegion} labels={{ front: t('log.front'), back: t('log.back') }} />
+  </div>
+
+  {#if draft.areas.length}
+    <div class="chips areas">
+      {#each draft.areas as a, i (i)}
+        <button
+          class="chip small area"
+          class:current={i === draft.cur}
+          aria-pressed={i === draft.cur}
+          style="--c: {intensityColor(a.intensity)}; --ink-on: {intensityInk(a.intensity)}"
+          onclick={() => apply(selectArea({ areas: draft.areas, cur: draft.cur }, i))}>
+          <span class="dot">{a.intensity}</span>
+          {#if a.regions.length}<EntrySummary areas={[a]} />{:else}<span class="muted">…</span>{/if}
+        </button>
+      {/each}
+      {#if !full && draft.areas[draft.cur]?.regions.length}
+        <button class="chip small outline" onclick={() => apply(addArea({ areas: draft.areas, cur: draft.cur }, brush))}>+ {t('log.addArea')}</button>
+      {/if}
+    </div>
+  {/if}
+
+  <div class="chips time">
+    {#each timeChoices as c (c.key)}
+      <button
+        class="chip small"
+        aria-pressed={activeTimeKey === c.key}
+        onclick={() => {
+          draft.at = c.iso
+          showPicker = false
+        }}>{c.label}</button>
+    {/each}
+    <button class="chip small" aria-pressed={activeTimeKey === 'custom'} onclick={() => (showPicker = !showPicker)}>
+      {activeTimeKey === 'custom' ? customLabel : t('time.pick')}
+    </button>
+  </div>
+  {#if showPicker}
+    <input
+      type="datetime-local"
+      value={toLocalInput(draft.at ?? new Date().toISOString())}
+      onchange={(e) => (draft.at = fromLocalInput((e.target as HTMLInputElement).value))} />
+  {/if}
+
+  <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
+
+  <div class="row">
+    <label class="switch grow">
+      <input type="checkbox" checked={draft.ongoing} onchange={(e) => (draft.ongoing = (e.target as HTMLInputElement).checked)} />
+      <span class="knob"></span>
+      <span>{t('log.ongoing')}</span>
+    </label>
+    <button class="chip outline" aria-expanded={detailsOpen} onclick={() => (detailsOpen = !detailsOpen)}>
+      {t('log.details')} {detailsOpen ? '▴' : '▾'}
+    </button>
+  </div>
+
+  {#if detailsOpen}
+    <div class="details">
+      {#each otherSymptoms as s (s.id)}
+        <IntensitySlider compact label={tl(s.label)} value={draft.readings[s.id] ?? 0} onchange={(v) => setReading(s.id, v)} />
+      {/each}
+      {#each tagsByGroup as { g, items } (g)}
+        <div>
+          <p class="small muted group-title">{t(`tag.group.${g}`)}</p>
+          <div class="chips">
+            {#each items as tag (tag.id)}
+              <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+            {/each}
+          </div>
+        </div>
+      {/each}
+      <textarea rows="2" placeholder={t('log.notePlaceholder')} bind:value={draft.note} aria-label={t('log.note')}></textarea>
+    </div>
+  {/if}
+</div>
+
+<style>
+  .form { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .form > * { min-width: 0; }
+  .tools, .time, .areas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; }
+  .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar { display: none; }
+  .map { height: var(--map-h, min(36dvh, 360px)); }
+  .details { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+  .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
+  .chip:disabled { opacity: 0.4; }
+  .area { background: var(--surface-2); color: var(--ink); border-color: transparent; padding-left: 6px; }
+  .area[aria-pressed='true'] { background: var(--surface-2); color: var(--ink); border-color: var(--ink); }
+  .dot {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--c); color: var(--ink-on); font-weight: 700; font-size: 13px;
+  }
+</style>
