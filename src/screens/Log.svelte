@@ -66,7 +66,7 @@
   function reset() {
     draft = emptyDraft({ ongoing: draft.ongoing, pain: draft.readings[PAIN] ?? 5 })
     detailsOpen = false
-    document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => el.scrollTo({ left: 0 }))
+    document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
   }
 
   async function save() {
