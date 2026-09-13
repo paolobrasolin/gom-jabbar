@@ -58,8 +58,8 @@
   let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
   let detailsOpen = $state(false)
   let saving = $state(false)
-  let editing = $state<Entry | null>(null)
-  let episode = $state<Entry | null>(null)
+  let editing = $state.raw<Entry | null>(null)
+  let episode = $state.raw<Entry | null>(null)
 
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 

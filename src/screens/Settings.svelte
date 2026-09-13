@@ -66,7 +66,7 @@
   }
 
   let fileInput: HTMLInputElement | undefined = $state()
-  let pending = $state<{ file: ExportFile; preview: ImportPreview } | null>(null)
+  let pending = $state.raw<{ file: ExportFile; preview: ImportPreview } | null>(null)
   let importOpen = $state(false)
   $effect(() => {
     if (!importOpen) pending = null
@@ -88,8 +88,17 @@
 
   async function doImport(mode: 'merge' | 'replace') {
     if (!pending) return
-    const snapshot = mode === 'replace' ? await buildExport() : null
-    const res = await applyImport(pending.file, mode)
+    let res: ImportPreview
+    let snapshot: ExportFile | null = null
+    try {
+      snapshot = mode === 'replace' ? await buildExport() : null
+      res = await applyImport(pending.file, mode)
+    } catch (err) {
+      const e = err as Error & { inner?: Error }
+      console.error('import failed', e.name, e.message, e.inner?.name, e.inner?.message, e)
+      showToast(t('import.failed'))
+      return
+    }
     importOpen = false
     haptic(20)
     const msg = t('import.done', { n: mode === 'replace' ? res.entries : res.added + res.updated })

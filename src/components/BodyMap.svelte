@@ -2,6 +2,7 @@
   import { regionsFor, shapeArea, pathFor, VIEWBOX, type View, type RegionDef } from '../lib/regions'
   import { intensityColor } from '../lib/color'
   import { isFull, type Area } from '../lib/areas'
+  import { intensityColor as ic } from '../lib/color'
 
   let {
     areas = [],
@@ -10,6 +11,7 @@
     onLongPress,
     readonly = false,
     labels = { front: '', back: '' },
+    heat,
   }: {
     areas?: Area[]
     /** Index of the area being edited; its regions get an outline when there is more than one area. */
@@ -18,6 +20,8 @@
     onLongPress?: (id: string) => void
     readonly?: boolean
     labels?: { front: string; back: string }
+    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity. Overrides `areas`. */
+    heat?: Map<string, { mean: number; weight: number }>
   } = $props()
 
   const full = $derived(isFull(areas))
@@ -66,8 +70,12 @@
       <svg viewBox="-4 -4 {VIEWBOX.w + 8} {VIEWBOX.h + 8}" role="group" aria-label={labels[view]}>
         <g class="paint">
           {#each regionsFor(view) as r (r.id)}
-            {@const color = full ? fullColor : fill.get(r.id)}
-            {@render shape(r, `region${color ? ' on' : ''}${outlined.has(r.id) ? ' hi' : ''}`, { 'data-region': r.id, style: color ? `fill:${color}` : undefined })}
+            {@const h = heat?.get(r.id)}
+            {@const color = heat ? (h ? ic(h.mean) : undefined) : full ? fullColor : fill.get(r.id)}
+            {@render shape(r, `region${color ? ' on' : ''}${outlined.has(r.id) ? ' hi' : ''}`, {
+              'data-region': r.id,
+              style: color ? `fill:${color}${h ? `;fill-opacity:${(0.35 + 0.65 * h.weight).toFixed(2)}` : ''}` : undefined,
+            })}
           {/each}
         </g>
         {#if !readonly}

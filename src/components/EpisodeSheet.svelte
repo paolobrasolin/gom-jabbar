@@ -17,7 +17,7 @@
 
   let open = $state(false)
   let level = $state(5)
-  let current = $state<Entry | null>(null)
+  let current = $state.raw<Entry | null>(null)
 
   $effect(() => {
     if (entry) {

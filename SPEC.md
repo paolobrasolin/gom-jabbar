@@ -185,12 +185,13 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 ### 6.3 Trends
 
-Range picker: 7d, 30d, 90d, custom.
+Range picker: 7, 30, 90, 365 days.
 
 - **Body heatmap**: the same body SVG, regions coloured by how often and how intensely they appeared in range.
 - **Intensity over time**: daily max and mean pain as a bar/line chart. Other symptoms selectable.
 - **Episodes**: count, mean and max duration, hours in pain per week.
-- **Tags**: for each tag with enough data, mean intensity on days with vs without it, shown as two small bars. Label it "descriptive, n = X days". Hide when n < 5 on either side.
+- **Tags**: for each tag with enough data, mean of the daily maximum on days with vs without it, shown as two small bars with the day counts. Labelled as descriptive. Hidden when fewer than 5 days on either side; usage counts are shown instead until then.
+- **Other symptoms**: mean of each non-pain symptom over the entries where it was recorded.
 - **Report** button → §7.
 
 ### 6.4 Settings
@@ -213,7 +214,7 @@ A print-styled HTML page (A4, print CSS), opened for a date range from Trends. T
 5. Tag summary table.
 6. Chronological list of episodes and notes (compact).
 
-No library; `window.print()` on a dedicated route with `@media print` styles.
+No library; the report is a full-screen overlay in a fixed light palette with a Print / PDF button that calls `window.print()`; `@media print` hides the app behind it. The chronological list contains episodes and entries with notes, not every entry.
 
 ## 8. Export format
 
