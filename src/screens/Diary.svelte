@@ -65,7 +65,7 @@
       </section>
     {/each}
     {#if entries.value.length < total.value}
-      <button class="btn" onclick={() => (days += 60)}>…</button>
+      <button class="btn" onclick={() => (days += 60)}>{t('diary.more')}</button>
     {/if}
   {/if}
 </div>

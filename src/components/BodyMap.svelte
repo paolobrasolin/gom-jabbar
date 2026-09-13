@@ -3,6 +3,8 @@
   import { intensityColor } from '../lib/color'
   import { isFull, type Area } from '../lib/areas'
   import { intensityColor as ic } from '../lib/color'
+  import { regionLabel } from '../lib/regionLabel'
+  import { t } from '../i18n/index.svelte'
 
   let {
     areas = [],
@@ -84,7 +86,7 @@
               {@render shape(r, 'hit', {
                 role: 'button',
                 'aria-pressed': full || fill.has(r.id),
-                'aria-label': r.id,
+                'aria-label': regionLabel(r.id, t),
                 onclick: () => click(r.id),
                 onpointerdown: () => down(r.id),
                 onpointerup: cancel,

@@ -14,7 +14,7 @@ beforeEach(() => {
 describe('Log fast path', () => {
   it('tap region, set intensity, save', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'thigh.r' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     const slider = screen.getByRole('slider', { name: 'Dolore' })
     await fireEvent.input(slider, { target: { value: '7' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
@@ -31,7 +31,7 @@ describe('Log fast path', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
     await fireEvent.click(screen.getByRole('button', { name: '+ Altra zona' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'shoulder.l' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Spalla sx' }))
     await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '3' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))

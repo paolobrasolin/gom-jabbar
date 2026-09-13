@@ -15,6 +15,19 @@
     if (prefs.theme === 'system') delete root.dataset.theme
     else root.dataset.theme = prefs.theme
     root.lang = prefs.lang
+    const mq = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null
+    const dark = prefs.theme === 'dark' || (prefs.theme === 'system' && !!mq?.matches)
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#111114' : '#f4f3ef')
+  })
+  // Re-run when the system theme flips while in "system" mode.
+  $effect(() => {
+    if (typeof matchMedia !== 'function') return
+    const mq = matchMedia('(prefers-color-scheme: dark)')
+    const h = () => {
+      if (prefs.theme === 'system') document.querySelector('meta[name="theme-color"]')?.setAttribute('content', mq.matches ? '#111114' : '#f4f3ef')
+    }
+    mq.addEventListener('change', h)
+    return () => mq.removeEventListener('change', h)
   })
 
   const tabs: { id: Tab; icon: string }[] = [
