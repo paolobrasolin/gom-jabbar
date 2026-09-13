@@ -20,6 +20,8 @@ export type Entry = {
   readings: Record<SymptomId, number>
   /** Painful areas, each with its own intensity. [] = unspecified. An area with regions ['*'] is full body. */
   areas: Area[]
+  /** Intensity updates made while an episode was ongoing. The entry's own `at`/pain is the implicit first point. */
+  history?: { at: string; pain: number }[]
   tags: TagId[]
   note: string
   createdAt: string

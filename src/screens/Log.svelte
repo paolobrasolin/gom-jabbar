@@ -1,6 +1,8 @@
 <script lang="ts">
   import EntryForm from '../components/EntryForm.svelte'
   import EntrySummary from '../components/EntrySummary.svelte'
+  import EditSheet from '../components/EditSheet.svelte'
+  import EpisodeSheet from '../components/EpisodeSheet.svelte'
   import { t, locale } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
@@ -9,22 +11,35 @@
   import { addEntry, deleteEntry, endEpisode, reopenEpisode, lastEntry, repeatEntry, durationMs } from '../lib/entries'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
-  import { formatDuration } from '../lib/time'
-  import { PAIN } from '../lib/types'
+  import { formatDuration, formatTime, dayKey } from '../lib/time'
+  import { PAIN, type Entry } from '../lib/types'
 
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const active = live(() => null, () => db.entries.filter((e) => e.ongoing).sortBy('at'), [])
   const count = live(() => null, () => db.entries.count(), -1)
 
-  let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
-  let detailsOpen = $state(false)
-  let saving = $state(false)
   let tick = $state(Date.now())
   $effect(() => {
     const id = setInterval(() => (tick = Date.now()), 30_000)
     return () => clearInterval(id)
   })
+  const todayKey = $derived(dayKey(new Date(tick).toISOString()))
+  const today = live(
+    () => todayKey,
+    () => {
+      const start = new Date()
+      start.setHours(0, 0, 0, 0)
+      return db.entries.where('at').aboveOrEqual(start.toISOString()).toArray()
+    },
+    [],
+  )
+
+  let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
+  let detailsOpen = $state(false)
+  let saving = $state(false)
+  let editing = $state<Entry | null>(null)
+  let episode = $state<Entry | null>(null)
 
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 
@@ -69,16 +84,33 @@
       {#each active.value as e (e.id)}
         {@const pain = e.readings[PAIN] ?? 0}
         <div class="card episode row">
-          <span class="pill" style="background: {intensityColor(pain)}; color: {intensityInk(pain)}">{pain}</span>
-          <div class="grow small">
-            <div><EntrySummary areas={e.areas} tags={e.tags} tagDefs={tags.value} /></div>
-            <div class="muted">{t('episode.since', { d: formatDuration(durationMs(e, tick) ?? 0, units) })}</div>
-          </div>
+          <button class="row grow open" onclick={() => (episode = e)} aria-label={t('episode.active')}>
+            <span class="pill" style="background: {intensityColor(pain)}; color: {intensityInk(pain)}">{pain}</span>
+            <span class="grow small text">
+              <span class="line"><EntrySummary areas={e.areas} tags={e.tags} tagDefs={tags.value} /></span>
+              <span class="muted">{t('episode.since', { d: formatDuration(durationMs(e, tick) ?? 0, units) })}</span>
+            </span>
+          </button>
           <button class="btn" onclick={() => end(e.id)}>{t('episode.end')}</button>
         </div>
       {/each}
     </div>
   {/if}
+
+  <div class="chips today" aria-label={t('log.today')}>
+    <span class="small muted label">{t('log.today')}</span>
+    {#if today.value.length === 0}
+      <span class="small muted">{t('log.todayEmpty')}</span>
+    {:else}
+      {#each today.value as e (e.id)}
+        {@const pain = e.readings[PAIN] ?? 0}
+        <button class="chip small tchip" onclick={() => (editing = e)}>
+          <span class="dot" style="background: {intensityColor(pain)}; color: {intensityInk(pain)}">{pain}</span>
+          {formatTime(e.at, locale())}
+        </button>
+      {/each}
+    {/if}
+  </div>
 
   <EntryForm bind:draft {detailsOpen} symptoms={symptoms.value} tags={tags.value} />
 
@@ -95,10 +127,21 @@
   </div>
 </div>
 
+<EpisodeSheet bind:entry={episode} tagDefs={tags.value} onedit={(e) => (editing = e)} />
+<EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
+
 <style>
   .log { padding-bottom: 8px; }
   .episodes { display: flex; flex-direction: column; gap: 8px; }
-  .episode { padding: 10px 12px; }
+  .episode { padding: 8px 8px 8px 12px; }
+  .open { text-align: left; min-height: 44px; min-width: 0; }
+  .text { display: flex; flex-direction: column; min-width: 0; }
+  .line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .today { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; min-height: 34px; align-items: center; }
+  .today::-webkit-scrollbar { display: none; }
+  .today .label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 12px; }
+  .tchip { padding-left: 6px; gap: 6px; font-variant-numeric: tabular-nums; }
+  .dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-weight: 700; font-size: 12px; }
   .actions {
     position: sticky;
     bottom: 0;

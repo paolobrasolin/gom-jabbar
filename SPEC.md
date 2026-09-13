@@ -148,6 +148,11 @@ Regions are grouped into **areas**, each with its own level. The slider always e
 - Tapping a region that belongs to another area moves it into the current one. Tapping a region in the current area removes it.
 - Full body replaces all areas with a single one.
 - Overall pain shown in the diary and used for trends is the max over areas.
+- **Press and hold** a region to toggle its whole limb on that side (whole torso, back or head for unsided regions). Mirror applies.
+
+### 5.5 Episode updates
+
+Tapping an active episode card opens a sheet with its summary, its level timeline, a slider and **Aggiorna** / **Termina**. Updating appends `{ at, pain }` to `entry.history` and sets `readings.pain`. With a single area, that area follows; with several, the initial split is kept. The diary shows the level trail as "7 → 4 → 2".
 
 ## 6. Screens
 
@@ -157,13 +162,14 @@ Bottom tab bar, four tabs, thumb reachable. The app opens on **Log**.
 
 This screen is the product. Layout top to bottom:
 
-1. **Active episode chips** (only if any): "Dolore 7 · gambe · da 3h". Tap → sheet with **Termina adesso** and **Modifica**.
-2. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
-3. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
-4. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
-5. **Episode toggle**: "In corso" switch next to the slider. Off by default the first time, then remembers the last used value. The slider edits the current area's level (§5.4).
-6. **Add details** expander (collapsed): other symptom sliders, tag chips grouped by type, note field.
-7. **Save** button, full width, bottom anchored. Next to it a **Repeat last** button that clones the last entry with `at = now`.
+1. **Active episode cards** (only if any): "7 · gambe · da 3h" with a **Termina** button. Tap the card → update sheet (§5.5).
+2. **Today strip**: "Oggi" followed by one small chip per entry logged today (level and time). Tap to edit. Shows "niente ancora" when empty.
+3. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
+4. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
+5. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
+6. **Episode toggle**: "In corso" switch next to the slider. Off by default the first time, then remembers the last used value. The slider edits the current area's level (§5.4).
+7. **Add details** expander (collapsed): other symptom sliders, tag chips grouped by type, note field.
+8. **Save** button, full width, bottom anchored. Next to it a **Repeat last** button that clones the last entry with `at = now`.
 
 Fast path: tap region(s) → drag slider → Save. Regions are optional; an entry with only intensity is valid.
 
@@ -259,4 +265,3 @@ Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `upd
 ## 13. Open decisions
 
 - App display name and icon. "Gom Jabbar" is the working name.
-- Whether episodes should keep a history of intensity updates (v2 candidate).

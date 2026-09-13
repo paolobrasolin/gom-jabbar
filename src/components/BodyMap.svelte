@@ -7,6 +7,7 @@
     areas = [],
     cur = -1,
     onToggle,
+    onLongPress,
     readonly = false,
     labels = { front: '', back: '' },
   }: {
@@ -14,6 +15,7 @@
     /** Index of the area being edited; its regions get an outline when there is more than one area. */
     cur?: number
     onToggle?: (id: string) => void
+    onLongPress?: (id: string) => void
     readonly?: boolean
     labels?: { front: string; back: string }
   } = $props()
@@ -27,6 +29,30 @@
   })
   const outlined = $derived(new Set(areas.length > 1 && cur >= 0 ? (areas[cur]?.regions ?? []) : []))
   const views: View[] = ['front', 'back']
+  // Long press: fire after a hold, then swallow the click that follows.
+  const HOLD_MS = 450
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let held = false
+  function down(id: string) {
+    held = false
+    clearTimeout(timer)
+    if (!onLongPress) return
+    timer = setTimeout(() => {
+      held = true
+      onLongPress(id)
+    }, HOLD_MS)
+  }
+  function cancel() {
+    clearTimeout(timer)
+  }
+  function click(id: string) {
+    if (held) {
+      held = false
+      return
+    }
+    onToggle?.(id)
+  }
+  const C = VIEWBOX.w / 2
   /** Hit layer: smallest regions drawn last so they win over big neighbours. */
   const hits = (view: View): RegionDef[] => [...regionsFor(view)].sort((a, b) => shapeArea(b.shape) - shapeArea(a.shape))
 </script>
@@ -48,6 +74,11 @@
             {@const color = full ? fullColor : fill.get(r.id)}
             {@render shape(r, `region${color ? ' on' : ''}${outlined.has(r.id) ? ' hi' : ''}`, { 'data-region': r.id, style: color ? `fill:${color}` : undefined })}
           {/each}
+          {#if view === 'front'}
+            <circle class="deco" cx={C - 8} cy="24" r="2.6" /><circle class="deco" cx={C + 8} cy="24" r="2.6" />
+          {:else}
+            <ellipse class="deco hair" cx={C} cy="17" rx="23" ry="15" /><ellipse class="deco hair" cx={C} cy="50" rx="7" ry="10" />
+          {/if}
         </g>
         {#if !readonly}
           <g class="hits">
@@ -56,7 +87,12 @@
                 role: 'button',
                 'aria-pressed': full || fill.has(r.id),
                 'aria-label': r.id,
-                onclick: () => onToggle?.(r.id),
+                onclick: () => click(r.id),
+                onpointerdown: () => down(r.id),
+                onpointerup: cancel,
+                onpointercancel: cancel,
+                onpointerleave: cancel,
+                oncontextmenu: (e: Event) => e.preventDefault(),
               })}
             {/each}
           </g>
@@ -100,6 +136,9 @@
     flex: none;
   }
   .paint { pointer-events: none; }
+  .deco { fill: var(--bg); }
+  .deco.hair { fill: var(--ink); opacity: 0.22; }
+  svg { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .region {
     fill: var(--surface-2);
     stroke: var(--bg);

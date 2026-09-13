@@ -43,7 +43,7 @@
   <div class="card">
     <p class="small muted label">{t('settings.help')}</p>
     <ul class="help">
-      {#each ['tap', 'level', 'areas', 'ongoing', 'time', 'undo', 'edit'] as k (k)}
+      {#each ['tap', 'limb', 'level', 'areas', 'ongoing', 'time', 'undo', 'edit'] as k (k)}
         <li>{t(`help.${k}`)}</li>
       {/each}
     </ul>

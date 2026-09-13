@@ -1,14 +1,11 @@
 <script lang="ts">
-  import Sheet from '../components/Sheet.svelte'
-  import EntryForm from '../components/EntryForm.svelte'
+  import EditSheet from '../components/EditSheet.svelte'
   import EntrySummary from '../components/EntrySummary.svelte'
   import { t, locale } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { draftFromEntry, draftToInput, type EntryDraft } from '../lib/draft'
-  import { updateEntry, deleteEntry, restoreEntry, durationMs } from '../lib/entries'
-  import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
+  import { durationMs } from '../lib/entries'
   import { intensityColor, intensityInk } from '../lib/color'
   import { dayKey, formatDay, formatTime, formatDuration } from '../lib/time'
   import { PAIN, type Entry } from '../lib/types'
@@ -36,36 +33,6 @@
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 
   let editing = $state<Entry | null>(null)
-  let draft = $state<EntryDraft>(draftFromEntry({ readings: {}, areas: [], tags: [], note: '', at: '', endedAt: null, ongoing: false, id: '', createdAt: '', updatedAt: '' }))
-  let open = $state(false)
-
-  function edit(e: Entry) {
-    dismissToast()
-    editing = e
-    draft = draftFromEntry(e)
-    open = true
-  }
-
-  async function save() {
-    if (!editing) return
-    const input = draftToInput(draft)
-    const wasOngoing = editing.ongoing
-    const patch: Partial<Entry> = { ...input, readings: input.readings!, areas: input.areas!, tags: input.tags!, note: input.note!, at: input.at!, ongoing: input.ongoing! }
-    if (wasOngoing && !input.ongoing) patch.endedAt = new Date().toISOString()
-    if (!wasOngoing && input.ongoing) patch.endedAt = null
-    await updateEntry(editing.id, patch)
-    haptic(20)
-    open = false
-    showToast(t('log.saved'))
-  }
-
-  async function remove() {
-    if (!editing) return
-    const gone = await deleteEntry(editing.id)
-    open = false
-    haptic(20)
-    if (gone) showToast(t('diary.deleted'), { label: t('log.undo'), run: () => void restoreEntry(gone) })
-  }
 </script>
 
 <div class="screen">
@@ -82,13 +49,13 @@
           {#each g.items as e (e.id)}
             {@const pain = e.readings[PAIN] ?? 0}
             {@const dur = durationMs(e)}
-            <button class="entry card row" onclick={() => edit(e)}>
+            <button class="entry card row" onclick={() => (editing = e)}>
               <span class="time muted small">{formatTime(e.at, locale())}</span>
               <span class="pill" style="background: {intensityColor(pain)}; color: {intensityInk(pain)}">{pain}</span>
               <span class="grow body">
                 <span class="line"><EntrySummary areas={e.areas} tags={e.tags} tagDefs={tags.value} /></span>
                 {#if dur !== null}
-                  <span class="small muted">{e.ongoing ? t('diary.ongoing') : formatDuration(dur, units)}</span>
+                  <span class="small muted">{e.ongoing ? t('diary.ongoing') : formatDuration(dur, units)}{#if e.history?.length} · {[(e.history.length ? e.history[0].pain : pain), ...e.history.slice(1).map((h) => h.pain)].join(' → ')}{/if}</span>
                 {/if}
                 {#if e.note}<span class="small muted note">{e.note}</span>{/if}
               </span>
@@ -103,13 +70,7 @@
   {/if}
 </div>
 
-<Sheet bind:open title={t('diary.edit')}>
-  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value} detailsOpen={true} />
-  <div class="row">
-    <button class="btn danger" onclick={remove}>{t('diary.delete')}</button>
-    <button class="btn primary grow" onclick={save}>{t('common.save')}</button>
-  </div>
-</Sheet>
+<EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
 
 <style>
   .empty { text-align: center; padding: 48px 0; }

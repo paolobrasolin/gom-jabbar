@@ -7,7 +7,7 @@
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { PAIN, type Symptom, type Tag, type TagGroup } from '../lib/types'
-  import { LEG_IDS, ARM_IDS } from '../lib/regions'
+  import { LEG_IDS, ARM_IDS, limbOf, mirrorId } from '../lib/regions'
   import { isFull, tapRegion, tapSet, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
   import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
   import type { EntryDraft } from '../lib/draft'
@@ -69,6 +69,12 @@
   function onSet(ids: string[]) {
     apply(tapSet({ areas: draft.areas, cur: draft.cur }, ids, brush))
   }
+  function onLimb(id: string) {
+    let ids = limbOf(id)
+    if (prefs.mirror) ids = [...new Set(ids.flatMap((x) => [x, mirrorId(x) ?? x]))]
+    onSet(ids)
+    haptic(25)
+  }
   function onFull() {
     apply(toggleFull({ areas: draft.areas, cur: draft.cur }, brush))
   }
@@ -97,11 +103,13 @@
   </div>
 
   <div class="map">
-    <BodyMap areas={draft.areas} cur={draft.cur} onToggle={onRegion} labels={{ front: t('log.front'), back: t('log.back') }} />
+    <BodyMap areas={draft.areas} cur={draft.cur} onToggle={onRegion} onLongPress={onLimb} labels={{ front: t('log.front'), back: t('log.back') }} />
   </div>
 
-  {#if draft.areas.length}
-    <div class="chips areas">
+  <div class="chips areas">
+    {#if draft.areas.length === 0}
+      <span class="small muted placeholder">{t('log.noArea')}</span>
+    {:else}
       {#each draft.areas as a, i (i)}
         <button
           class="chip small area"
@@ -116,8 +124,8 @@
       {#if !full && draft.areas[draft.cur]?.regions.length}
         <button class="chip small outline" onclick={() => apply(addArea({ areas: draft.areas, cur: draft.cur }, brush))}>+ {t('log.addArea')}</button>
       {/if}
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   <div class="chips time">
     <button class="chip small ongoing" aria-pressed={draft.ongoing} onclick={() => (draft.ongoing = !draft.ongoing)}>
@@ -169,6 +177,8 @@
 <style>
   .form { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1; }
   .form > * { min-width: 0; }
+  .areas { min-height: 40px; align-items: center; }
+  .placeholder { padding-left: 4px; }
   .ongoing { border-color: var(--border); }
   .ongoing[aria-pressed='true'] { border-color: transparent; }
   .tools, .time, .areas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
