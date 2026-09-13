@@ -13,11 +13,30 @@
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration, formatTime, dayKey } from '../lib/time'
   import { PAIN, type Entry } from '../lib/types'
+  import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
 
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const active = live(() => null, () => db.entries.filter((e) => e.ongoing).sortBy('at'), [])
   const count = live(() => null, () => db.entries.count(), -1)
+  const oldest = live(() => null, async () => (await db.entries.orderBy('createdAt').first())?.createdAt ?? null, null)
+
+  async function backupNow() {
+    try {
+      await shareOrDownload(exportFilename('json'), JSON.stringify(await buildExport(), null, 1), 'application/json')
+      prefs.lastBackupAt = new Date().toISOString()
+      prefs.backupSnoozedUntil = null
+      savePrefs()
+      haptic(20)
+      showToast(t('backup.done'))
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') showToast(t('backup.failed'))
+    }
+  }
+  function snooze() {
+    prefs.backupSnoozedUntil = new Date(Date.now() + 7 * 86_400_000).toISOString()
+    savePrefs()
+  }
 
   let tick = $state(Date.now())
   $effect(() => {
@@ -25,6 +44,7 @@
     return () => clearInterval(id)
   })
   const todayKey = $derived(dayKey(new Date(tick).toISOString()))
+  const nudge = $derived(backupDue(prefs.lastBackupAt, oldest.value, prefs.backupSnoozedUntil, tick))
   const today = live(
     () => todayKey,
     () => {
@@ -97,6 +117,14 @@
     </div>
   {/if}
 
+  {#if nudge}
+    <div class="card row nudge small">
+      <span class="grow">{t('backup.nudge')}</span>
+      <button class="chip small" onclick={backupNow}>{t('backup.now')}</button>
+      <button class="chip small outline" onclick={snooze} aria-label={t('backup.later')}>✕</button>
+    </div>
+  {/if}
+
   <div class="chips today" aria-label={t('log.today')}>
     <span class="small muted label">{t('log.today')}</span>
     {#if today.value.length === 0}
@@ -133,6 +161,7 @@
 <style>
   .log { padding-bottom: 8px; }
   .episodes { display: flex; flex-direction: column; gap: 8px; }
+  .nudge { padding: 8px 8px 8px 12px; }
   .episode { padding: 8px 8px 8px 12px; }
   .open { text-align: left; min-height: 44px; min-width: 0; }
   .text { display: flex; flex-direction: column; min-width: 0; }

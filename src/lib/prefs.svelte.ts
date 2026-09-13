@@ -9,6 +9,7 @@ type Prefs = {
   mirror: boolean
   ongoing: boolean
   lastBackupAt: string | null
+  backupSnoozedUntil: string | null
 }
 
 const KEY = 'gj.prefs'
@@ -25,6 +26,7 @@ function load(): Prefs {
     mirror: true,
     ongoing: false,
     lastBackupAt: null,
+    backupSnoozedUntil: null,
   }
   try {
     const raw = localStorage.getItem(KEY)
