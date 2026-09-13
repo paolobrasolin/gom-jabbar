@@ -1,0 +1,80 @@
+import { describe, it, expect } from 'vitest'
+import { makeEntry } from './entries'
+import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, rangeStart, inRange, tagCounts } from './stats'
+import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
+
+const at = (d: string, h = 12) => new Date(2026, 2, Number(d), h).toISOString() // March 2026, local time
+const e = (day: string, pain: number, extra: Parameters<typeof makeEntry>[0] = {}) =>
+  makeEntry({ at: at(day), readings: { pain, ...(extra.readings ?? {}) }, ...extra })
+
+describe('stats', () => {
+  it('builds a daily series with gaps', () => {
+    const from = new Date(2026, 2, 1)
+    const s = dailySeries([e('1', 3), e('1', 7), e('3', 5)], from, 4)
+    expect(s.map((p) => p.max)).toEqual([7, null, 5, null])
+    expect(s[0].mean).toBe(5)
+    expect(s[0].count).toBe(2)
+    expect(s[3].day).toBe('2026-03-04')
+  })
+
+  it('summarizes entries and episodes', () => {
+    const now = Date.parse(at('10'))
+    const eps = [
+      makeEntry({ at: at('2', 10), readings: { pain: 8 }, ongoing: true }),
+      makeEntry({ at: at('4', 8), readings: { pain: 6 } }),
+    ]
+    eps[1].endedAt = at('4', 10)
+    eps[1].ongoing = false
+    eps[0].endedAt = at('2', 13)
+    eps[0].ongoing = false
+    const s = summarize([...eps, e('6', 2), e('6', 4)], 7, now)
+    expect(s.entries).toBe(4)
+    expect(s.daysWithEntries).toBe(3)
+    expect(s.meanPain).toBe(5)
+    expect(s.maxPain).toBe(8)
+    expect(s.daysAtLeast5).toBe(2)
+    expect(s.episodes).toBe(2)
+    expect(s.meanEpisodeMs).toBe(2.5 * 3_600_000)
+    expect(s.maxEpisodeMs).toBe(3 * 3_600_000)
+    expect(s.hoursPerWeek).toBe(5)
+    expect(summarize([], 7).meanPain).toBeNull()
+  })
+
+  it('computes region heat with full body spreading everywhere', () => {
+    const h = regionHeat([
+      e('1', 8, { areas: [{ regions: ['thigh.l'], intensity: 8 }] }),
+      e('2', 4, { areas: [{ regions: ['thigh.l', 'chest'], intensity: 4 }] }),
+      e('3', 2, { areas: [{ regions: ['*'], intensity: 2 }] }),
+    ])
+    expect(h.get('thigh.l')).toEqual({ mean: 14 / 3, count: 3, weight: 1 })
+    expect(h.get('chest')?.count).toBe(2)
+    expect(h.get('calf.r')).toEqual({ mean: 2, count: 1, weight: 1 / 3 })
+  })
+
+  it('compares tags on days with vs without, with a minimum', () => {
+    const entries = []
+    for (let d = 1; d <= 6; d++) entries.push(e(String(d), 8, { tags: ['badsleep'] }))
+    for (let d = 7; d <= 12; d++) entries.push(e(String(d), 3))
+    entries.push(e('13', 9, { tags: ['stress'] }))
+    const cmp = tagComparison(entries, DEFAULT_TAGS)
+    expect(cmp).toHaveLength(1)
+    expect(cmp[0].tag.id).toBe('badsleep')
+    expect(cmp[0].withN).toBe(6)
+    expect(cmp[0].withoutN).toBe(7)
+    expect(cmp[0].withMean).toBe(8)
+    expect(cmp[0].withoutMean).toBeCloseTo((3 * 6 + 9) / 7)
+    expect(tagComparison(entries, DEFAULT_TAGS, 1).map((c) => c.tag.id)).toEqual(['badsleep', 'stress'])
+    expect(tagCounts(entries, DEFAULT_TAGS).map((x) => [x.tag.id, x.count])).toEqual([['badsleep', 6], ['stress', 1]])
+  })
+
+  it('averages other symptoms where recorded', () => {
+    const m = symptomMeans([e('1', 5, { readings: { swelling: 6 } }), e('2', 5, { readings: { swelling: 2, fog: 0 } }), e('3', 5)], DEFAULT_SYMPTOMS)
+    expect(m).toEqual([{ symptom: DEFAULT_SYMPTOMS[1], mean: 4, count: 2 }])
+  })
+
+  it('range helpers', () => {
+    const now = new Date(2026, 2, 10, 15)
+    expect(rangeStart(7, now).getTime()).toBe(new Date(2026, 2, 4).getTime())
+    expect(inRange([e('3'.toString(), 1), e('5', 1)], rangeStart(7, now))).toHaveLength(1)
+  })
+})

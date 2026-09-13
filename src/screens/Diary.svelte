@@ -32,7 +32,7 @@
   })
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 
-  let editing = $state<Entry | null>(null)
+  let editing = $state.raw<Entry | null>(null)
 </script>
 
 <div class="screen">

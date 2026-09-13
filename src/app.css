@@ -195,6 +195,14 @@ textarea { resize: vertical; }
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
+@media print {
+  @page { size: A4; margin: 14mm; }
+  /* The report lives inside the current screen: hide everything around it, unclip the containers. */
+  body.printing .tabs, body.printing .toast, body.printing .screen > :not(.report) { display: none !important; }
+  body.printing .app, body.printing .screen { display: block; height: auto; overflow: visible; padding: 0; }
+  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }

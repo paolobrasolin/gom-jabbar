@@ -59,6 +59,13 @@ describe('backup', () => {
     expect(parsed.vocabulary.tags).toEqual([])
   })
 
+  it('replace with an empty vocabulary keeps the defaults', async () => {
+    const parsed = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 2, entries: [] }))
+    await applyImport(parsed, 'replace')
+    expect(await db.symptoms.count()).toBeGreaterThan(3)
+    expect(await db.tags.count()).toBeGreaterThan(5)
+  })
+
   it('rejects garbage', () => {
     expect(() => parseImport('nope')).toThrow('invalid-json')
     expect(() => parseImport('{"app":"other","entries":[]}')).toThrow('invalid-file')

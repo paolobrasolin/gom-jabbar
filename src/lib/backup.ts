@@ -2,6 +2,7 @@ import { db } from './db'
 import { PAIN, type Entry, type Symptom, type Tag, type Lang } from './types'
 import { regionText } from './summary'
 import type { Area } from './areas'
+import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 
 export const EXPORT_VERSION = 2
 
@@ -98,8 +99,9 @@ export async function applyImport(file: ExportFile, mode: ImportMode): Promise<I
     if (mode === 'replace') {
       await Promise.all([db.entries.clear(), db.symptoms.clear(), db.tags.clear()])
       await db.entries.bulkPut(file.entries)
-      await db.symptoms.bulkPut(file.vocabulary.symptoms)
-      await db.tags.bulkPut(file.vocabulary.tags)
+      // A file without vocabulary must not leave the app without symptoms or tags.
+      await db.symptoms.bulkPut(file.vocabulary.symptoms.length ? file.vocabulary.symptoms : DEFAULT_SYMPTOMS)
+      await db.tags.bulkPut(file.vocabulary.tags.length ? file.vocabulary.tags : DEFAULT_TAGS)
       return
     }
     const existing = new Map((await db.entries.toArray()).map((e) => [e.id, e]))

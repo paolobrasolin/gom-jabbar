@@ -5,7 +5,8 @@ import { liveQuery } from 'dexie'
  * `deps` is read inside the effect so the query re-subscribes when reactive inputs change.
  */
 export function live<T>(deps: () => unknown, query: () => Promise<T>, initial: T): { readonly value: T } {
-  let value = $state<T>(initial)
+  // Raw on purpose: query results are plain objects that get handed back to Dexie (proxies cannot be structured-cloned).
+  let value = $state.raw<T>(initial)
   $effect(() => {
     deps()
     const sub = liveQuery(query).subscribe({
