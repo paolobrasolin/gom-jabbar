@@ -10,7 +10,8 @@
     "preview": "vite preview --host",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "preversion": "npm run check && npm test"
   },
   "dependencies": {
     "dexie": "^4.0.10",
