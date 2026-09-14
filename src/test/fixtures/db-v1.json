@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "stores": {
+    "entries": "id, at, createdAt, updatedAt",
+    "symptoms": "id, order",
+    "tags": "id, group, order"
+  },
+  "tables": {
+    "entries": [
+      {
+        "endedAt": null,
+        "ongoing": false,
+        "createdAt": "2026-08-01T07:31:00.000Z",
+        "updatedAt": "2026-08-01T07:31:00.000Z",
+        "id": "v1-moment",
+        "at": "2026-08-01T07:30:00.000Z",
+        "readings": {
+          "pain": 6,
+          "swelling": 3
+        },
+        "regions": [
+          "thigh.l",
+          "thigh.r",
+          "knee.l"
+        ],
+        "tags": [
+          "compression"
+        ],
+        "note": "mattina pesante"
+      },
+      {
+        "endedAt": "2026-08-03T02:00:00.000Z",
+        "ongoing": false,
+        "createdAt": "2026-08-02T20:00:30.000Z",
+        "updatedAt": "2026-08-03T02:00:10.000Z",
+        "id": "v1-episode",
+        "at": "2026-08-02T20:00:00.000Z",
+        "readings": {
+          "pain": 8
+        },
+        "regions": [
+          "head"
+        ],
+        "tags": [
+          "med-x1"
+        ],
+        "note": ""
+      },
+      {
+        "endedAt": null,
+        "ongoing": false,
+        "createdAt": "2026-08-04T12:00:00.000Z",
+        "updatedAt": "2026-08-04T12:00:00.000Z",
+        "id": "v1-nolocation",
+        "at": "2026-08-04T12:00:00.000Z",
+        "readings": {
+          "pain": 0
+        },
+        "regions": [],
+        "tags": [],
+        "note": "niente dolore oggi"
+      },
+      {
+        "endedAt": null,
+        "ongoing": false,
+        "createdAt": "2026-08-05T22:00:00.000Z",
+        "updatedAt": "2026-08-05T22:00:00.000Z",
+        "id": "v1-fullbody-sparse",
+        "at": "2026-08-05T22:00:00.000Z",
+        "readings": {
+          "pain": 9
+        },
+        "regions": [
+          "*"
+        ],
+        "tags": [],
+        "note": ""
+      }
+    ],
+    "symptoms": [
+      {
+        "id": "pain",
+        "label": {
+          "it": "Dolore",
+          "en": "Pain"
+        },
+        "enabled": true,
+        "order": 0
+      },
+      {
+        "id": "swelling",
+        "label": {
+          "it": "Gonfiore",
+          "en": "Swelling"
+        },
+        "enabled": true,
+        "order": 1
+      },
+      {
+        "id": "fog",
+        "label": {
+          "it": "Nebbia mentale",
+          "en": "Brain fog"
+        },
+        "enabled": false,
+        "order": 4
+      }
+    ],
+    "tags": [
+      {
+        "id": "compression",
+        "label": {
+          "it": "Compressione",
+          "en": "Compression"
+        },
+        "group": "intervention",
+        "enabled": true,
+        "order": 0
+      },
+      {
+        "id": "med-x1",
+        "label": {
+          "it": "Tachipirina",
+          "en": "Tachipirina"
+        },
+        "group": "medication",
+        "enabled": true,
+        "order": 0
+      }
+    ]
+  }
+}
