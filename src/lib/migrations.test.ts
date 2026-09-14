@@ -107,3 +107,15 @@ describe.each(Object.entries(DB_FIXTURES).map(([v, f]) => [Number(v), f] as cons
     }
   })
 })
+
+describe('unknown fields', () => {
+  it('pass through import, storage and export', async () => {
+    fresh()
+    const file = { ...exportV2, entries: [{ ...exportV2.entries[0], preset: 'schiena', extra: { deep: [1, 2] } }] }
+    const parsed = parseImport(JSON.stringify(file))
+    expect(parsed.entries[0]).toMatchObject({ preset: 'schiena', extra: { deep: [1, 2] } })
+    await applyImport(parsed, 'merge')
+    const out = await buildExport()
+    expect(out.entries[0]).toMatchObject({ preset: 'schiena', extra: { deep: [1, 2] } })
+  })
+})
