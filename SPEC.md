@@ -1,6 +1,6 @@
 # Gom Jabbar — chronic pain diary
 
-*Working name. Installable web app for logging pain episodes with as little friction as physically possible. Single user, no backend, data lives on the phone and is exportable.*
+*Installable web app for logging pain episodes with as little friction as physically possible. Single user, no backend, data lives on the phone and is exportable.*
 
 ## 1. Goals
 
@@ -43,6 +43,7 @@ Browser targets: Chrome on Android (primary), Safari on iOS 16.4+ (secondary). D
 
 - Call `navigator.storage.persist()` at startup, and again on the first launch as an installed app (recorded in `prefs.installedAt`) and when the browser fires `appinstalled`: installed origins are granted persistence without a prompt.
 - While the app is not installed, the log screen nudges to add it to the home screen (§6.1); Settings keeps a static card as the fallback. On iOS the install is what exempts the app from Safari's 7-day storage eviction for unused sites; on Android it is what opens the app from an icon.
+- The icon is a white needle with a drop at the tip on the pain-10 red tile (`public/favicon.svg` is the source; the PNGs are renders of it, the maskable one full-bleed with the art at 78%). The name is final (#12).
 - Chrome's `beforeinstallprompt` is captured at startup (`lib/install.svelte.ts`) and replayed from the nudge; where no prompt exists the nudge opens a sheet with the manual steps (Share → Aggiungi alla schermata Home on iOS, browser menu elsewhere).
 - Every write goes through Dexie; no data in `localStorage` except UI preferences (language, last-used tab, theme).
 - Schema versioning through Dexie migrations. Export format carries a `version` field.
@@ -266,4 +267,4 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 
 ## 12. Open work
 
-This document describes the app as built. Anything planned, requested or undecided lives in the GitHub issues; where a section above cites an issue number, that behaviour is not built yet. The name and icon are still the working ones (#12).
+This document describes the app as built. Anything planned, requested or undecided lives in the GitHub issues; where a section above cites an issue number, that behaviour is not built yet.

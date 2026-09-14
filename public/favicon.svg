@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#111114"/>
-  <circle cx="256" cy="256" r="150" fill="none" stroke="oklch(0.62 0.21 30)" stroke-width="44"/>
-  <circle cx="256" cy="256" r="56" fill="oklch(0.84 0.13 95)"/>
+  <rect width="512" height="512" rx="112" fill="oklch(0.56 0.22 20)"/>
+  <g transform="translate(262 244) rotate(135) translate(-175 0)">
+    <path d="M 230 -23 L 350 0 L 230 23 L 0 23 A 23 23 0 0 1 0 -23 Z" fill="white"/>
+    <rect x="34" y="-7.8" width="78" height="15.6" rx="7.8" fill="oklch(0.56 0.22 20)"/>
+  </g>
+  <path d="M 138.3 373.7 q -24 36 -24 50.4 a 24 24 0 0 0 48 0 q 0 -14.4 -24 -50.4 z" fill="#111114"/>
 </svg>
