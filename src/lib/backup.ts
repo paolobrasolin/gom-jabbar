@@ -59,7 +59,9 @@ function normalizeEntry(e: Record<string, unknown>, version: number): Entry {
     areas = [{ regions: e.regions as string[], intensity: readings[PAIN] ?? 0 }]
   }
   const ts = typeof e.updatedAt === 'string' ? e.updatedAt : e.at
-  return {
+  // Spread first: a field this version does not know about is still the user's data and must survive.
+  const out: Entry = {
+    ...(e as object),
     id: e.id,
     at: e.at,
     endedAt: typeof e.endedAt === 'string' ? e.endedAt : null,
@@ -72,6 +74,9 @@ function normalizeEntry(e: Record<string, unknown>, version: number): Entry {
     createdAt: typeof e.createdAt === 'string' ? e.createdAt : e.at,
     updatedAt: ts,
   }
+  // `regions` was converted into `areas` above; only a converted field may be dropped.
+  if (version < 2) delete (out as Record<string, unknown>).regions
+  return out
 }
 
 export type ImportPreview = { entries: number; added: number; updated: number; unchanged: number; symptoms: number; tags: number }
