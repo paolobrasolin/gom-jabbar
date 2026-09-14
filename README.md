@@ -1,6 +1,6 @@
 # Gom Jabbar
 
-Chronic pain diary. Installable web app, no backend, data stays on the phone. See [SPEC.md](SPEC.md).
+Chronic pain diary. Installable web app, no backend, data stays on the phone. See [SPEC.md](SPEC.md). Deployed at https://paolobrasolin.github.io/gom-jabbar/ (install to the home screen from there).
 
 With [Nix](https://nixos.org) and [direnv](https://direnv.net), `direnv allow` once and the shell gets the pinned Node; `nix build` runs the whole CI (check, tests, build, size gate) and leaves the Pages bundle in `result/`. Without Nix, any Node ≥ 22 works.
 
