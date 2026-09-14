@@ -41,8 +41,8 @@ Browser targets: Chrome on Android (primary), Safari on iOS 16.4+ (secondary). D
 
 ### 4.1 Persistence rules
 
-- Call `navigator.storage.persist()` on first run and again after install.
-- Nudge to install to the home screen on first run. On iOS this is what exempts the app from Safari's 7-day storage eviction for unused sites.
+- Call `navigator.storage.persist()` at startup.
+- While the app is not running standalone, Settings shows a card suggesting to add it to the home screen. On iOS the install is what exempts the app from Safari's 7-day storage eviction for unused sites. A nudge on the log screen itself is planned (#11).
 - Every write goes through Dexie; no data in `localStorage` except UI preferences (language, last-used tab, theme).
 - Schema versioning through Dexie migrations. Export format carries a `version` field.
 
@@ -180,8 +180,8 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 - Reverse-chronological list grouped by day. Each row: time, intensity as a coloured pill, region summary ("gambe, fianchi", "tutto il corpo"), tag icons, note preview, duration if episode.
 - Tap a row → edit sheet, same form as Log, prefilled, with Delete (undo toast).
-- Sticky day headers. Infinite scroll, loads 30 days at a time.
-- Search by note text and filter by tag (small, in a top bar).
+- Shows the last 30 days; a **Mostra altre** button at the bottom loads 60 more days at a time while older entries exist.
+- Search by note text and a tag filter are planned (#10).
 
 ### 6.3 Trends
 
@@ -189,7 +189,7 @@ Range picker: 7, 30, 90, 365 days.
 
 - **Body heatmap**: the same body SVG, regions coloured by how often and how intensely they appeared in range.
 - **Intensity over time**: daily max and mean pain as a bar/line chart. Other symptoms selectable.
-- **Episodes**: count, mean and max duration, hours in pain per week.
+- **Episodes**: count and mean duration.
 - **Tags**: for each tag with enough data, mean of the daily maximum on days with vs without it, shown as two small bars with the day counts. Labelled as descriptive. Hidden when fewer than 5 days on either side; usage counts are shown instead until then.
 - **Other symptoms**: mean of each non-pain symptom over the entries where it was recorded.
 - **Report** button → §7.
@@ -205,7 +205,7 @@ Range picker: 7, 30, 90, 365 days.
 
 ## 7. Report
 
-A print-styled HTML page (A4, print CSS), opened for a date range from Trends. The user prints to PDF or shares it. Contents:
+A full-screen overlay in a fixed light palette, opened for the current range from Trends, with print CSS for A4; `@media print` hides the app behind it. No library. Contents:
 
 1. Header: date range, generated on, number of entries and episodes.
 2. Body heatmap (front and back side by side).
@@ -214,9 +214,9 @@ A print-styled HTML page (A4, print CSS), opened for a date range from Trends. T
 5. Tag summary table.
 6. Chronological list of episodes and notes (compact).
 
-No library; the report is a full-screen overlay in a fixed light palette with a Print / PDF button that calls `window.print()`; `@media print` hides the app behind it. The chronological list contains episodes and entries with notes, not every entry.
+The chronological list contains episodes and entries with notes, not every entry.
 
-A **Condividi file** button shares the report as a single self-contained HTML file (markup plus every stylesheet rule), which opens and prints anywhere. This is the path on iOS home-screen apps, where `window.print()` is unreliable.
+Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** shares the report as a single self-contained HTML file (markup plus every stylesheet rule), which opens and prints anywhere. This is the path on iOS home-screen apps, where `window.print()` is unreliable.
 
 ## 8. Export format
 
@@ -250,7 +250,7 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 - Every body region has a human accessible name ("Coscia sx", "Left thigh"); focus is visible on all controls; sheets take focus on open and give it back on close.
 - Dark mode via `prefers-color-scheme`, overridable.
 - Intensity colour ramp: neutral at 0, warm at 10, perceptually even, readable in both themes and by colour-blind users (ramp plus the number, never colour alone).
-- No spinners, no splash beyond the PWA one, no onboarding screens. First run shows the log screen with a single dismissable hint line.
+- No spinners, no splash beyond the PWA one, no onboarding screens. At most one dismissable hint line on the log screen (planned, #4).
 - Respect `prefers-reduced-motion`.
 - Italian copy first, terse, informal ("Salva", "Annulla", "In corso").
 
@@ -262,14 +262,6 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 - **Bundle size gate**: `npm run size` fails the build above 150 KB gzipped JS; it runs in CI.
 - No e2e framework in v1.
 
-## 12. Milestones
+## 12. Open work
 
-1. **Shell**: Vite + Svelte + PWA + i18n + Dexie. Log screen with body map, slider, save. Diary list. Installable and offline. *This alone should already be usable daily.*
-2. **Entries done right**: episodes and active chips, time backfill, details expander, tags, edit/delete with undo, repeat last, mirror and limb shortcuts.
-3. **Data safety**: export/import/CSV, backup nudge, settings, vocabulary editors, persistence request.
-4. **Insight**: trends, heatmap, tag comparison, report.
-5. **Polish**: iOS pass, accessibility pass, performance budget (< 150 KB gzipped JS), release checklist.
-
-## 13. Open decisions
-
-- App display name and icon. "Gom Jabbar" is the working name.
+This document describes the app as built. Anything planned, requested or undecided lives in the GitHub issues; where a section above cites an issue number, that behaviour is not built yet. The name and icon are still the working ones (#12).
