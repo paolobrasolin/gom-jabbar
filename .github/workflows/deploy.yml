@@ -22,20 +22,12 @@ jobs:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run check
-      - run: npm test
-      - run: npm run build
-        env:
-          BASE_PATH: /${{ github.event.repository.name }}/
-      - run: npm run size
+      - uses: DeterminateSystems/nix-installer-action@main
+      # Runs check, tests, build and the size gate (see flake.nix).
+      - run: nix build --print-build-logs
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: result
   deploy:
     needs: build
     runs-on: ubuntu-latest
