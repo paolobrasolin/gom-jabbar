@@ -13,7 +13,7 @@
         pkg = builtins.fromJSON (builtins.readFile ./package.json);
       in {
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [nodejs];
+          packages = with pkgs; [nodejs gh];
         };
 
         packages = rec {
