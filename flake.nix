@@ -29,6 +29,8 @@
             npmConfigHook = pkgs.importNpmLock.npmConfigHook;
 
             BASE_PATH = "/${pkg.name}/";
+            # The sandbox has no git; the flake knows the commit it was built from.
+            GIT_REV = self.shortRev or self.dirtyShortRev or "unknown";
 
             doCheck = true;
             checkPhase = ''
