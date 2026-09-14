@@ -1,6 +1,16 @@
 # Release checklist
 
-Automated on every push: type check, unit tests, build, bundle size gate, deploy to Pages.
+Automated on every push: type check, unit tests, build, bundle size gate. A push to `main` also deploys to Pages, and installed phones pick it up on their next open without asking, so only merge into `main` what has passed the manual pass below.
+
+Release, from a clean tree on `main`:
+
+```sh
+git merge --ff-only development
+npm version patch      # refuses if check or tests fail; commits and tags vX.Y.Z
+git push               # tags follow (push.followTags is set)
+```
+
+Settings shows `Versione X.Y.Z+<short commit>`; `-dirty` after the hash means a local build, never a deploy.
 
 Manual, on a real phone, before telling anyone to update:
 
