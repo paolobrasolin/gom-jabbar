@@ -14,4 +14,4 @@ npm run build      # static bundle in dist/
 
 `node scripts/seed.mjs` writes a demo export you can load from Settings → Importa to see Trends and the report with data.
 
-Work happens on `development`, where CI runs `nix build` (`.github/workflows/ci.yml`). Merging into `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`, same build plus the upload). Enable Pages with source "GitHub Actions" in the repo settings once.
+Work happens on `development`, where CI runs `nix build` (`.github/workflows/ci.yml`). Merging into `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`, same build plus the upload). Releases are cut with `npm version patch`, see [CHECKLIST.md](CHECKLIST.md). Settings shows the version plus the short commit hash it was built from. Enable Pages with source "GitHub Actions" in the repo settings once.
