@@ -127,9 +127,9 @@ Users can add, rename, reorder, and disable symptoms and tags. Disabled items st
 
 Body map with front and back figures side by side, labelled, both always visible. Region ids are stable strings; the SVG shapes carry them as `data-region`.
 
-Front: `head`, `neck`, `shoulder.l/r`, `upperarm.l/r`, `forearm.l/r`, `hand.l/r`, `chest`, `abdomen`, `hip.l/r`, `thigh.l/r`, `knee.l/r`, `shin.l/r`, `ankle.l/r`, `foot.l/r`.
+Front: `head`, `neck`, `shoulder.l/r`, `upperarm.l/r`, `elbow.l/r`, `forearm.l/r`, `hand.l/r`, `chest`, `abdomen`, `hip.l/r`, `thigh.l/r`, `knee.l/r`, `shin.l/r`, `ankle.l/r`, `foot.l/r`.
 
-Back: `head.back`, `neck.back`, `upperback`, `lowerback`, `shoulder.back.l/r`, `upperarm.back.l/r`, `forearm.back.l/r`, `buttock.l/r`, `thigh.back.l/r`, `knee.back.l/r`, `calf.l/r`, `heel.l/r`.
+Back: `head.back`, `neck.back`, `upperback`, `lowerback`, `shoulder.back.l/r`, `upperarm.back.l/r`, `elbow.back.l/r`, `forearm.back.l/r`, `buttock.l/r`, `thigh.back.l/r`, `knee.back.l/r`, `calf.l/r`, `heel.l/r`, `foot.back.l/r`. The hands are drawn on both figures and share the front ids.
 
 Special: `*` = full body. When selected, both figures fill and individual regions cannot be toggled until it is deselected.
 
