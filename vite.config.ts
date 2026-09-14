@@ -55,5 +55,19 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,svelte}'],
+      exclude: ['src/**/*.test.ts', 'src/test/**', 'src/main.ts', 'src/vite-env.d.ts'],
+      reporter: process.env.COVERAGE_HTML ? ['text', 'html'] : ['text-summary'],
+      // Ratchet: raise these when coverage grows, never lower them. `npm test` fails below.
+      thresholds: {
+        'src/lib/**': { lines: 88, statements: 86, functions: 90, branches: 78 },
+        lines: 50,
+        statements: 40,
+        functions: 42,
+        branches: 45,
+      },
+    },
   },
 })
