@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
+import { install, initInstall } from '../lib/install.svelte'
 import App from '../App.svelte'
 
 let db: ReturnType<typeof resetDb>
@@ -63,5 +64,68 @@ describe('Log fast path', () => {
       expect(e.ongoing).toBe(false)
       expect(e.endedAt).not.toBeNull()
     })
+  })
+})
+
+describe('Install nudge', () => {
+  beforeEach(() => {
+    prefs.installedAt = null
+    install.dismissed = false
+  })
+
+  it('shows under the today strip while the app is not installed', () => {
+    render(App)
+    const banner = screen.getByText('Aggiungi alla schermata Home per tenere i dati al sicuro').closest('.card')!
+    const today = screen.getByLabelText('Oggi')
+    expect(today.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('dismiss hides it for this session only, without touching prefs', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Non ora' }))
+    expect(screen.queryByText(/Aggiungi alla schermata Home per/)).not.toBeInTheDocument()
+    expect(install.dismissed).toBe(true)
+    expect(localStorage.getItem('gj.prefs') ?? '').not.toContain('dismissed')
+  })
+
+  it('is hidden once the app has run standalone', () => {
+    prefs.installedAt = '2026-09-01T00:00:00.000Z'
+    render(App)
+    expect(screen.queryByText(/Aggiungi alla schermata Home per/)).not.toBeInTheDocument()
+  })
+
+  it('is hidden while running standalone', () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(display-mode: standalone)', addEventListener() {}, removeEventListener() {} }))
+    render(App)
+    expect(screen.queryByText(/Aggiungi alla schermata Home per/)).not.toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('opens the how-to sheet when the browser offers no install prompt', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Aggiungi alla schermata Home' })
+    expect(sheet).toHaveTextContent(/menu del browser/)
+  })
+
+  it('explains the Share button on iOS', async () => {
+    vi.stubGlobal('navigator', { ...navigator, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)' })
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Aggiungi alla schermata Home' })
+    expect(sheet).toHaveTextContent(/Condividi/)
+    vi.unstubAllGlobals()
+  })
+
+  it('replays the captured browser prompt instead of the sheet', async () => {
+    initInstall()
+    const e = new Event('beforeinstallprompt', { cancelable: true }) as Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' }> }
+    e.prompt = vi.fn(async () => {})
+    e.userChoice = Promise.resolve({ outcome: 'accepted' })
+    window.dispatchEvent(e)
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }))
+    await waitFor(() => expect(e.prompt).toHaveBeenCalled())
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

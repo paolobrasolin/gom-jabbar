@@ -62,11 +62,11 @@ export default defineConfig({
       reporter: process.env.COVERAGE_HTML ? ['text', 'html'] : ['text-summary'],
       // Ratchet: raise these when coverage grows, never lower them. `npm test` fails below.
       thresholds: {
-        'src/lib/**': { lines: 88, statements: 86, functions: 90, branches: 78 },
-        lines: 50,
-        statements: 40,
-        functions: 42,
-        branches: 45,
+        'src/lib/**': { lines: 90, statements: 89, functions: 92, branches: 83 },
+        lines: 56,
+        statements: 44,
+        functions: 46,
+        branches: 52,
       },
     },
   },

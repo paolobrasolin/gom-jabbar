@@ -3,6 +3,7 @@
   import EntrySummary from '../components/EntrySummary.svelte'
   import EditSheet from '../components/EditSheet.svelte'
   import EpisodeSheet from '../components/EpisodeSheet.svelte'
+  import Sheet from '../components/Sheet.svelte'
   import { t, locale } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
@@ -14,6 +15,7 @@
   import { formatDuration, formatTime, dayKey } from '../lib/time'
   import { PAIN, type Entry } from '../lib/types'
   import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
+  import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
 
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
@@ -36,6 +38,16 @@
   function snooze() {
     prefs.backupSnoozedUntil = new Date(Date.now() + 7 * 86_400_000).toISOString()
     savePrefs()
+  }
+
+  // Read once: the display mode cannot change while the page lives.
+  const standalone = isStandalone()
+  const installNudge = $derived(installDue(standalone, prefs.installedAt, install.dismissed))
+  let howTo = $state(false)
+  async function installNow() {
+    const r = await requestInstall()
+    if (r === 'manual') howTo = true
+    else if (r === 'accepted') haptic(20)
   }
 
   let tick = $state(Date.now())
@@ -141,6 +153,14 @@
     {/if}
   </div>
 
+  {#if installNudge}
+    <div class="card row nudge small">
+      <span class="grow">{t('install.nudge')}</span>
+      <button class="chip small" onclick={installNow}>{t('install.now')}</button>
+      <button class="chip small outline" onclick={() => (install.dismissed = true)} aria-label={t('install.later')}>✕</button>
+    </div>
+  {/if}
+
   <EntryForm bind:draft {detailsOpen} symptoms={symptoms.value} tags={tags.value} />
 
   <div class="actions">
@@ -158,6 +178,10 @@
 
 <EpisodeSheet bind:entry={episode} tagDefs={tags.value} onedit={(e) => (editing = e)} />
 <EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
+<Sheet bind:open={howTo} title={t('install.title')}>
+  <p>{t(isIOS() ? 'install.ios' : 'install.android')}</p>
+  <p class="small muted">{t('install.why')}</p>
+</Sheet>
 
 <style>
   .log { padding-bottom: 8px; }

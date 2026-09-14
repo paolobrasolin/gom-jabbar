@@ -4,6 +4,7 @@ import App from './App.svelte'
 
 import { db } from './lib/db'
 import { t } from './i18n/index.svelte'
+import { initInstall } from './lib/install.svelte'
 
 const target = document.getElementById('app')!
 const app = mount(App, { target })
@@ -17,7 +18,7 @@ db.open().catch((err) => {
   document.body.appendChild(p)
 })
 
-// Ask the browser not to evict our storage. Best effort.
-navigator.storage?.persist?.().catch(() => {})
+// Install prompt capture, first-standalone-launch bookkeeping and the persistent storage request.
+initInstall()
 
 export default app

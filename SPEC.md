@@ -41,8 +41,9 @@ Browser targets: Chrome on Android (primary), Safari on iOS 16.4+ (secondary). D
 
 ### 4.1 Persistence rules
 
-- Call `navigator.storage.persist()` at startup.
-- While the app is not running standalone, Settings shows a card suggesting to add it to the home screen. On iOS the install is what exempts the app from Safari's 7-day storage eviction for unused sites. A nudge on the log screen itself is planned (#11).
+- Call `navigator.storage.persist()` at startup, and again on the first launch as an installed app (recorded in `prefs.installedAt`) and when the browser fires `appinstalled`: installed origins are granted persistence without a prompt.
+- While the app is not installed, the log screen nudges to add it to the home screen (§6.1); Settings keeps a static card as the fallback. On iOS the install is what exempts the app from Safari's 7-day storage eviction for unused sites; on Android it is what opens the app from an icon.
+- Chrome's `beforeinstallprompt` is captured at startup (`lib/install.svelte.ts`) and replayed from the nudge; where no prompt exists the nudge opens a sheet with the manual steps (Share → Aggiungi alla schermata Home on iOS, browser menu elsewhere).
 - Every write goes through Dexie; no data in `localStorage` except UI preferences (language, last-used tab, theme).
 - Schema versioning through Dexie migrations. Export format carries a `version` field.
 
@@ -165,6 +166,7 @@ This screen is the product. Layout top to bottom:
 
 1. **Active episode cards** (only if any): "7 · gambe · da 3h" with a **Termina** button. Tap the card → update sheet (§5.5).
 2. **Today strip**: "Oggi" followed by one small chip per entry logged today (level and time). Tap to edit. Shows "niente ancora" when empty.
+   Under it, while the app is not installed (no `display-mode: standalone`, no `installedAt` pref): an inline **install nudge** in the backup banner style, "Aggiungi alla schermata Home per tenere i dati al sicuro", with **Aggiungi** and a dismiss. It shows on every launch until the app is installed; dismiss hides it for the current session only. Aggiungi replays the browser install prompt when captured, else opens the how-to sheet (§4.1).
 3. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
 4. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
 5. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.

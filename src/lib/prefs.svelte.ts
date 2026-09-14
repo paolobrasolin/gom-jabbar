@@ -10,6 +10,8 @@ type Prefs = {
   ongoing: boolean
   lastBackupAt: string | null
   backupSnoozedUntil: string | null
+  /** First launch as an installed app; set once, hides the install nudge for good. */
+  installedAt: string | null
 }
 
 const KEY = 'gj.prefs'
@@ -27,6 +29,7 @@ function load(): Prefs {
     ongoing: false,
     lastBackupAt: null,
     backupSnoozedUntil: null,
+    installedAt: null,
   }
   try {
     const raw = localStorage.getItem(KEY)
