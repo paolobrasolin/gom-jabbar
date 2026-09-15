@@ -76,7 +76,6 @@ describe('Details inline', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(await screen.findByRole('slider', { name: 'Gonfiore' })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Note' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Freddo' })).not.toBeInTheDocument()
     expect(screen.queryByText('Contesto')).not.toBeInTheDocument()
     const all = () => screen.getByRole('button', { name: 'Tutti i tag' })
     expect(all()).toHaveAttribute('aria-expanded', 'false')
@@ -87,7 +86,7 @@ describe('Details inline', () => {
     expect(screen.getByRole('button', { name: 'Stress' })).toBeInTheDocument()
     await fireEvent.click(all())
     expect(all()).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('button', { name: 'Stress' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Contesto')).not.toBeInTheDocument()
   })
 
   it('saves what is set inline and leaves the form clean', async () => {
@@ -105,24 +104,24 @@ describe('Details inline', () => {
     expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('')
   })
 
-  it('a tag picked from the full list joins the strip, pressed, and can be toggled off there', async () => {
+  it('the grouped view stands in for the strip and shares its state', async () => {
     render(App)
     let strip = await screen.findByLabelText('Tag frequenti')
-    await waitFor(() => expect(within(strip).getAllByRole('button')).toHaveLength(7))
+    await waitFor(() => expect(within(strip).getAllByRole('button')).toHaveLength(16))
     await fireEvent.click(screen.getByRole('button', { name: 'Tutti i tag' }))
     // Expanded: the strip is gone, the grouped list stands in its place, the same toggle folds it back.
     expect(screen.queryByLabelText('Tag frequenti')).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Compressione' })).toHaveLength(1)
-    // Stress is a context tag: never among the most used remedies on a fresh install.
     await fireEvent.click(screen.getByRole('button', { name: 'Stress' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Tutti i tag' }))
     strip = await screen.findByLabelText('Tag frequenti')
+    expect(within(strip).getAllByRole('button')[0]).toHaveAccessibleName('Tutti i tag')
     const chip = within(strip).getByRole('button', { name: 'Stress' })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
-    expect(within(strip).getAllByRole('button')).toHaveLength(8)
-    expect(within(strip).getAllByRole('button')[0]).toHaveAccessibleName('Tutti i tag')
     await fireEvent.click(chip)
-    expect(within(strip).queryByRole('button', { name: 'Stress' })).not.toBeInTheDocument()
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect((await db.entries.toArray())[0]?.tags).toEqual([]))
   })
 
   it('Azzera empties the form and the toast undoes it', async () => {
@@ -166,7 +165,10 @@ describe('Tag discoverability', () => {
     render(App)
     const strip = await screen.findByLabelText('Tag frequenti')
     const names = () => within(strip).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)
-    await waitFor(() => expect(names()).toEqual(['Tutti i tag', 'Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Calore', 'Freddo']))
+    // Every enabled tag, vocabulary order until something has been used.
+    await waitFor(() => expect(names().slice(0, 7)).toEqual(['Tutti i tag', 'Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Calore', 'Freddo']))
+    expect(names()).toHaveLength(16)
+    expect(names().at(-1)).toBe('Viaggio')
     await fireEvent.click(within(strip).getByRole('button', { name: 'Calore' }))
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))

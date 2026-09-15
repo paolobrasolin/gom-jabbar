@@ -20,9 +20,9 @@
 
   let showPicker = $state(false)
 
-  // The strip: the most used tags plus whatever the draft has set (§6.1 item 8). Expanded, every tag by group takes its place.
+  // The strip: every enabled tag, the most used first (§6.1 item 8). Expanded, the same tags by group take its place.
   const entries = live(() => null, () => db.entries.toArray(), [])
-  const suggestions = $derived(frequentTags(entries.value, tags, 6, draft.tags))
+  const suggestions = $derived(frequentTags(entries.value, tags))
   let allTags = $state(false)
   // A new draft (save, clear, another entry to edit) folds the full list away again.
   $effect(() => {

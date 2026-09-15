@@ -5,10 +5,10 @@ import { DEFAULT_TAGS } from './vocabulary'
 
 describe('frequentTags', () => {
   const e = (createdAt: string, tags: string[]) => ({ ...makeEntry({ tags }), createdAt })
+  const tags = DEFAULT_TAGS.map((t) => (t.id === 'mld' ? { ...t, enabled: false } : t))
 
-  it('falls back to the first enabled tags in vocabulary order', () => {
-    const tags = DEFAULT_TAGS.map((t) => (t.id === 'mld' ? { ...t, enabled: false } : t))
-    expect(frequentTags([], tags, 4).map((t) => t.id)).toEqual(['compression', 'exercise', 'rest', 'heat'])
+  it('is every enabled tag in vocabulary order while nothing has been used', () => {
+    expect(frequentTags([], tags).map((t) => t.id)).toEqual(tags.filter((t) => t.enabled).map((t) => t.id))
   })
 
   it('ranks by how often a tag was used, ties in vocabulary order, skipping disabled and unknown ones', () => {
@@ -18,14 +18,11 @@ describe('frequentTags', () => {
       e('2026-09-03T00:00:00Z', ['stress', 'heat', 'gone', 'mld']),
       e('2026-09-04T00:00:00Z', ['rest']),
     ]
-    const tags = DEFAULT_TAGS.map((t) => (t.id === 'mld' ? { ...t, enabled: false } : t))
-    // stress 3, heat 2, then rest and period at 1 in vocabulary order, then the fill.
-    expect(frequentTags(entries, tags, 5).map((t) => t.id)).toEqual(['stress', 'heat', 'rest', 'period', 'compression'])
-  })
-
-  it('appends selected tags that would otherwise be out of the strip, without reordering it', () => {
-    const tags = DEFAULT_TAGS.map((t) => (t.id === 'mld' ? { ...t, enabled: false } : t))
-    expect(frequentTags([], tags, 3, ['heat', 'compression', 'mld', 'gone']).map((t) => t.id)).toEqual(['compression', 'exercise', 'rest', 'heat'])
+    const ids = frequentTags(entries, tags).map((t) => t.id)
+    // stress 3, heat 2, then rest and period at 1 in vocabulary order, then the rest of the vocabulary.
+    expect(ids.slice(0, 5)).toEqual(['stress', 'heat', 'rest', 'period', 'compression'])
+    expect(ids).toHaveLength(tags.length - 1)
+    expect(ids).not.toContain('mld')
   })
 })
 

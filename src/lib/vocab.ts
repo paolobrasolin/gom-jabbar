@@ -58,26 +58,14 @@ export async function move(table: Table, id: string, dir: -1 | 1): Promise<void>
 }
 
 /**
- * The tags to offer without opening anything: the most used first (count over `entries`, ties in
- * vocabulary order), then the first enabled tags in vocabulary order to fill `n` slots.
- * `selected` tags (the draft's) that did not make the cut are appended, so what was picked from
- * the full list stays visible and can be toggled off from the strip. Appended, not moved to the
- * front: the strip must not reorder under a finger that just tapped it.
+ * Every enabled tag, the most used first (count over `entries`, ties in vocabulary order).
+ * The strip shows all of them in one scrolling row: what gets used sits under the thumb,
+ * the long tail is a swipe away, and the grouped view exists only for browsing by category.
  */
-export function frequentTags(entries: Entry[], tags: Tag[], n = 6, selected: string[] = []): Tag[] {
+export function frequentTags(entries: Entry[], tags: Tag[]): Tag[] {
   const enabled = tags.filter((t) => t.enabled)
-  const byId = new Map(enabled.map((t) => [t.id, t]))
+  const ids = new Set(enabled.map((t) => t.id))
   const count = new Map<string, number>()
-  for (const e of entries) for (const id of e.tags) if (byId.has(id)) count.set(id, (count.get(id) ?? 0) + 1)
-  const ranked = [...enabled].sort((a, b) => (count.get(b.id) ?? 0) - (count.get(a.id) ?? 0))
-  const out = ranked.slice(0, n)
-  const seen = new Set(out.map((t) => t.id))
-  for (const id of selected) {
-    const t = byId.get(id)
-    if (t && !seen.has(id)) {
-      seen.add(id)
-      out.push(t)
-    }
-  }
-  return out
+  for (const e of entries) for (const id of e.tags) if (ids.has(id)) count.set(id, (count.get(id) ?? 0) + 1)
+  return [...enabled].sort((a, b) => (count.get(b.id) ?? 0) - (count.get(a.id) ?? 0))
 }
