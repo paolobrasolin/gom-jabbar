@@ -78,15 +78,16 @@ describe('Details inline', () => {
     expect(screen.getByRole('textbox', { name: 'Note' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Freddo' })).not.toBeInTheDocument()
     expect(screen.queryByText('Contesto')).not.toBeInTheDocument()
-    const all = screen.getByRole('button', { name: 'Tutti i tag' })
-    expect(all).toHaveAttribute('aria-pressed', 'false')
-    await fireEvent.click(all)
-    expect(all).toHaveAttribute('aria-pressed', 'true')
+    const all = () => screen.getByRole('button', { name: 'Tutti i tag' })
+    expect(all()).toHaveAttribute('aria-pressed', 'false')
+    await fireEvent.click(all())
+    expect(all()).toHaveAttribute('aria-pressed', 'true')
     expect(await screen.findByText('Rimedi')).toBeInTheDocument()
     expect(screen.getByText('Contesto')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Freddo' })).toBeInTheDocument()
-    await fireEvent.click(all)
-    expect(screen.queryByRole('button', { name: 'Freddo' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stress' })).toBeInTheDocument()
+    await fireEvent.click(all())
+    expect(all()).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: 'Stress' })).not.toBeInTheDocument()
   })
 
   it('saves what is set inline and leaves the form clean', async () => {
@@ -106,16 +107,20 @@ describe('Details inline', () => {
 
   it('a tag picked from the full list joins the strip, pressed, and can be toggled off there', async () => {
     render(App)
-    const strip = await screen.findByLabelText('Tag recenti')
-    await waitFor(() => expect(within(strip).getAllByRole('button')).toHaveLength(6))
+    let strip = await screen.findByLabelText('Tag frequenti')
+    await waitFor(() => expect(within(strip).getAllByRole('button')).toHaveLength(7))
     await fireEvent.click(screen.getByRole('button', { name: 'Tutti i tag' }))
-    // Stress is a context tag: never among the five suggested remedies on a fresh install.
+    // Expanded: the strip is gone, the grouped list stands in its place, the same toggle folds it back.
+    expect(screen.queryByLabelText('Tag frequenti')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Compressione' })).toHaveLength(1)
+    // Stress is a context tag: never among the most used remedies on a fresh install.
     await fireEvent.click(screen.getByRole('button', { name: 'Stress' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Tutti i tag' }))
+    strip = await screen.findByLabelText('Tag frequenti')
     const chip = within(strip).getByRole('button', { name: 'Stress' })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
-    expect(within(strip).getAllByRole('button')).toHaveLength(7)
-    expect(within(strip).getAllByRole('button').at(-1)).toHaveTextContent('Tutti i tag')
+    expect(within(strip).getAllByRole('button')).toHaveLength(8)
+    expect(within(strip).getAllByRole('button')[0]).toHaveAccessibleName('Tutti i tag')
     await fireEvent.click(chip)
     expect(within(strip).queryByRole('button', { name: 'Stress' })).not.toBeInTheDocument()
   })
@@ -159,14 +164,15 @@ describe('Details inline', () => {
 describe('Tag discoverability', () => {
   it('offers the first remedies in a strip under the slider and toggles them on the draft', async () => {
     render(App)
-    const strip = await screen.findByLabelText('Tag recenti')
-    await waitFor(() => expect(within(strip).getAllByRole('button').map((b) => b.textContent)).toEqual(['Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Calore', 'Tutti i tag']))
+    const strip = await screen.findByLabelText('Tag frequenti')
+    const names = () => within(strip).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)
+    await waitFor(() => expect(names()).toEqual(['Tutti i tag', 'Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Calore', 'Freddo']))
     await fireEvent.click(within(strip).getByRole('button', { name: 'Calore' }))
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect((await db.entries.toArray())[0]?.tags).toEqual(['heat']))
-    // Once used, a tag moves to the front of the strip and the form is clean again.
-    await waitFor(() => expect(within(strip).getAllByRole('button')[0]).toHaveTextContent('Calore'))
+    // Once used, a tag is the most frequent: first after the toggle, and the form is clean again.
+    await waitFor(() => expect(names()[1]).toBe('Calore'))
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'false')
   })
 

@@ -83,7 +83,7 @@
   "settings.presets": "Presets",
   "trends.presets": "By preset",
   "trends.presetsHint": "Only the moments logged from the preset; days without stay empty.",
-  "log.suggestions": "Recent tags",
+  "log.suggestions": "Frequent tags",
   "log.noArea": "No area: tap the figures",
   "help.limb": "Press and hold an area to select the whole limb.",
   "episode.edit": "Edit areas and note",

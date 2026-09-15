@@ -9,7 +9,7 @@
   import { PAIN, type Symptom, type Tag, type TagGroup } from '../lib/types'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
-  import { recentTags } from '../lib/vocab'
+  import { frequentTags } from '../lib/vocab'
   import { LEG_IDS, ARM_IDS, limbOf, mirrorId } from '../lib/regions'
   import { isFull, tapRegion, tapSet, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
   import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
@@ -20,9 +20,9 @@
 
   let showPicker = $state(false)
 
-  // The strip: recent tags plus whatever the draft has set (§6.1 item 8). Behind it, on demand, every tag by group.
-  const recent = live(() => null, () => db.entries.orderBy('createdAt').reverse().limit(30).toArray(), [])
-  const suggestions = $derived(recentTags(recent.value, tags, 5, draft.tags))
+  // The strip: the most used tags plus whatever the draft has set (§6.1 item 8). Expanded, every tag by group takes its place.
+  const entries = live(() => null, () => db.entries.toArray(), [])
+  const suggestions = $derived(frequentTags(entries.value, tags, 6, draft.tags))
   let allTags = $state(false)
   // A new draft (save, clear, another entry to edit) folds the full list away again.
   $effect(() => {
@@ -162,18 +162,29 @@
 
   <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
 
-  <div class="chips suggest" aria-label={t('log.suggestions')}>
-    {#each suggestions as tag (tag.id)}
-      <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
-    {/each}
-    <button class="chip small outline" aria-pressed={allTags} onclick={() => (allTags = !allTags)}>{t('log.allTags')}</button>
-  </div>
+  {#snippet expander()}
+    <button class="chip small outline expand" aria-pressed={allTags} aria-label={t('log.allTags')} onclick={() => (allTags = !allTags)}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        {#if allTags}<path d="M6 15l6-6 6 6" />{:else}<path d="M6 9l6 6 6-6" />{/if}
+      </svg>
+    </button>
+  {/snippet}
 
-  {#if allTags}
+  {#if !allTags}
+    <div class="chips suggest" aria-label={t('log.suggestions')}>
+      {@render expander()}
+      {#each suggestions as tag (tag.id)}
+        <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+      {/each}
+    </div>
+  {:else}
     <div class="groups">
-      {#each tagsByGroup as { g, items } (g)}
+      {#each tagsByGroup as { g, items }, i (g)}
         <div>
-          <p class="small muted group-title">{t(`tag.group.${g}`)}</p>
+          <div class="row head">
+            {#if i === 0}{@render expander()}{/if}
+            <p class="small muted group-title">{t(`tag.group.${g}`)}</p>
+          </div>
           <div class="chips">
             {#each items as tag (tag.id)}
               <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
@@ -203,7 +214,9 @@
   .map { flex: 1 1 var(--map-h, 320px); min-height: var(--map-min, 320px); max-height: var(--map-max, 640px); }
   .chip:disabled { opacity: 0.4; }
   .groups { display: flex; flex-direction: column; gap: 12px; }
-  .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
+  .head { margin-bottom: 6px; min-height: 34px; }
+  .expand { padding: 0 10px; flex: none; }
+  .group-title { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   /* One line that grows with the text; no drag handle on a phone. */
   .note { field-sizing: content; min-height: var(--tap); max-height: 40dvh; resize: none; }
   .area { background: var(--surface-2); color: var(--ink); border-color: transparent; padding-left: 6px; }
