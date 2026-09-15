@@ -83,7 +83,7 @@
   "settings.presets": "Preset",
   "trends.presets": "Per preset",
   "trends.presetsHint": "Solo i momenti registrati dal preset; i giorni senza restano vuoti.",
-  "log.suggestions": "Tag recenti",
+  "log.suggestions": "Tag frequenti",
   "log.noArea": "Nessuna zona: tocca le figure",
   "help.limb": "Tieni premuta una zona per selezionare tutto l'arto.",
   "episode.edit": "Modifica zone e note",
