@@ -64,8 +64,9 @@ export async function restoreEntry(entry: Entry): Promise<void> {
   await db.entries.put(entry)
 }
 
-export async function endEpisode(id: string, at: string = now()): Promise<Entry | undefined> {
-  return updateEntry(id, { ongoing: false, endedAt: at })
+/** End an episode, optionally recording the tags (remedies, medications) that go with it. */
+export async function endEpisode(id: string, at: string = now(), tags?: string[]): Promise<Entry | undefined> {
+  return updateEntry(id, { ongoing: false, endedAt: at, ...(tags ? { tags: [...tags] } : {}) })
 }
 
 export async function reopenEpisode(id: string): Promise<Entry | undefined> {
@@ -75,9 +76,9 @@ export async function reopenEpisode(id: string): Promise<Entry | undefined> {
 /**
  * Record new readings on an ongoing episode. Unmentioned symptoms keep their level. A single area
  * follows the pain reading; several keep their initial split. The first update also stores where
- * the episode started, so the history is the complete trail.
+ * the episode started, so the history is the complete trail. `tags`, when given, replace the entry's.
  */
-export async function updateEpisode(id: string, readings: Record<string, number>, at: string = now()): Promise<Entry | undefined> {
+export async function updateEpisode(id: string, readings: Record<string, number>, at: string = now(), tags?: string[]): Promise<Entry | undefined> {
   const e = await db.entries.get(id)
   if (!e) return undefined
   const next = { ...e.readings, ...readings }
@@ -85,7 +86,7 @@ export async function updateEpisode(id: string, readings: Record<string, number>
   const areas = e.areas.length === 1 ? [{ ...e.areas[0], intensity: pain }] : e.areas
   const history = e.history?.length ? [...e.history] : [{ at: e.at, readings: { ...e.readings } }]
   history.push({ at, readings: next })
-  await db.entries.update(id, { readings: next, areas, history, updatedAt: now() })
+  await db.entries.update(id, { readings: next, areas, history, updatedAt: now(), ...(tags ? { tags: [...tags] } : {}) })
   return db.entries.get(id)
 }
 

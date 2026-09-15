@@ -1,5 +1,5 @@
 import { db } from './db'
-import { PAIN, type Symptom, type Tag, type TagGroup, type Lang } from './types'
+import { PAIN, type Entry, type Symptom, type Tag, type TagGroup, type Lang } from './types'
 
 type Table = 'symptoms' | 'tags'
 
@@ -55,4 +55,25 @@ export async function move(table: Table, id: string, dir: -1 | 1): Promise<void>
     await db[table].update(me.id, { order: other.order })
     await db[table].update(other.id, { order: me.order })
   })
+}
+
+/**
+ * The tags to suggest without opening anything: the most recently used first, then the first
+ * enabled tags in vocabulary order to fill `n` slots. `entries` in any order; newest wins.
+ */
+export function recentTags(entries: Entry[], tags: Tag[], n = 5): Tag[] {
+  const enabled = tags.filter((t) => t.enabled)
+  const byId = new Map(enabled.map((t) => [t.id, t]))
+  const out: Tag[] = []
+  const seen = new Set<string>()
+  const push = (id: string) => {
+    const t = byId.get(id)
+    if (t && !seen.has(id) && out.length < n) {
+      seen.add(id)
+      out.push(t)
+    }
+  }
+  for (const e of [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) e.tags.forEach(push)
+  for (const t of enabled) push(t.id)
+  return out
 }

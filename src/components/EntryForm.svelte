@@ -19,7 +19,8 @@
     symptoms = [],
     tags = [],
     detailsOpen = false,
-  }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[]; detailsOpen?: boolean } = $props()
+    suggestions = [],
+  }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[]; detailsOpen?: boolean; suggestions?: Tag[] } = $props()
 
   let showPicker = $state(false)
 
@@ -84,6 +85,9 @@
     prefs.mirror = v
     savePrefs()
   }
+  function toggleTag(id: string) {
+    draft.tags = draft.tags.includes(id) ? draft.tags.filter((x) => x !== id) : [...draft.tags, id]
+  }
 </script>
 
 <div class="form">
@@ -146,6 +150,14 @@
 
   <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
 
+  {#if suggestions.length}
+    <div class="chips suggest" aria-label={t('log.suggestions')}>
+      {#each suggestions as tag (tag.id)}
+        <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+      {/each}
+    </div>
+  {/if}
+
   {#if detailsOpen}
     <EntryDetails bind:draft {symptoms} {tags} />
   {/if}
@@ -158,8 +170,8 @@
   .placeholder { padding-left: 4px; }
   .ongoing { border-color: var(--border); }
   .ongoing[aria-pressed='true'] { border-color: transparent; }
-  .tools, .time, .areas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
-  .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar { display: none; }
+  .tools, .time, .areas, .suggest { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
+  .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar, .suggest::-webkit-scrollbar { display: none; }
   .map { flex: 1 1 var(--map-h, 320px); min-height: var(--map-min, 320px); max-height: var(--map-max, 640px); }
   .chip:disabled { opacity: 0.4; }
   .area { background: var(--surface-2); color: var(--ink); border-color: transparent; padding-left: 6px; }

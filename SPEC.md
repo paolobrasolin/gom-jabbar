@@ -116,6 +116,8 @@ Default tags:
 | rest | intervention | Riposo | Rest |
 | heat | intervention | Calore | Heat |
 | cold | intervention | Freddo | Cold |
+| stretching | intervention | Stretching | Stretching |
+| meditation | intervention | Meditazione | Meditation |
 | period | context | Ciclo | Period |
 | stress | context | Stress | Stress |
 | badsleep | context | Dormito male | Slept badly |
@@ -158,7 +160,7 @@ Regions are grouped into **areas**, each with its own level. The slider always e
 
 ### 5.5 Episode updates
 
-Tapping an active episode card opens a sheet with its summary, its level timeline, one slider per symptom the entry tracks (pain always, the others when above 0) and **Aggiorna** / **Termina**, plus a **Modifica zone e note** link to the full edit sheet (§6.2). **Aggiorna** updates every slider's reading at once. The first update stores the starting readings as the first point of `entry.history`, then each update appends `{ at, readings }` with the full readings at that moment, so the history is the complete trail. With a single area, that area follows the pain reading; with several, the initial split is kept. The diary shows the headline symptom's trail as "7 → 4 → 2". Histories written before export version 3 held `{ at, pain }` and were converted, so their first point is the first update, not the start.
+Tapping an active episode card opens a sheet with its summary, its level timeline, one slider per symptom the entry tracks (pain always, the others when above 0), the **Rimedi** and **Farmaci** chips (remedies happen in response to pain: this is where "ho preso il farmaco" gets recorded; context tags stay in the edit sheet) and **Aggiorna** / **Termina**, both of which save the chips too, plus a **Modifica zone e note** link to the full edit sheet (§6.2). **Aggiorna** updates every slider's reading at once. The first update stores the starting readings as the first point of `entry.history`, then each update appends `{ at, readings }` with the full readings at that moment, so the history is the complete trail. With a single area, that area follows the pain reading; with several, the initial split is kept. The diary shows the headline symptom's trail as "7 → 4 → 2". Histories written before export version 3 held `{ at, pain }` and were converted, so their first point is the first update, not the start.
 
 ## 6. Screens
 
@@ -175,8 +177,10 @@ This screen is the product. Layout top to bottom:
 4. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
 5. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
 6. **Episode toggle**: "In corso" switch next to the slider. Off by default the first time, then remembers the last used value. The slider edits the current area's level (§5.4).
-7. **Save** button, bottom anchored, with two buttons beside it: **Sintomi · rimedi · note** and **Repeat last**, which clones the last entry with `at = now`.
-8. **Sintomi · rimedi · note** opens a bottom sheet with the other symptom sliders, tag chips grouped by type and the note field. The button carries a count badge while anything in it is set (readings other than pain, tags, note); the badge clears with the form on save. Nothing of this lives inline in the form: on a phone the form already fills the screen, and an inline expander opened out of sight under the action bar (#1).
+7. **Suggestion strip**: one row of tag chips under the slider, no header, like the word suggestions above a keyboard. The 5 most recently used tags (from the last 30 entries), filled with the first enabled tags in vocabulary order on a fresh install, so the user meets the tags without opening anything. Tap toggles the tag on the draft; everything else is in the details sheet (#4).
+8. **Hint line** (until dismissed, `hintDismissed` pref): "Altri sintomi, rimedi e note: bottone qui sotto." with a dismiss. The one hint the log screen is allowed (§10).
+9. **Save** button, bottom anchored, with two buttons beside it: **Sintomi · rimedi · note** and **Repeat last**, which clones the last entry with `at = now`.
+10. **Sintomi · rimedi · note** opens a bottom sheet with the other symptom sliders, tag chips grouped by type and the note field. The button carries a count badge while anything in it is set (readings other than pain, tags, note); the badge clears with the form on save. Nothing of this lives inline in the form: on a phone the form already fills the screen, and an inline expander opened out of sight under the action bar (#1).
 
 Fast path: tap region(s) → drag slider → Save. Regions are optional; an entry with only intensity is valid.
 
@@ -256,7 +260,7 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 - Every body region has a human accessible name ("Coscia sx", "Left thigh"); focus is visible on all controls; sheets take focus on open and give it back on close.
 - Dark mode via `prefers-color-scheme`, overridable.
 - Intensity colour ramp: neutral at 0, warm at 10, perceptually even, readable in both themes and by colour-blind users (ramp plus the number, never colour alone).
-- No spinners, no splash beyond the PWA one, no onboarding screens. At most one dismissable hint line on the log screen (planned, #4).
+- No spinners, no splash beyond the PWA one, no onboarding screens. At most one dismissable hint line on the log screen (§6.1 item 8).
 - Respect `prefers-reduced-motion`.
 - Italian copy first, terse, informal ("Salva", "Annulla", "In corso").
 

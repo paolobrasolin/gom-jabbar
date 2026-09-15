@@ -17,6 +17,8 @@ export const DEFAULT_TAGS: Tag[] = [
   { id: 'rest', group: 'intervention', label: { it: 'Riposo', en: 'Rest' }, enabled: true, order: 3 },
   { id: 'heat', group: 'intervention', label: { it: 'Calore', en: 'Heat' }, enabled: true, order: 4 },
   { id: 'cold', group: 'intervention', label: { it: 'Freddo', en: 'Cold' }, enabled: true, order: 5 },
+  { id: 'stretching', group: 'intervention', label: { it: 'Stretching', en: 'Stretching' }, enabled: true, order: 6 },
+  { id: 'meditation', group: 'intervention', label: { it: 'Meditazione', en: 'Meditation' }, enabled: true, order: 7 },
   { id: 'period', group: 'context', label: { it: 'Ciclo', en: 'Period' }, enabled: true, order: 10 },
   { id: 'stress', group: 'context', label: { it: 'Stress', en: 'Stress' }, enabled: true, order: 11 },
   { id: 'badsleep', group: 'context', label: { it: 'Dormito male', en: 'Slept badly' }, enabled: true, order: 12 },
