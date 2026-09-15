@@ -16,6 +16,7 @@
   import { formatDuration, formatTime, dayKey } from '../lib/time'
   import { PAIN, type Entry } from '../lib/types'
   import { headline, symptomName } from '../lib/summary'
+  import { recentTags } from '../lib/vocab'
   import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
 
@@ -23,6 +24,8 @@
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const active = live(() => null, () => db.entries.filter((e) => e.ongoing).sortBy('at'), [])
   const count = live(() => null, () => db.entries.count(), -1)
+  const recent = live(() => null, () => db.entries.orderBy('createdAt').reverse().limit(30).toArray(), [])
+  const suggestions = $derived(recentTags(recent.value, tags.value))
   const oldest = live(() => null, async () => (await db.entries.orderBy('createdAt').first())?.createdAt ?? null, null)
 
   async function backupNow() {
@@ -166,7 +169,14 @@
     </div>
   {/if}
 
-  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value} />
+  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value} {suggestions} />
+
+  {#if !prefs.hintDismissed}
+    <p class="row hint small muted">
+      <span class="grow">{t('log.hint')}</span>
+      <button class="chip small outline" onclick={() => { prefs.hintDismissed = true; savePrefs() }} aria-label={t('log.hintDismiss')}>✕</button>
+    </p>
+  {/if}
 
   <div class="actions">
     <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
@@ -205,6 +215,7 @@
   .today .label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 12px; }
   .tchip { padding-left: 6px; gap: 6px; font-variant-numeric: tabular-nums; }
   .dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-weight: 700; font-size: 12px; }
+  .hint { margin-top: -4px; }
   .actions {
     position: sticky;
     bottom: 0;

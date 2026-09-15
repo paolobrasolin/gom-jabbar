@@ -4,11 +4,11 @@
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { endEpisode, reopenEpisode, updateEpisode, durationMs } from '../lib/entries'
+  import { endEpisode, reopenEpisode, updateEpisode, updateEntry, durationMs } from '../lib/entries'
   import { headline, symptomName } from '../lib/summary'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import { formatDuration, formatTime } from '../lib/time'
-  import { PAIN, type Entry, type Symptom, type Tag } from '../lib/types'
+  import { PAIN, type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
 
   let {
     entry = $bindable(null),
@@ -21,6 +21,8 @@
   /** One level per symptom the episode tracks: pain always, the others when set above 0. */
   let levels = $state<Record<string, number>>({})
   let current = $state.raw<Entry | null>(null)
+  /** The entry's tags as edited in the sheet; saved with Aggiorna and Termina. */
+  let picked = $state<string[]>([])
 
   $effect(() => {
     if (entry) {
@@ -29,6 +31,7 @@
       const lv = Object.fromEntries(Object.entries(entry.readings).filter(([id, v]) => id === PAIN || v > 0))
       if (!(PAIN in lv)) lv[PAIN] = 0
       levels = lv
+      picked = [...entry.tags]
       open = true
     }
   })
@@ -38,6 +41,12 @@
 
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const hl = $derived(current ? headline(current.readings) : { id: PAIN, value: 0 })
+  /** Remedies happen in response to pain, so they are offered here; context tags stay in the edit sheet. */
+  const remedyGroups: TagGroup[] = ['intervention', 'medication']
+  const remedies = $derived(remedyGroups.map((g) => ({ g, items: tagDefs.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
+  function toggleTag(id: string) {
+    picked = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]
+  }
   const points = $derived((current?.history ?? []).filter((h) => typeof h.readings[hl.id] === 'number'))
   /** Sliders in vocabulary order, pain first; a symptom missing from the vocabulary still gets one. */
   const tracked = $derived.by(() => {
@@ -49,7 +58,7 @@
   async function update() {
     if (!current) return
     const before = current
-    await updateEpisode(current.id, { ...levels })
+    await updateEpisode(current.id, { ...levels }, undefined, picked)
     haptic(20)
     open = false
     showToast(t('episode.updated'), {
@@ -59,15 +68,15 @@
   }
   async function updateEpisodeUndo(before: Entry) {
     const { db } = await import('../lib/db')
-    await db.entries.update(before.id, { readings: before.readings, areas: before.areas, history: before.history, updatedAt: new Date().toISOString() })
+    await db.entries.update(before.id, { readings: before.readings, areas: before.areas, history: before.history, tags: before.tags, updatedAt: new Date().toISOString() })
   }
   async function end() {
     if (!current) return
-    const id = current.id
-    await endEpisode(id)
+    const before = current
+    await endEpisode(before.id, undefined, picked)
     haptic(20)
     open = false
-    showToast(t('episode.ended'), { label: t('log.undo'), run: () => void reopenEpisode(id) })
+    showToast(t('episode.ended'), { label: t('log.undo'), run: () => void reopenEpisode(before.id).then(() => updateEntry(before.id, { tags: before.tags })) })
   }
 </script>
 
@@ -86,6 +95,16 @@
     {#each tracked as s (s.id)}
       <IntensitySlider compact={s.id !== PAIN} label={s.id === PAIN ? s.label : s.label.charAt(0).toUpperCase() + s.label.slice(1)} value={levels[s.id]} onchange={(v) => (levels[s.id] = v)} />
     {/each}
+    {#each remedies as { g, items } (g)}
+      <div>
+        <p class="small muted group-title">{t(`tag.group.${g}`)}</p>
+        <div class="chips">
+          {#each items as tag (tag.id)}
+            <button class="chip small" aria-pressed={picked.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+          {/each}
+        </div>
+      </div>
+    {/each}
     <div class="row">
       <button class="btn" onclick={end}>{t('episode.end')}</button>
       <button class="btn primary grow" onclick={update}>{t('episode.update')}</button>
@@ -96,6 +115,7 @@
 
 <style>
   .history { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .now { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; margin-bottom: -6px; }
   .link { background: none; color: var(--accent); min-height: 40px; }
 </style>
