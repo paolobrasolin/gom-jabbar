@@ -286,7 +286,7 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 ## 11. Testing
 
 - **Unit (Vitest)**: data layer on `fake-indexeddb` (CRUD, episodes, migrations), stats and correlation functions, export/import round trip and merge semantics, region helpers (mirror, limb shortcuts, full body), area operations, i18n key parity.
-- **Component (Testing Library)**: the fast path (select region, set intensity, save, entry appears), undo, episode end, the details sheet, presets.
+- **Component (Testing Library)**: every screen and sheet, against the real Dexie on `fake-indexeddb`: the fast path (select region, set intensity, save, entry appears), undo, the details sheet, presets, the episode sheet (history, update and end with undo, hand-off to edit), the diary (day groups, row content, load more, edit and delete with undo), trends (ranges, heatmap, chart tap, tag comparison, symptom means), the report (numbers, sections, share as one HTML file), settings (language, theme, backup export and import with merge, replace and undo) and the vocabulary editor.
 - **Manual checklist** before each release: see `CHECKLIST.md`.
 - **Bundle size gate**: `npm run size` fails the build above 150 KB gzipped JS; it runs in CI.
 - No e2e framework in v1.
