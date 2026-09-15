@@ -7,7 +7,6 @@
   "log.saved": "Salvato",
   "log.undo": "Annulla",
   "log.ongoing": "In corso",
-  "log.details": "Sintomi · rimedi · note",
   "log.note": "Note",
   "log.notePlaceholder": "Aggiungi una nota…",
   "log.mirror": "Entrambi i lati",
@@ -84,8 +83,6 @@
   "settings.presets": "Preset",
   "trends.presets": "Per preset",
   "trends.presetsHint": "Solo i momenti registrati dal preset; i giorni senza restano vuoti.",
-  "log.hint": "Altri sintomi, rimedi e note: bottone qui sotto.",
-  "log.hintDismiss": "Nascondi",
   "log.suggestions": "Tag recenti",
   "log.noArea": "Nessuna zona: tocca le figure",
   "help.limb": "Tieni premuta una zona per selezionare tutto l'arto.",
@@ -193,5 +190,7 @@
   "report.share": "Condividi file",
   "report.shared": "Report condiviso",
   "preset.fromEntry": "Crea preset da questa voce",
-  "log.noteWord": "nota"
+  "log.clear": "Azzera",
+  "log.cleared": "Modulo azzerato",
+  "log.allTags": "Tutti i tag"
 }

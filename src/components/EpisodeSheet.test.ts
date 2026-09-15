@@ -9,7 +9,6 @@ let db: ReturnType<typeof resetDb>
 beforeEach(() => {
   db = resetDb()
   prefs.lang = 'it'
-  prefs.hintDismissed = true
 })
 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()

@@ -12,8 +12,6 @@ type Prefs = {
   backupSnoozedUntil: string | null
   /** First launch as an installed app; set once, hides the install nudge for good. */
   installedAt: string | null
-  /** The one hint line on the log screen was dismissed. */
-  hintDismissed: boolean
 }
 
 const KEY = 'gj.prefs'
@@ -32,7 +30,6 @@ function load(): Prefs {
     lastBackupAt: null,
     backupSnoozedUntil: null,
     installedAt: null,
-    hintDismissed: false,
   }
   try {
     const raw = localStorage.getItem(KEY)

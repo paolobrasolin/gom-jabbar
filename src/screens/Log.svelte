@@ -1,6 +1,5 @@
 <script lang="ts">
   import EntryForm from '../components/EntryForm.svelte'
-  import EntryDetails from '../components/EntryDetails.svelte'
   import EntrySummary from '../components/EntrySummary.svelte'
   import EditSheet from '../components/EditSheet.svelte'
   import EpisodeSheet from '../components/EpisodeSheet.svelte'
@@ -10,7 +9,7 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
-  import { emptyDraft, draftToInput, detailCount, detailText } from '../lib/draft'
+  import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
   import { addEntry, deleteEntry, endEpisode, reopenEpisode, durationMs } from '../lib/entries'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
@@ -18,7 +17,6 @@
   import { PAIN, type Entry, type Preset } from '../lib/types'
   import { lastByPreset } from '../lib/presets'
   import { headline, symptomName } from '../lib/summary'
-  import { recentTags } from '../lib/vocab'
   import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
 
@@ -27,7 +25,6 @@
   const active = live(() => null, () => db.entries.filter((e) => e.ongoing).sortBy('at'), [])
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
   const lastBy = live(() => null, async () => lastByPreset(await db.entries.filter((e) => !!e.preset).toArray()), {} as Record<string, Entry>)
-  const recent = live(() => null, () => db.entries.orderBy('createdAt').reverse().limit(30).toArray(), [])
   const oldest = live(() => null, async () => (await db.entries.orderBy('createdAt').first())?.createdAt ?? null, null)
 
   async function backupNow() {
@@ -75,10 +72,10 @@
   )
 
   let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
-  let detailsOpen = $state(false)
-  const details = $derived(detailCount(draft))
-  const suggestions = $derived(recentTags(recent.value, tags.value, 5, draft.tags))
-  const detailLine = $derived(detailText(draft, symptoms.value, tags.value, tl, t('log.noteWord')))
+  /** Anything worth clearing: areas, a time, a tag, a note, a reading other than pain. The pain level alone is not. */
+  const dirty = $derived(
+    draft.areas.length > 0 || draft.at !== null || draft.tags.length > 0 || draft.note.trim() !== '' || Object.entries(draft.readings).some(([id, v]) => id !== PAIN && v > 0),
+  )
   let saving = $state(false)
   let editing = $state.raw<Entry | null>(null)
   let episode = $state.raw<Entry | null>(null)
@@ -87,8 +84,16 @@
 
   function reset() {
     draft = emptyDraft({ ongoing: draft.ongoing, pain: draft.readings[PAIN] ?? 5 })
-    detailsOpen = false
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
+  }
+
+  /** Azzera: back to an empty form, undoable from the toast (no confirmation dialogs, §6.1). */
+  function clear() {
+    const before = $state.snapshot(draft) as EntryDraft
+    draft = emptyDraft({ ongoing: draft.ongoing })
+    document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
+    haptic(20)
+    showToast(t('log.cleared'), { label: t('log.undo'), run: () => (draft = before) })
   }
 
   async function save() {
@@ -180,33 +185,13 @@
     </div>
   {/if}
 
-  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value} {suggestions} />
-
-  {#if !prefs.hintDismissed}
-    <p class="row hint small muted">
-      <span class="grow">{t('log.hint')}</span>
-      <button class="chip small outline" onclick={() => { prefs.hintDismissed = true; savePrefs() }} aria-label={t('log.hintDismiss')}>✕</button>
-    </p>
-  {/if}
+  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value} />
 
   <div class="actions">
-    {#if detailLine}<p class="small muted summary" data-testid="details-summary">{detailLine}</p>{/if}
-    <div class="row buttons">
-      <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
-      <button class="btn details" onclick={() => (detailsOpen = true)}>
-        {t('log.details')}
-        {#if details}<span class="badge">{details}</span>{/if}
-      </button>
-    </div>
+    <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>
+    <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
   </div>
 </div>
-
-<Sheet bind:open={detailsOpen} title={t('log.details')}>
-  <EntryDetails bind:draft symptoms={symptoms.value} tags={tags.value} />
-  <div class="sheet-actions">
-    <button class="btn primary block" onclick={save} disabled={saving}>{t('log.save')}</button>
-  </div>
-</Sheet>
 <PresetSheet bind:preset={presetOpen} last={presetOpen ? lastBy.value[presetOpen.id] : undefined} symptoms={symptoms.value} tagDefs={tags.value} />
 <EpisodeSheet bind:entry={episode} tagDefs={tags.value} symptoms={symptoms.value} onedit={(e) => (editing = e)} />
 <EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
@@ -216,7 +201,7 @@
 </Sheet>
 
 <style>
-  .log { padding-bottom: 8px; }
+  .log { padding-bottom: 0; } /* the sticky bar carries the bottom padding, so nothing scrolls out under it */
   .episodes { display: flex; flex-direction: column; gap: 8px; }
   .nudge { padding: 8px 8px 8px 12px; }
   .episode { padding: 8px 8px 8px 12px; }
@@ -229,34 +214,16 @@
   .today .label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 12px; }
   .tchip { padding-left: 6px; gap: 6px; font-variant-numeric: tabular-nums; }
   .dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-weight: 700; font-size: 12px; }
-  .hint { margin-top: -4px; }
   .actions {
     position: sticky;
     bottom: 0;
+    z-index: 1; /* above the slider thumbs scrolling under it */
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding-top: 10px;
-    /* Only the top 10px fade: the summary line must sit on solid ground, or the strip scrolls through it. */
-    background: linear-gradient(to top, var(--bg) calc(100% - 10px), transparent);
+    gap: 10px;
+    padding: 8px 0;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
     margin-top: auto;
   }
-  .actions .buttons { gap: 10px; }
-  .summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
-  .sheet-actions {
-    position: sticky;
-    bottom: 0;
-    padding-top: 8px;
-    margin-bottom: -4px;
-    background: linear-gradient(to top, var(--bg) 70%, transparent);
-  }
-  .sheet-actions .btn { min-height: 56px; font-size: 18px; }
   .actions .btn.primary { min-height: 56px; font-size: 18px; }
-  .actions .btn:not(.primary) { min-height: 56px; padding: 0 14px; }
-  .actions .details { font-size: 15px; padding: 0 12px; }
-  .badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
-    background: var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 700;
-  }
+  .actions .btn:not(.primary) { min-height: 56px; padding: 0 18px; }
 </style>
