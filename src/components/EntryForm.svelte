@@ -163,7 +163,7 @@
   <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
 
   {#snippet expander()}
-    <button class="chip small outline expand" aria-pressed={allTags} aria-label={t('log.allTags')} onclick={() => (allTags = !allTags)}>
+    <button class="chip small expand" aria-expanded={allTags} aria-label={t('log.allTags')} onclick={() => (allTags = !allTags)}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         {#if allTags}<path d="M6 15l6-6 6 6" />{:else}<path d="M6 9l6 6 6-6" />{/if}
       </svg>
@@ -216,7 +216,7 @@
   .chip:disabled { opacity: 0.4; }
   .groups { display: flex; flex-direction: column; gap: 12px; }
   .head { margin-bottom: 6px; min-height: 34px; }
-  .expand { padding: 0 10px; flex: none; }
+  .expand { padding: 0 10px; flex: none; color: var(--ink-2); }
   .group-title { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   /* One line that grows with the text; no drag handle on a phone. */
   .note { field-sizing: content; min-height: var(--tap); max-height: 40dvh; resize: none; }
