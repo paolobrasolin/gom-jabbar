@@ -60,8 +60,11 @@ export async function move(table: Table, id: string, dir: -1 | 1): Promise<void>
 /**
  * The tags to suggest without opening anything: the most recently used first, then the first
  * enabled tags in vocabulary order to fill `n` slots. `entries` in any order; newest wins.
+ * `selected` tags (the draft's) that did not make the cut are appended, so what the details
+ * sheet set stays visible and can be toggled off without reopening it. Appended, not moved to
+ * the front: the strip must not reorder under a finger that just tapped it.
  */
-export function recentTags(entries: Entry[], tags: Tag[], n = 5): Tag[] {
+export function recentTags(entries: Entry[], tags: Tag[], n = 5, selected: string[] = []): Tag[] {
   const enabled = tags.filter((t) => t.enabled)
   const byId = new Map(enabled.map((t) => [t.id, t]))
   const out: Tag[] = []
@@ -75,5 +78,12 @@ export function recentTags(entries: Entry[], tags: Tag[], n = 5): Tag[] {
   }
   for (const e of [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) e.tags.forEach(push)
   for (const t of enabled) push(t.id)
+  for (const id of selected) {
+    const t = byId.get(id)
+    if (t && !seen.has(id)) {
+      seen.add(id)
+      out.push(t)
+    }
+  }
   return out
 }

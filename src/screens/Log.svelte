@@ -10,13 +10,13 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
-  import { emptyDraft, draftToInput, detailCount } from '../lib/draft'
+  import { emptyDraft, draftToInput, detailCount, detailText } from '../lib/draft'
   import { addEntry, deleteEntry, endEpisode, reopenEpisode, durationMs } from '../lib/entries'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration, formatTime, dayKey } from '../lib/time'
   import { PAIN, type Entry, type Preset } from '../lib/types'
-  import { addPreset, presetFromDraft, lastByPreset } from '../lib/presets'
+  import { lastByPreset } from '../lib/presets'
   import { headline, symptomName } from '../lib/summary'
   import { recentTags } from '../lib/vocab'
   import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
@@ -28,7 +28,6 @@
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
   const lastBy = live(() => null, async () => lastByPreset(await db.entries.filter((e) => !!e.preset).toArray()), {} as Record<string, Entry>)
   const recent = live(() => null, () => db.entries.orderBy('createdAt').reverse().limit(30).toArray(), [])
-  const suggestions = $derived(recentTags(recent.value, tags.value))
   const oldest = live(() => null, async () => (await db.entries.orderBy('createdAt').first())?.createdAt ?? null, null)
 
   async function backupNow() {
@@ -78,6 +77,8 @@
   let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
   let detailsOpen = $state(false)
   const details = $derived(detailCount(draft))
+  const suggestions = $derived(recentTags(recent.value, tags.value, 5, draft.tags))
+  const detailLine = $derived(detailText(draft, symptoms.value, tags.value, tl, t('log.noteWord')))
   let saving = $state(false)
   let editing = $state.raw<Entry | null>(null)
   let episode = $state.raw<Entry | null>(null)
@@ -106,16 +107,6 @@
   }
 
   let presetOpen = $state.raw<Preset | null>(null)
-  let presetName = $state('')
-  async function createPreset() {
-    const name = presetName.trim()
-    if (!name) return
-    await addPreset(presetFromDraft(draft, name))
-    presetName = ''
-    detailsOpen = false
-    haptic(20)
-    showToast(t('preset.created'))
-  }
 
   async function end(id: string) {
     await endEpisode(id)
@@ -199,21 +190,22 @@
   {/if}
 
   <div class="actions">
-    <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
-    <button class="btn details" onclick={() => (detailsOpen = true)}>
-      {t('log.details')}
-      {#if details}<span class="badge">{details}</span>{/if}
-    </button>
+    {#if detailLine}<p class="small muted summary" data-testid="details-summary">{detailLine}</p>{/if}
+    <div class="row buttons">
+      <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
+      <button class="btn details" onclick={() => (detailsOpen = true)}>
+        {t('log.details')}
+        {#if details}<span class="badge">{details}</span>{/if}
+      </button>
+    </div>
   </div>
 </div>
 
 <Sheet bind:open={detailsOpen} title={t('log.details')}>
   <EntryDetails bind:draft symptoms={symptoms.value} tags={tags.value} />
-  <div class="row newpreset">
-    <input class="grow" type="text" placeholder={t('preset.name')} aria-label={t('preset.name')} bind:value={presetName} onkeydown={(e) => e.key === 'Enter' && createPreset()} />
-    <button class="chip small" disabled={!presetName.trim()} onclick={createPreset}>{t('preset.create')}</button>
+  <div class="sheet-actions">
+    <button class="btn primary block" onclick={save} disabled={saving}>{t('log.save')}</button>
   </div>
-  <p class="small muted">{t('preset.hint')}</p>
 </Sheet>
 <PresetSheet bind:preset={presetOpen} last={presetOpen ? lastBy.value[presetOpen.id] : undefined} symptoms={symptoms.value} tagDefs={tags.value} />
 <EpisodeSheet bind:entry={episode} tagDefs={tags.value} symptoms={symptoms.value} onedit={(e) => (editing = e)} />
@@ -234,8 +226,6 @@
   .today { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; min-height: 34px; align-items: center; }
   .today::-webkit-scrollbar, .presets::-webkit-scrollbar { display: none; }
   .presets { flex: none; min-height: 38px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
-  .newpreset input { min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); min-width: 0; }
-  .newpreset .chip:disabled { opacity: 0.4; }
   .today .label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 12px; }
   .tchip { padding-left: 6px; gap: 6px; font-variant-numeric: tabular-nums; }
   .dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-weight: 700; font-size: 12px; }
@@ -244,11 +234,23 @@
     position: sticky;
     bottom: 0;
     display: flex;
-    gap: 10px;
-    padding-top: 8px;
-    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 10px;
+    /* Only the top 10px fade: the summary line must sit on solid ground, or the strip scrolls through it. */
+    background: linear-gradient(to top, var(--bg) calc(100% - 10px), transparent);
     margin-top: auto;
   }
+  .actions .buttons { gap: 10px; }
+  .summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+  .sheet-actions {
+    position: sticky;
+    bottom: 0;
+    padding-top: 8px;
+    margin-bottom: -4px;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+  }
+  .sheet-actions .btn { min-height: 56px; font-size: 18px; }
   .actions .btn.primary { min-height: 56px; font-size: 18px; }
   .actions .btn:not(.primary) { min-height: 56px; padding: 0 14px; }
   .actions .details { font-size: 15px; padding: 0 12px; }

@@ -1,4 +1,4 @@
-import { PAIN, type Entry } from './types'
+import { PAIN, type Entry, type LocalizedString, type Symptom, type Tag } from './types'
 import type { Area } from './areas'
 import type { EntryInput } from './entries'
 
@@ -54,4 +54,20 @@ export function draftToInput(d: EntryDraft): EntryInput {
 export function detailCount(d: EntryDraft): number {
   const readings = Object.entries(d.readings).filter(([id, v]) => id !== PAIN && v > 0).length
   return readings + d.tags.length + (d.note.trim() ? 1 : 0)
+}
+
+/**
+ * One line naming what the details sheet holds, so closing it visibly loses nothing:
+ * "Gonfiore 3 · Riposo · nota". Readings other than pain above 0 in symptom order, tags in
+ * vocabulary order, then `noteWord` when the note is not blank. Empty when nothing is set.
+ */
+export function detailText(d: EntryDraft, symptoms: Symptom[], tags: Tag[], tl: (s: LocalizedString) => string, noteWord: string): string {
+  const parts: string[] = []
+  for (const s of symptoms) {
+    const v = d.readings[s.id] ?? 0
+    if (s.id !== PAIN && v > 0) parts.push(`${tl(s.label)} ${v}`)
+  }
+  for (const t of tags) if (d.tags.includes(t.id)) parts.push(tl(t.label))
+  if (d.note.trim()) parts.push(noteWord)
+  return parts.join(' · ')
 }
