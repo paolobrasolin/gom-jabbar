@@ -72,17 +72,20 @@ export async function reopenEpisode(id: string): Promise<Entry | undefined> {
   return updateEntry(id, { ongoing: true, endedAt: null })
 }
 
-/** Record a new overall level on an ongoing episode. A single area follows it; several keep their initial split. */
-export async function updateEpisodeIntensity(id: string, pain: number, at: string = now()): Promise<Entry | undefined> {
+/**
+ * Record new readings on an ongoing episode. Unmentioned symptoms keep their level. A single area
+ * follows the pain reading; several keep their initial split. The first update also stores where
+ * the episode started, so the history is the complete trail.
+ */
+export async function updateEpisode(id: string, readings: Record<string, number>, at: string = now()): Promise<Entry | undefined> {
   const e = await db.entries.get(id)
   if (!e) return undefined
+  const next = { ...e.readings, ...readings }
+  const pain = next[PAIN] ?? 0
   const areas = e.areas.length === 1 ? [{ ...e.areas[0], intensity: pain }] : e.areas
-  await db.entries.update(id, {
-    readings: { ...e.readings, [PAIN]: pain },
-    areas,
-    history: [...(e.history ?? []), { at, pain }],
-    updatedAt: now(),
-  })
+  const history = e.history?.length ? [...e.history] : [{ at: e.at, readings: { ...e.readings } }]
+  history.push({ at, readings: next })
+  await db.entries.update(id, { readings: next, areas, history, updatedAt: now() })
   return db.entries.get(id)
 }
 

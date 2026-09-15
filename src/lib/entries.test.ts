@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { resetDb } from './db'
-import { addEntry, updateEntry, deleteEntry, restoreEntry, endEpisode, activeEpisodes, lastEntry, repeatEntry, durationMs, makeEntry, updateEpisodeIntensity } from './entries'
+import { addEntry, updateEntry, deleteEntry, restoreEntry, endEpisode, reopenEpisode, activeEpisodes, lastEntry, repeatEntry, durationMs, makeEntry, updateEpisode } from './entries'
 import { draftFromEntry, draftToInput, emptyDraft } from './draft'
 
 let db: ReturnType<typeof resetDb>
@@ -42,14 +42,24 @@ describe('entries', () => {
     expect(durationMs(makeEntry({}))).toBeNull()
   })
 
-  it('records intensity updates on an episode', async () => {
-    const e = await addEntry({ ongoing: true, areas: [{ regions: ['thigh.l'], intensity: 7 }] })
-    const u = await updateEpisodeIntensity(e.id, 4, '2026-01-01T12:00:00.000Z')
-    expect(u?.readings.pain).toBe(4)
+  it('records reading updates on an episode, starting the history from where it began', async () => {
+    const e = await addEntry({ ongoing: true, at: '2026-01-01T10:00:00.000Z', readings: { swelling: 3 }, areas: [{ regions: ['thigh.l'], intensity: 7 }] })
+    const u = await updateEpisode(e.id, { pain: 4, swelling: 6 }, '2026-01-01T12:00:00.000Z')
+    expect(u?.readings).toEqual({ pain: 4, swelling: 6 })
     expect(u?.areas[0].intensity).toBe(4)
-    expect(u?.history).toEqual([{ at: '2026-01-01T12:00:00.000Z', pain: 4 }])
+    expect(u?.history).toEqual([
+      { at: '2026-01-01T10:00:00.000Z', readings: { pain: 7, swelling: 3 } },
+      { at: '2026-01-01T12:00:00.000Z', readings: { pain: 4, swelling: 6 } },
+    ])
+    const w = await updateEpisode(e.id, { pain: 2 }, '2026-01-01T14:00:00.000Z')
+    expect(w?.readings).toEqual({ pain: 2, swelling: 6 })
+    expect(w?.history).toHaveLength(3)
+    await endEpisode(e.id)
+    const back = await reopenEpisode(e.id)
+    expect(back?.ongoing).toBe(true)
+    expect(back?.endedAt).toBeNull()
     const two = await addEntry({ ongoing: true, areas: [{ regions: ['thigh.l'], intensity: 7 }, { regions: ['chest'], intensity: 2 }] })
-    const v = await updateEpisodeIntensity(two.id, 9)
+    const v = await updateEpisode(two.id, { pain: 9 })
     expect(v?.readings.pain).toBe(9)
     expect(v?.areas.map((a) => a.intensity)).toEqual([7, 2])
   })

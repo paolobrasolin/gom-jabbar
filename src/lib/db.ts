@@ -22,6 +22,18 @@ export class GomJabbarDB extends Dexie {
           delete e.regions
         }),
       )
+    // 3: history points `{ at, pain }` became `{ at, readings: { pain } }` so an episode can track every symptom.
+    this.version(3)
+      .stores({})
+      .upgrade((tx) =>
+        tx.table('entries').toCollection().modify((e: Entry) => {
+          if (!Array.isArray(e.history)) return
+          e.history = e.history.map((h) => {
+            const { pain, ...rest } = h as unknown as { at: string; pain?: number; readings?: Record<string, number> }
+            return rest.readings || pain === undefined ? h : { ...rest, readings: { pain } }
+          })
+        }),
+      )
     this.on('populate', () => {
       this.symptoms.bulkAdd(DEFAULT_SYMPTOMS)
       this.tags.bulkAdd(DEFAULT_TAGS)

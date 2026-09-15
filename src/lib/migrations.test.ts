@@ -14,15 +14,17 @@ import { db, resetDb } from './db'
 import { parseImport, applyImport, buildExport, EXPORT_VERSION } from './backup'
 import exportV1 from '../test/fixtures/export-v1.json'
 import exportV2 from '../test/fixtures/export-v2.json'
+import exportV3 from '../test/fixtures/export-v3.json'
 import dbV1 from '../test/fixtures/db-v1.json'
 import dbV2 from '../test/fixtures/db-v2.json'
+import dbV3 from '../test/fixtures/db-v3.json'
 
 type Row = Record<string, unknown>
 type DbFixture = { version: number; stores: Record<string, string>; tables: Record<string, Row[]> }
 type ExportFixture = { exportedAt: string; vocabulary: unknown; entries: Row[] }
 
-const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2 }
-const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2 }
+const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3 }
+const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3 }
 
 /**
  * The documented, deliberate change from version N to N+1 for an entry.
@@ -34,6 +36,8 @@ const UPGRADES: Record<number, (e: Row) => Row> = {
     ...e,
     areas: Array.isArray(regions) && regions.length ? [{ regions, intensity: (e.readings as Row | undefined)?.pain ?? 0 }] : [],
   }),
+  // 2 → 3: history points `{ at, pain }` became `{ at, readings: { pain } }`, so an episode can track every symptom.
+  2: (e) => (Array.isArray(e.history) ? { ...e, history: (e.history as Row[]).map(({ pain, ...h }) => ({ ...h, readings: { pain } })) } : e),
 }
 
 /** What an entry from `from` must look like today. */

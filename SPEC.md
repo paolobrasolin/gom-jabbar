@@ -68,6 +68,7 @@ type Entry = {
   ongoing: boolean;      // true = episode still active (endedAt is null)
   readings: Record<SymptomId, number>; // e.g. { pain: 7, swelling: 4 }, 0..10
   areas: Area[];         // [] = unspecified; see below
+  history?: { at: string; readings: Record<SymptomId, number> }[]; // episodes only, see §5.5
   tags: TagId[];
   note: string;
   createdAt: string;
@@ -83,6 +84,8 @@ Rules:
 - **Areas.** `type Area = { regions: RegionId[]; intensity: number }`. An entry has zero or more areas, each a set of regions sharing one level. `readings.pain` is the max over areas when there are any, otherwise a free value (used for "no pain today" or entries with no location).
 - An area with `regions: ['*']` means full body and is always the only area.
 - Intensity is 0..10 integer. 0 is allowed (useful to record "no pain today").
+- **Areas are "where", readings are "what".** "Legs, pain 0, swelling 3" means legs swollen, no pain. There is no per-area reading and no symptom switch on the slider; two areas with different symptoms are two entries.
+- **Headline reading.** An entry's headline is its highest reading; pain wins ties. Every list (today chips, diary rows, episode cards, report) shows the headline value in the pill, coloured by it, and names the symptom when it is not pain: `3 gonfiore · gambe` (#3).
 
 ### 5.2 Vocabulary (editable, shipped with defaults)
 
@@ -155,7 +158,7 @@ Regions are grouped into **areas**, each with its own level. The slider always e
 
 ### 5.5 Episode updates
 
-Tapping an active episode card opens a sheet with its summary, its level timeline, a slider and **Aggiorna** / **Termina**, plus a **Modifica zone e note** link to the full edit sheet (§6.2). Updating appends `{ at, pain }` to `entry.history` and sets `readings.pain`. With a single area, that area follows; with several, the initial split is kept. The diary shows the level trail as "7 → 4 → 2".
+Tapping an active episode card opens a sheet with its summary, its level timeline, one slider per symptom the entry tracks (pain always, the others when above 0) and **Aggiorna** / **Termina**, plus a **Modifica zone e note** link to the full edit sheet (§6.2). **Aggiorna** updates every slider's reading at once. The first update stores the starting readings as the first point of `entry.history`, then each update appends `{ at, readings }` with the full readings at that moment, so the history is the complete trail. With a single area, that area follows the pain reading; with several, the initial split is kept. The diary shows the headline symptom's trail as "7 → 4 → 2". Histories written before export version 3 held `{ at, pain }` and were converted, so their first point is the first update, not the start.
 
 ## 6. Screens
 
@@ -165,8 +168,8 @@ Bottom tab bar, four tabs, thumb reachable. The app opens on **Log**.
 
 This screen is the product. Layout top to bottom:
 
-1. **Active episode cards** (only if any): "7 · gambe · da 3h" with a **Termina** button. Tap the card → update sheet (§5.5).
-2. **Today strip**: "Oggi" followed by one small chip per entry logged today (level and time). Tap to edit. Shows "niente ancora" when empty.
+1. **Active episode cards** (only if any): "7 · gambe · da 3h", or "3 · gonfiore · gambe · da 3h" when the headline is not pain (§5.1), with a **Termina** button. Tap the card → update sheet (§5.5).
+2. **Today strip**: "Oggi" followed by one small chip per entry logged today (headline level, symptom name when not pain, time). Tap to edit. Shows "niente ancora" when empty.
    Under it, while the app is not installed (no `display-mode: standalone`, no `installedAt` pref): an inline **install nudge** in the backup banner style, "Aggiungi alla schermata Home per tenere i dati al sicuro", with **Aggiungi** and a dismiss. It shows on every launch until the app is installed; dismiss hides it for the current session only. Aggiungi replays the browser install prompt when captured, else opens the how-to sheet (§4.1).
 3. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
 4. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
@@ -181,7 +184,7 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 ### 6.2 Diary
 
-- Reverse-chronological list grouped by day. Each row: time, intensity as a coloured pill, region summary ("gambe, fianchi", "tutto il corpo"), tag icons, note preview, duration if episode.
+- Reverse-chronological list grouped by day. Each row: time, headline reading as a coloured pill (§5.1), the symptom name when it is not pain, region summary ("gambe, fianchi", "tutto il corpo"), tags, note preview, duration and level trail if episode.
 - Tap a row → edit sheet, same form as Log, prefilled, with Delete (undo toast).
 - Shows the last 30 days; a **Mostra altre** button at the bottom loads 60 more days at a time while older entries exist.
 - Search by note text and a tag filter are planned (#10).
@@ -226,7 +229,7 @@ Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** sha
 ```json
 {
   "app": "gom-jabbar",
-  "version": 1,
+  "version": 3,
   "exportedAt": "2026-09-13T18:00:00Z",
   "vocabulary": { "symptoms": [], "tags": [] },
   "entries": []

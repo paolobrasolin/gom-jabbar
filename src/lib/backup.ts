@@ -1,10 +1,10 @@
 import { db } from './db'
-import { PAIN, type Entry, type Symptom, type Tag, type Lang } from './types'
+import { PAIN, type Entry, type HistoryPoint, type Symptom, type Tag, type Lang } from './types'
 import { regionText } from './summary'
 import type { Area } from './areas'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 
-export const EXPORT_VERSION = 2
+export const EXPORT_VERSION = 3
 
 export type ExportFile = {
   app: 'gom-jabbar'
@@ -28,7 +28,7 @@ export function exportFilename(kind: 'json' | 'csv' | 'html', d = new Date()): s
   return `gom-jabbar-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.${kind}`
 }
 
-/** Parse and validate an export file. Accepts version 1 (regions) and upgrades it. Throws on garbage. */
+/** Parse and validate an export file. Accepts every version ever written and upgrades it. Throws on garbage. */
 export function parseImport(text: string): ExportFile {
   let raw: unknown
   try {
@@ -51,6 +51,17 @@ export function parseImport(text: string): ExportFile {
   }
 }
 
+type Row = Record<string, unknown>
+
+/** Before version 3 a history point carried a single `pain` value; it became `readings` (converted, never dropped). */
+function normalizePoint(h: Row, version: number): HistoryPoint {
+  if (version < 3 && !h.readings && typeof h.pain === 'number') {
+    const { pain, ...rest } = h
+    return { ...rest, readings: { [PAIN]: pain } } as HistoryPoint
+  }
+  return h as HistoryPoint
+}
+
 function normalizeEntry(e: Record<string, unknown>, version: number): Entry {
   if (typeof e.id !== 'string' || typeof e.at !== 'string') throw new Error('invalid-entry')
   const readings = (e.readings && typeof e.readings === 'object' ? e.readings : { [PAIN]: 0 }) as Record<string, number>
@@ -70,7 +81,7 @@ function normalizeEntry(e: Record<string, unknown>, version: number): Entry {
     areas,
     tags: Array.isArray(e.tags) ? (e.tags as string[]) : [],
     note: typeof e.note === 'string' ? e.note : '',
-    history: Array.isArray(e.history) ? (e.history as Entry['history']) : undefined,
+    history: Array.isArray(e.history) ? (e.history as Row[]).map((h) => normalizePoint(h, version)) : undefined,
     createdAt: typeof e.createdAt === 'string' ? e.createdAt : e.at,
     updatedAt: ts,
   }
@@ -139,7 +150,7 @@ export function toCsv(entries: Entry[], symptoms: Symptom[], tags: Tag[], lang: 
     e.tags.join('|'),
     e.tags.map((id) => tagLabel.get(id) ?? id).join('|'),
     e.note,
-    (e.history ?? []).map((h) => `${h.at}:${h.pain}`).join('|'),
+    (e.history ?? []).map((h) => `${h.at}:${symIds.map((id) => h.readings[id] ?? '').join(';')}`).join('|'),
   ])
   const esc = (v: string) => (/[",\n\r]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v)
   return [head, ...rows].map((r) => r.map(esc).join(',')).join('\r\n') + '\r\n'
