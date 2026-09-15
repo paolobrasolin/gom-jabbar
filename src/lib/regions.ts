@@ -81,7 +81,11 @@ const UPPERARM = poly(10, [20, 110], [47, 104], [44, 166], [22, 168])
 const ELBOW = ell(33, 174, 14, 10)
 const FOREARM = poly(10, [20, 182], [44, 182], [40, 242], [24, 242])
 const HAND = ell(32, 260, 14, 18)
-const HIP = poly(10, [52, 192], [C, 192], [C, 226], [50, 228])
+/** Front hip: a strip on the outer edge of the pelvis, where hips and flanks are. */
+const HIP = poly(8, [48, 192], [66, 192], [65, 228], [50, 228])
+/** Back: the buttock fills the inner half, as before. */
+const BUTTOCK = poly(10, [52, 192], [C, 192], [C, 226], [50, 228])
+const PELVIS = poly(10, [68, 192], [C + 17, 192], [C + 19, 226], [66, 226])
 const THIGH = poly(12, [52, 230], [C - 1, 230], [C - 3, 306], [56, 306])
 const KNEE = ell(69, 316, 15, 11)
 const SHIN = poly(10, [57, 328], [81, 328], [78, 384], [60, 384])
@@ -98,6 +102,7 @@ const FRONT: Base[] = [
   { id: 'elbow', group: 'arm', shape: ELBOW, sided: true },
   { id: 'forearm', group: 'arm', shape: FOREARM, sided: true },
   { id: 'hand', group: 'arm', shape: HAND, sided: true },
+  { id: 'pelvis', group: 'torso', shape: PELVIS },
   { id: 'hip', group: 'hip', shape: HIP, sided: true },
   { id: 'thigh', group: 'leg', shape: THIGH, sided: true },
   { id: 'knee', group: 'leg', shape: KNEE, sided: true },
@@ -116,7 +121,7 @@ const BACK: Base[] = [
   { id: 'elbow.back', group: 'arm', shape: ELBOW, sided: true },
   { id: 'forearm.back', group: 'arm', shape: FOREARM, sided: true },
   { id: 'hand', group: 'arm', shape: HAND, sided: true },
-  { id: 'buttock', group: 'hip', shape: HIP, sided: true },
+  { id: 'buttock', group: 'hip', shape: BUTTOCK, sided: true },
   { id: 'thigh.back', group: 'leg', shape: THIGH, sided: true },
   { id: 'knee.back', group: 'leg', shape: KNEE, sided: true },
   { id: 'calf', group: 'leg', shape: SHIN, sided: true },

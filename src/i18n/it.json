@@ -149,6 +149,7 @@
   "reg.shoulder": "Spalla",
   "reg.chest": "Petto",
   "reg.abdomen": "Addome",
+  "reg.pelvis": "Bacino",
   "reg.upperarm": "Braccio",
   "reg.elbow": "Gomito",
   "reg.forearm": "Avambraccio",
