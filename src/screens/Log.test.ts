@@ -28,6 +28,9 @@ describe('Log fast path', () => {
     expect(e.readings.pain).toBe(7)
     expect(e.ongoing).toBe(false)
     expect(await screen.findByText('Salvato')).toBeInTheDocument()
+    // No today strip: the toast is the receipt, the diary is the review.
+    expect(screen.queryByLabelText('Oggi')).not.toBeInTheDocument()
+    expect(screen.queryByText('niente ancora')).not.toBeInTheDocument()
   })
 
   it('supports two areas with different levels', async () => {
@@ -207,8 +210,10 @@ describe('Headline reading', () => {
     await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '0' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
-    const chip = await screen.findByRole('button', { name: /^3 gonfiore/ })
-    expect(chip).toBeInTheDocument()
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+    const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
+    expect(row).toHaveAccessibleName(/3\s*gonfiore/)
   })
 
   it('the episode sheet has a slider per symptom and Aggiorna updates all of them', async () => {
@@ -238,9 +243,9 @@ describe('Presets', () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
-    // The entry just saved sits in the Today strip; its edit sheet is where a preset is made.
-    const today = screen.getByLabelText('Oggi')
-    await fireEvent.click(await within(today).findByRole('button', { name: /\d\d:\d\d/ }))
+    // The entry just saved is the first diary row; its edit sheet is where a preset is made.
+    await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
     const edit = await screen.findByRole('dialog', { name: 'Modifica' })
     expect(within(edit).queryByRole('textbox', { name: 'Nome del preset' })).not.toBeInTheDocument()
     await fireEvent.click(within(edit).getByRole('button', { name: 'Crea preset da questa voce' }))
@@ -252,6 +257,7 @@ describe('Presets', () => {
     expect(await screen.findByText('Preset creato')).toBeInTheDocument()
     expect(within(edit).queryByRole('textbox', { name: 'Nome del preset' })).not.toBeInTheDocument()
     await fireEvent.keyDown(window, { key: 'Escape' })
+    await fireEvent.click(screen.getByRole('button', { name: 'Registra' }))
 
     const strip = await screen.findByLabelText('Preset')
     const chip = await within(strip).findByRole('button', { name: /Le gambe/ })
@@ -278,7 +284,8 @@ describe('Presets', () => {
     const { addEntry } = await import('../lib/entries')
     await addEntry({ areas: [{ regions: ['lowerback'], intensity: 4 }], readings: { pain: 4, swelling: 2 }, tags: ['heat'], note: 'x' })
     render(App)
-    await fireEvent.click(await within(screen.getByLabelText('Oggi')).findByRole('button', { name: /\d\d:\d\d/ }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
     const edit = await screen.findByRole('dialog', { name: 'Modifica' })
     await fireEvent.click(within(edit).getByRole('button', { name: 'Crea preset da questa voce' }))
     await fireEvent.input(within(edit).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Schiena' } })
@@ -307,11 +314,11 @@ describe('Install nudge', () => {
     install.dismissed = false
   })
 
-  it('shows under the today strip while the app is not installed', () => {
+  it('shows above the body map while the app is not installed', () => {
     render(App)
     const banner = screen.getByText('Aggiungi alla schermata Home per tenere i dati al sicuro').closest('.card')!
-    const today = screen.getByLabelText('Oggi')
-    expect(today.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const map = screen.getAllByRole('group')[0]
+    expect(banner.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('dismiss hides it for this session only, without touching prefs', async () => {

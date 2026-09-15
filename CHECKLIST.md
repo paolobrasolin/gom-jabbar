@@ -26,7 +26,7 @@ Manual, on a real phone, before telling anyone to update:
 - [ ] Azzera: fill the form, Azzera empties it, Annulla from the toast brings everything back.
 - [ ] Settings → Esporta backup: share sheet opens, file lands in Drive or Files. Toast "Backup esportato".
 - [ ] Settings → Importa the same file: preview counts, Unisci. Then Sostituisci tutto and Undo.
-- [ ] Preset: tap a Today chip, Crea preset da questa voce, name it, Crea preset; chip appears on the log screen; tap it, set a level, Salva; the chip shows the level and "0m"; Andamento has a Per preset line; delete it from Impostazioni and undo.
+- [ ] Preset: open the entry from Diario, Crea preset da questa voce, name it, Crea preset; chip appears on the log screen; tap it, set a level, Salva; the chip shows the level and "0m"; Andamento has a Per preset line; delete it from Impostazioni and undo.
 - [ ] Vocabolario: add a medication tag, rename, disable, reorder. It shows up (or not) under Tutti i tag on the log form; a disabled symptom loses its slider.
 - [ ] Andamento with data: heatmap, chart tap shows a day, range chips.
 - [ ] Report → Stampa / PDF → Save as PDF. Report → Condividi file → open the HTML from Drive.

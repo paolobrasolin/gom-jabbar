@@ -5,7 +5,7 @@
   import EpisodeSheet from '../components/EpisodeSheet.svelte'
   import PresetSheet from '../components/PresetSheet.svelte'
   import Sheet from '../components/Sheet.svelte'
-  import { t, tl, locale } from '../i18n/index.svelte'
+  import { t, tl } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
@@ -13,7 +13,7 @@
   import { addEntry, deleteEntry, endEpisode, reopenEpisode, durationMs } from '../lib/entries'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
-  import { formatDuration, formatTime, dayKey } from '../lib/time'
+  import { formatDuration } from '../lib/time'
   import { PAIN, type Entry, type Preset } from '../lib/types'
   import { lastByPreset } from '../lib/presets'
   import { headline, symptomName } from '../lib/summary'
@@ -59,18 +59,7 @@
     const id = setInterval(() => (tick = Date.now()), 30_000)
     return () => clearInterval(id)
   })
-  const todayKey = $derived(dayKey(new Date(tick).toISOString()))
   const nudge = $derived(backupDue(prefs.lastBackupAt, oldest.value, prefs.backupSnoozedUntil, tick))
-  const today = live(
-    () => todayKey,
-    () => {
-      const start = new Date()
-      start.setHours(0, 0, 0, 0)
-      return db.entries.where('at').aboveOrEqual(start.toISOString()).toArray()
-    },
-    [],
-  )
-
   let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
   /** Anything worth clearing: areas, a time, a tag, a note, a reading other than pain. The pain level alone is not. */
   const dirty = $derived(
@@ -160,23 +149,6 @@
     </div>
   {/if}
 
-  <div class="chips today" aria-label={t('log.today')}>
-    <span class="small muted label">{t('log.today')}</span>
-    {#if today.value.length === 0}
-      <span class="small muted">{t('log.todayEmpty')}</span>
-    {:else}
-      {#each today.value as e (e.id)}
-        {@const hl = headline(e.readings)}
-        {@const lead = symptomName(hl.id, symptoms.value, tl)}
-        <button class="chip small tchip" onclick={() => (editing = e)}>
-          <span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
-          {#if lead}<span>{lead}</span>{/if}
-          {formatTime(e.at, locale())}
-        </button>
-      {/each}
-    {/if}
-  </div>
-
   {#if installNudge}
     <div class="card row nudge small">
       <span class="grow">{t('install.nudge')}</span>
@@ -208,10 +180,8 @@
   .open { text-align: left; min-height: 44px; min-width: 0; }
   .text { display: flex; flex-direction: column; min-width: 0; }
   .line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .today { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; min-height: 34px; align-items: center; }
-  .today::-webkit-scrollbar, .presets::-webkit-scrollbar { display: none; }
+  .presets::-webkit-scrollbar { display: none; }
   .presets { flex: none; min-height: 38px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
-  .today .label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 12px; }
   .tchip { padding-left: 6px; gap: 6px; font-variant-numeric: tabular-nums; }
   .dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-weight: 700; font-size: 12px; }
   .actions {
