@@ -1,5 +1,11 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
+import { configure } from '@testing-library/svelte'
+
+// findBy*/waitFor default to 1s. A save fans out to every live query on the entries table, and on
+// CI (two cores, every test file in its own worker, inside the nix sandbox) that can take longer:
+// v0.2.2's deploy failed on two episode tests that pass locally in 250ms. Timing, not behaviour.
+configure({ asyncUtilTimeout: 5000 })
 
 // jsdom has no ResizeObserver; Svelte's bind:clientWidth needs one. Sizes stay at their defaults under tests.
 if (typeof globalThis.ResizeObserver === 'undefined') {
