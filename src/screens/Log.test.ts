@@ -107,6 +107,44 @@ describe('Details sheet', () => {
   })
 })
 
+describe('Headline reading', () => {
+  it('shows swelling as the headline when pain is 0', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: /^Sintomi · rimedi · note/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
+    await fireEvent.input(await within(sheet).findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
+    await fireEvent.keyDown(window, { key: 'Escape' })
+    await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '0' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    const chip = await screen.findByRole('button', { name: /^3 gonfiore/ })
+    expect(chip).toBeInTheDocument()
+  })
+
+  it('the episode sheet has a slider per symptom and Aggiorna updates all of them', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: /^Sintomi · rimedi · note/ }))
+    const details = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
+    await fireEvent.input(await within(details).findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
+    await fireEvent.keyDown(window, { key: 'Escape' })
+    await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await fireEvent.click(await screen.findByRole('button', { name: 'Episodio in corso' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
+    expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('5')
+    expect(within(sheet).queryByRole('slider', { name: 'Stanchezza' })).not.toBeInTheDocument()
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Gonfiore' }), { target: { value: '6' } })
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '2' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
+    await waitFor(async () => {
+      const [e] = await db.entries.toArray()
+      expect(e.readings).toEqual({ pain: 2, swelling: 6 })
+      expect(e.history?.map((h) => h.readings)).toEqual([{ pain: 5, swelling: 3 }, { pain: 2, swelling: 6 }])
+    })
+    // The card now leads with swelling, the highest reading.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Episodio in corso' })).toHaveTextContent(/^6\s*gonfiore/))
+  })
+})
+
 describe('Install nudge', () => {
   beforeEach(() => {
     prefs.installedAt = null

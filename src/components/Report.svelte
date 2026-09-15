@@ -7,7 +7,8 @@
   import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, tagCounts } from '../lib/stats'
   import { durationMs } from '../lib/entries'
   import { formatDuration, formatTime } from '../lib/time'
-  import { PAIN, type Entry, type Symptom, type Tag } from '../lib/types'
+  import type { Entry, Symptom, Tag } from '../lib/types'
+  import { headline, symptomName, trail } from '../lib/summary'
   import { intensityColor, intensityInk } from '../lib/color'
   import { shareOrDownload, exportFilename } from '../lib/backup'
   import { showToast } from '../lib/toast.svelte'
@@ -120,15 +121,16 @@
         <table class="list">
           <tbody>
             {#each notable as e (e.id)}
-              {@const pain = e.readings[PAIN] ?? 0}
+              {@const hl = headline(e.readings)}
+              {@const levels = trail(e, hl.id)}
               {@const dur = durationMs(e)}
               <tr>
                 <td class="when">{fmtDay(e.at)} {formatTime(e.at, locale())}</td>
-                <td class="num"><span class="pill" style="background: {intensityColor(pain)}; color: {intensityInk(pain)}">{pain}</span></td>
+                <td class="num"><span class="pill" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span></td>
                 <td>
-                  <EntrySummary areas={e.areas} tags={e.tags} tagDefs={tags} />
+                  <EntrySummary lead={symptomName(hl.id, symptoms, tl)} areas={e.areas} tags={e.tags} tagDefs={tags} />
                   {#if dur !== null}<span class="muted"> · {e.ongoing ? t('diary.ongoing') : formatDuration(dur, units)}</span>{/if}
-                  {#if e.history?.length}<span class="muted"> · {[e.readings[PAIN], ...e.history.map((h) => h.pain)].join(' → ')}</span>{/if}
+                  {#if levels.length}<span class="muted"> · {levels.join(' → ')}</span>{/if}
                   {#if e.note}<div class="note">{e.note}</div>{/if}
                 </td>
               </tr>

@@ -4,10 +4,14 @@
   import type { Area } from '../lib/areas'
   import type { Tag } from '../lib/types'
 
-  let { areas, tags = [], tagDefs = [] }: { areas: Area[]; tags?: string[]; tagDefs?: Tag[] } = $props()
+  /** `lead` goes first, e.g. the headline symptom name when it is not pain. */
+  let { lead = '', areas, tags = [], tagDefs = [] }: { lead?: string; areas: Area[]; tags?: string[]; tagDefs?: Tag[] } = $props()
 
   const regionText = (regions: string[]) => rt(regions, t)
-  const parts = $derived(areas.filter((a) => a.regions.length).map((a) => (areas.length > 1 ? `${regionText(a.regions)} ${a.intensity}` : regionText(a.regions))))
+  const parts = $derived([
+    ...(lead ? [lead] : []),
+    ...areas.filter((a) => a.regions.length).map((a) => (areas.length > 1 ? `${regionText(a.regions)} ${a.intensity}` : regionText(a.regions))),
+  ])
   const tagText = $derived(
     tags
       .map((id) => tagDefs.find((d) => d.id === id))

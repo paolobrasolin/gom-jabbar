@@ -5,7 +5,7 @@
   import EditSheet from '../components/EditSheet.svelte'
   import EpisodeSheet from '../components/EpisodeSheet.svelte'
   import Sheet from '../components/Sheet.svelte'
-  import { t, locale } from '../i18n/index.svelte'
+  import { t, tl, locale } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
@@ -15,6 +15,7 @@
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration, formatTime, dayKey } from '../lib/time'
   import { PAIN, type Entry } from '../lib/types'
+  import { headline, symptomName } from '../lib/summary'
   import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
 
@@ -117,12 +118,12 @@
   {#if active.value.length}
     <div class="episodes">
       {#each active.value as e (e.id)}
-        {@const pain = e.readings[PAIN] ?? 0}
+        {@const hl = headline(e.readings)}
         <div class="card episode row">
           <button class="row grow open" onclick={() => (episode = e)} aria-label={t('episode.active')}>
-            <span class="pill" style="background: {intensityColor(pain)}; color: {intensityInk(pain)}">{pain}</span>
+            <span class="pill" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
             <span class="grow small text">
-              <span class="line"><EntrySummary areas={e.areas} tags={e.tags} tagDefs={tags.value} /></span>
+              <span class="line"><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} areas={e.areas} tags={e.tags} tagDefs={tags.value} /></span>
               <span class="muted">{t('episode.since', { d: formatDuration(durationMs(e, tick) ?? 0, units) })}</span>
             </span>
           </button>
@@ -146,9 +147,11 @@
       <span class="small muted">{t('log.todayEmpty')}</span>
     {:else}
       {#each today.value as e (e.id)}
-        {@const pain = e.readings[PAIN] ?? 0}
+        {@const hl = headline(e.readings)}
+        {@const lead = symptomName(hl.id, symptoms.value, tl)}
         <button class="chip small tchip" onclick={() => (editing = e)}>
-          <span class="dot" style="background: {intensityColor(pain)}; color: {intensityInk(pain)}">{pain}</span>
+          <span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
+          {#if lead}<span>{lead}</span>{/if}
           {formatTime(e.at, locale())}
         </button>
       {/each}
@@ -182,7 +185,7 @@
 <Sheet bind:open={detailsOpen} title={t('log.details')}>
   <EntryDetails bind:draft symptoms={symptoms.value} tags={tags.value} />
 </Sheet>
-<EpisodeSheet bind:entry={episode} tagDefs={tags.value} onedit={(e) => (editing = e)} />
+<EpisodeSheet bind:entry={episode} tagDefs={tags.value} symptoms={symptoms.value} onedit={(e) => (editing = e)} />
 <EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
 <Sheet bind:open={howTo} title={t('install.title')}>
   <p>{t(isIOS() ? 'install.ios' : 'install.android')}</p>

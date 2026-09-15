@@ -8,6 +8,8 @@ export type RegionId = string
 export type LocalizedString = { it: string; en: string }
 export type Lang = keyof LocalizedString
 
+export type HistoryPoint = { at: string; readings: Record<SymptomId, number> }
+
 export type Entry = {
   id: string
   /** ISO datetime: when it happened, or when the episode started. */
@@ -20,8 +22,8 @@ export type Entry = {
   readings: Record<SymptomId, number>
   /** Painful areas, each with its own intensity. [] = unspecified. An area with regions ['*'] is full body. */
   areas: Area[]
-  /** Intensity updates made while an episode was ongoing. The entry's own `at`/pain is the implicit first point. */
-  history?: { at: string; pain: number }[]
+  /** Readings over time while an episode was ongoing: the starting point first, then one per update. */
+  history?: HistoryPoint[]
   tags: TagId[]
   note: string
   createdAt: string
