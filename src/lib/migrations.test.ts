@@ -15,16 +15,18 @@ import { parseImport, applyImport, buildExport, EXPORT_VERSION } from './backup'
 import exportV1 from '../test/fixtures/export-v1.json'
 import exportV2 from '../test/fixtures/export-v2.json'
 import exportV3 from '../test/fixtures/export-v3.json'
+import exportV4 from '../test/fixtures/export-v4.json'
 import dbV1 from '../test/fixtures/db-v1.json'
 import dbV2 from '../test/fixtures/db-v2.json'
 import dbV3 from '../test/fixtures/db-v3.json'
+import dbV4 from '../test/fixtures/db-v4.json'
 
 type Row = Record<string, unknown>
 type DbFixture = { version: number; stores: Record<string, string>; tables: Record<string, Row[]> }
-type ExportFixture = { exportedAt: string; vocabulary: unknown; entries: Row[] }
+type ExportFixture = { exportedAt: string; vocabulary: unknown; entries: Row[]; presets?: Row[] }
 
-const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3 }
-const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3 }
+const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4 }
+const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4 }
 
 /**
  * The documented, deliberate change from version N to N+1 for an entry.
@@ -38,6 +40,8 @@ const UPGRADES: Record<number, (e: Row) => Row> = {
   }),
   // 2 → 3: history points `{ at, pain }` became `{ at, readings: { pain } }`, so an episode can track every symptom.
   2: (e) => (Array.isArray(e.history) ? { ...e, history: (e.history as Row[]).map(({ pain, ...h }) => ({ ...h, readings: { pain } })) } : e),
+  // 3 → 4: presets arrive as a new table and export key; entries gain an optional `preset` id. Nothing changes on existing rows.
+  3: (e) => e,
 }
 
 /** What an entry from `from` must look like today. */
@@ -72,6 +76,7 @@ describe.each(Object.entries(EXPORT_FIXTURES).map(([v, f]) => [Number(v), f] as 
     expect(parsed.version).toBe(EXPORT_VERSION)
     expect(parsed.exportedAt).toBe(fixture.exportedAt)
     expect(parsed.vocabulary).toEqual(fixture.vocabulary)
+    expect(parsed.presets).toEqual(fixture.presets ?? [])
     expect(parsed.entries.map((e) => e.id)).toEqual(fixture.entries.map((e) => e.id))
     for (const e of fixture.entries) {
       const got = parsed.entries.find((x) => x.id === e.id)
@@ -88,6 +93,7 @@ describe.each(Object.entries(EXPORT_FIXTURES).map(([v, f]) => [Number(v), f] as 
     expect(byId(out.entries)).toEqual(byId(parsed.entries))
     expect(byId(out.vocabulary.symptoms)).toEqual(byId(parsed.vocabulary.symptoms))
     expect(byId(out.vocabulary.tags)).toEqual(byId(parsed.vocabulary.tags))
+    expect(byId(out.presets)).toEqual(byId(parsed.presets))
     // Today's export imports as itself.
     const again = parseImport(JSON.stringify(out))
     expect(again).toEqual(out)
@@ -115,11 +121,11 @@ describe.each(Object.entries(DB_FIXTURES).map(([v, f]) => [Number(v), f] as cons
 describe('unknown fields', () => {
   it('pass through import, storage and export', async () => {
     fresh()
-    const file = { ...exportV2, entries: [{ ...exportV2.entries[0], preset: 'schiena', extra: { deep: [1, 2] } }] }
+    const file = { ...exportV2, entries: [{ ...exportV2.entries[0], origin: 'watch', extra: { deep: [1, 2] } }] }
     const parsed = parseImport(JSON.stringify(file))
-    expect(parsed.entries[0]).toMatchObject({ preset: 'schiena', extra: { deep: [1, 2] } })
+    expect(parsed.entries[0]).toMatchObject({ origin: 'watch', extra: { deep: [1, 2] } })
     await applyImport(parsed, 'merge')
     const out = await buildExport()
-    expect(out.entries[0]).toMatchObject({ preset: 'schiena', extra: { deep: [1, 2] } })
+    expect(out.entries[0]).toMatchObject({ origin: 'watch', extra: { deep: [1, 2] } })
   })
 })

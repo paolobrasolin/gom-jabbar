@@ -10,6 +10,7 @@ export type EntryInput = {
   areas?: Area[]
   tags?: string[]
   note?: string
+  preset?: string
 }
 
 const now = () => new Date().toISOString()
@@ -27,6 +28,7 @@ export function makeEntry(input: EntryInput): Entry {
     areas,
     tags: [...(input.tags ?? [])],
     note: input.note ?? '',
+    ...(input.preset ? { preset: input.preset } : {}),
     createdAt: ts,
     updatedAt: ts,
   }
@@ -92,21 +94,6 @@ export async function updateEpisode(id: string, readings: Record<string, number>
 
 export function activeEpisodes(): Promise<Entry[]> {
   return db.entries.filter((e) => e.ongoing).sortBy('at')
-}
-
-export async function lastEntry(): Promise<Entry | undefined> {
-  return db.entries.orderBy('createdAt').last()
-}
-
-/** Clone an entry as a new one happening now. */
-export async function repeatEntry(source: Entry): Promise<Entry> {
-  return addEntry({
-    readings: source.readings,
-    areas: source.areas,
-    tags: source.tags,
-    ongoing: source.ongoing,
-    note: '',
-  })
 }
 
 export function durationMs(entry: Entry, nowMs = Date.now()): number | null {

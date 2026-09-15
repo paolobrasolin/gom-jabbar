@@ -1,10 +1,10 @@
 import { db } from './db'
-import { PAIN, type Entry, type HistoryPoint, type Symptom, type Tag, type Lang } from './types'
+import { PAIN, type Entry, type HistoryPoint, type Preset, type Symptom, type Tag, type Lang } from './types'
 import { regionText } from './summary'
 import type { Area } from './areas'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 
-export const EXPORT_VERSION = 3
+export const EXPORT_VERSION = 4
 
 export type ExportFile = {
   app: 'gom-jabbar'
@@ -12,15 +12,18 @@ export type ExportFile = {
   exportedAt: string
   vocabulary: { symptoms: Symptom[]; tags: Tag[] }
   entries: Entry[]
+  /** Since version 4. */
+  presets: Preset[]
 }
 
 export async function buildExport(): Promise<ExportFile> {
-  const [symptoms, tags, entries] = await Promise.all([
+  const [symptoms, tags, entries, presets] = await Promise.all([
     db.symptoms.orderBy('order').toArray(),
     db.tags.orderBy('order').toArray(),
     db.entries.orderBy('at').toArray(),
+    db.presets.orderBy('order').toArray(),
   ])
-  return { app: 'gom-jabbar', version: EXPORT_VERSION, exportedAt: new Date().toISOString(), vocabulary: { symptoms, tags }, entries }
+  return { app: 'gom-jabbar', version: EXPORT_VERSION, exportedAt: new Date().toISOString(), vocabulary: { symptoms, tags }, entries, presets }
 }
 
 export function exportFilename(kind: 'json' | 'csv' | 'html', d = new Date()): string {
@@ -48,6 +51,7 @@ export function parseImport(text: string): ExportFile {
     exportedAt: typeof o.exportedAt === 'string' ? o.exportedAt : new Date().toISOString(),
     vocabulary: { symptoms: Array.isArray(vocab.symptoms) ? vocab.symptoms : [], tags: Array.isArray(vocab.tags) ? vocab.tags : [] },
     entries,
+    presets: Array.isArray(o.presets) ? (o.presets as Preset[]) : [],
   }
 }
 
@@ -111,10 +115,11 @@ export type ImportMode = 'merge' | 'replace'
 /** Merge: upsert by id, newer `updatedAt` wins; vocabulary items are added if missing. Replace: wipe and load. */
 export async function applyImport(file: ExportFile, mode: ImportMode): Promise<ImportPreview> {
   const preview = await previewImport(file)
-  await db.transaction('rw', db.entries, db.symptoms, db.tags, async () => {
+  await db.transaction('rw', db.entries, db.symptoms, db.tags, db.presets, async () => {
     if (mode === 'replace') {
-      await Promise.all([db.entries.clear(), db.symptoms.clear(), db.tags.clear()])
+      await Promise.all([db.entries.clear(), db.symptoms.clear(), db.tags.clear(), db.presets.clear()])
       await db.entries.bulkPut(file.entries)
+      await db.presets.bulkPut(file.presets)
       // A file without vocabulary must not leave the app without symptoms or tags.
       await db.symptoms.bulkPut(file.vocabulary.symptoms.length ? file.vocabulary.symptoms : DEFAULT_SYMPTOMS)
       await db.tags.bulkPut(file.vocabulary.tags.length ? file.vocabulary.tags : DEFAULT_TAGS)
@@ -130,6 +135,8 @@ export async function applyImport(file: ExportFile, mode: ImportMode): Promise<I
     await db.symptoms.bulkPut(file.vocabulary.symptoms.filter((s) => !haveS.has(s.id)))
     const haveT = new Set((await db.tags.toArray()).map((t) => t.id))
     await db.tags.bulkPut(file.vocabulary.tags.filter((t) => !haveT.has(t.id)))
+    const haveP = new Set((await db.presets.toArray()).map((p) => p.id))
+    await db.presets.bulkPut(file.presets.filter((p) => !haveP.has(p.id)))
   })
   return preview
 }

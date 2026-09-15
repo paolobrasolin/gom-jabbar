@@ -93,3 +93,10 @@ describe('regions', () => {
     ])
   })
 })
+
+describe('shape helpers', async () => {
+  const R = await import('./regions')
+  it('centres an ellipse on its origin', () => {
+    expect(R.shapeCenter({ kind: 'ellipse', cx: 10, cy: 20, rx: 5, ry: 3 })).toEqual([10, 20])
+  })
+})

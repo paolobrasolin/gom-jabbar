@@ -61,3 +61,14 @@ describe('areas', () => {
     expect(allRegions(areas)).toEqual(['*', 'a', 'b'])
   })
 })
+
+describe('areas edge cases', async () => {
+  const A = await import('./areas')
+  it('mirror on an unsided region adds only that region, and a set already present is removed', () => {
+    const s = A.tapRegion({ areas: [], cur: 0 }, 'chest', true, 4)
+    expect(s.areas).toEqual([{ regions: ['chest'], intensity: 4 }])
+    const legs = A.tapSet({ areas: [], cur: 0 }, ['thigh.l', 'thigh.r'], 4)
+    const off = A.tapSet(legs, ['thigh.l', 'thigh.r'], 4)
+    expect(off.areas[0]?.regions ?? []).toEqual([])
+  })
+})

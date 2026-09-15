@@ -69,6 +69,7 @@ type Entry = {
   readings: Record<SymptomId, number>; // e.g. { pain: 7, swelling: 4 }, 0..10
   areas: Area[];         // [] = unspecified; see below
   history?: { at: string; readings: Record<SymptomId, number> }[]; // episodes only, see §5.5
+  preset?: string;       // the preset this moment was logged from (§5.6)
   tags: TagId[];
   note: string;
   createdAt: string;
@@ -162,6 +163,20 @@ Regions are grouped into **areas**, each with its own level. The slider always e
 
 Tapping an active episode card opens a sheet with its summary, its level timeline, one slider per symptom the entry tracks (pain always, the others when above 0), the **Rimedi** and **Farmaci** chips (remedies happen in response to pain: this is where "ho preso il farmaco" gets recorded; context tags stay in the edit sheet) and **Aggiorna** / **Termina**, both of which save the chips too, plus a **Modifica zone e note** link to the full edit sheet (§6.2). **Aggiorna** updates every slider's reading at once. The first update stores the starting readings as the first point of `entry.history`, then each update appends `{ at, readings }` with the full readings at that moment, so the history is the complete trail. With a single area, that area follows the pain reading; with several, the initial split is kept. The diary shows the headline symptom's trail as "7 → 4 → 2". Histories written before export version 3 held `{ at, pain }` and were converted, so their first point is the first update, not the start.
 
+### 5.6 Presets
+
+Two kinds of pain: **episodic** (a migraine starts and ends; episodes cover it) and **continuous** (the back is always there, only the level drifts). For the second, a **preset** is a named, saved shape of an entry:
+
+```ts
+type Preset = { id: string; name: string; areas: Area[]; symptomIds: SymptomId[]; tags: TagId[]; ongoing: boolean; order: number };
+```
+
+- Created from a filled log form: **Crea preset** with a name at the bottom of the Sintomi · rimedi · note sheet. It captures the areas, pain plus every other symptom set above 0 (`symptomIds`, pain first), the tags and the episode toggle.
+- The home screen shows a strip of preset chips: `4 Schiena · 2g` (headline of the last entry logged from it, and how long ago; "mai" before the first). Tap → a sheet named after the preset with one slider per `symptomIds`, starting from the last logged levels, and **Salva**. Two taps.
+- Each save logs an **ordinary moment** carrying `preset`: its areas at the pain level, its tags, an empty note, an episode when `ongoing` is set (the existing card handles the end). The diary stays honest and every existing feature works.
+- Trends draws one line per preset (§6.3). Presets are deleted from Settings (undo toast) and travel in the backup (§8).
+- It absorbs the old **Ripeti l'ultima** button, a nameless preset. Rejected alternatives: a `persistent` flag on episodes (one entry with an unbounded history, one diary row for months) and carry-forward in trends only (#5).
+
 ## 6. Screens
 
 Bottom tab bar, four tabs, thumb reachable. The app opens on **Log**.
@@ -171,16 +186,17 @@ Bottom tab bar, four tabs, thumb reachable. The app opens on **Log**.
 This screen is the product. Layout top to bottom:
 
 1. **Active episode cards** (only if any): "7 · gambe · da 3h", or "3 · gonfiore · gambe · da 3h" when the headline is not pain (§5.1), with a **Termina** button. Tap the card → update sheet (§5.5).
-2. **Today strip**: "Oggi" followed by one small chip per entry logged today (headline level, symptom name when not pain, time). Tap to edit. Shows "niente ancora" when empty.
+2. **Preset strip** (only if any presets, §5.6): one chip per preset, `4 Schiena · 2g`. Tap → preset sheet.
+3. **Today strip**: "Oggi" followed by one small chip per entry logged today (headline level, symptom name when not pain, time). Tap to edit. Shows "niente ancora" when empty.
    Under it, while the app is not installed (no `display-mode: standalone`, no `installedAt` pref): an inline **install nudge** in the backup banner style, "Aggiungi alla schermata Home per tenere i dati al sicuro", with **Aggiungi** and a dismiss. It shows on every launch until the app is installed; dismiss hides it for the current session only. Aggiungi replays the browser install prompt when captured, else opens the how-to sheet (§4.1).
-3. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
-4. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
-5. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
-6. **Episode toggle**: "In corso" switch next to the slider. Off by default the first time, then remembers the last used value. The slider edits the current area's level (§5.4).
-7. **Suggestion strip**: one row of tag chips under the slider, no header, like the word suggestions above a keyboard. The 5 most recently used tags (from the last 30 entries), filled with the first enabled tags in vocabulary order on a fresh install, so the user meets the tags without opening anything. Tap toggles the tag on the draft; everything else is in the details sheet (#4).
-8. **Hint line** (until dismissed, `hintDismissed` pref): "Altri sintomi, rimedi e note: bottone qui sotto." with a dismiss. The one hint the log screen is allowed (§10).
-9. **Save** button, bottom anchored, with two buttons beside it: **Sintomi · rimedi · note** and **Repeat last**, which clones the last entry with `at = now`.
-10. **Sintomi · rimedi · note** opens a bottom sheet with the other symptom sliders, tag chips grouped by type and the note field. The button carries a count badge while anything in it is set (readings other than pain, tags, note); the badge clears with the form on save. Nothing of this lives inline in the form: on a phone the form already fills the screen, and an inline expander opened out of sight under the action bar (#1).
+4. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
+5. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
+6. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
+7. **Episode toggle**: "In corso" switch next to the slider. Off by default the first time, then remembers the last used value. The slider edits the current area's level (§5.4).
+8. **Suggestion strip**: one row of tag chips under the slider, no header, like the word suggestions above a keyboard. The 5 most recently used tags (from the last 30 entries), filled with the first enabled tags in vocabulary order on a fresh install, so the user meets the tags without opening anything. Tap toggles the tag on the draft; everything else is in the details sheet (#4).
+9. **Hint line** (until dismissed, `hintDismissed` pref): "Altri sintomi, rimedi e note: bottone qui sotto." with a dismiss. The one hint the log screen is allowed (§10).
+10. **Save** button, bottom anchored, with **Sintomi · rimedi · note** beside it. (Repeat last was absorbed by presets, §5.6.)
+11. **Sintomi · rimedi · note** opens a bottom sheet with the other symptom sliders, tag chips grouped by type, the note field and, at the bottom, **Crea preset** with a name field (§5.6). The button carries a count badge while anything in it is set (readings other than pain, tags, note); the badge clears with the form on save. Nothing of this lives inline in the form: on a phone the form already fills the screen, and an inline expander opened out of sight under the action bar (#1).
 
 Fast path: tap region(s) → drag slider → Save. Regions are optional; an entry with only intensity is valid.
 
@@ -199,6 +215,7 @@ Range picker: 7, 30, 90, 365 days.
 
 - **Body heatmap**: the same body SVG, regions coloured by how often and how intensely they appeared in range.
 - **Intensity over time**: daily max and mean pain as a bar/line chart. Other symptoms selectable.
+- **Per preset** (only when a preset has samples in range): one small line per preset, its first symptom over time, dots coloured by the intensity ramp. Samples only: days without a sample stay empty, no carry-forward (§5.6).
 - **Episodes**: count and mean duration.
 - **Tags**: for each tag with enough data, mean of the daily maximum on days with vs without it, shown as two small bars with the day counts. Labelled as descriptive. Hidden when fewer than 5 days on either side; usage counts are shown instead until then.
 - **Other symptoms**: mean of each non-pain symptom over the entries where it was recorded.
@@ -209,6 +226,7 @@ Range picker: 7, 30, 90, 365 days.
 - Language (it / en, follows device by default).
 - Theme (system / light / dark).
 - Vocabulary editors: symptoms, tags (three groups), reorder by drag, enable/disable, rename, add.
+- **Preset** list with delete (undo toast); creation happens from the log form (§5.6).
 - **Backup**: last backup date, Export JSON (share), Export CSV (share), Import JSON (merge or replace, with a preview of counts before applying).
 - Install to home screen hint (shown until installed).
 - About and data location note ("your data only lives on this phone").
@@ -233,16 +251,17 @@ Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** sha
 ```json
 {
   "app": "gom-jabbar",
-  "version": 3,
+  "version": 4,
   "exportedAt": "2026-09-13T18:00:00Z",
   "vocabulary": { "symptoms": [], "tags": [] },
-  "entries": []
+  "entries": [],
+  "presets": []
 }
 ```
 
 CSV export is one row per entry, one column per symptom, regions and tags joined with `|`. Meant for spreadsheets, not for reimport.
 
-Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `updatedAt` winning and adds vocabulary items that are missing. A sheet shows the file date and counts (new, updated) before committing. Replace is undoable from the toast: the previous state is snapshotted and restored on undo. Version 1 files (with `regions`) are upgraded on import.
+Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `updatedAt` winning and adds vocabulary items that are missing. A sheet shows the file date and counts (new, updated) before committing. Replace is undoable from the toast: the previous state is snapshotted and restored on undo. Every version ever written is accepted: version 1 files (with `regions`), version 2 (history points with `pain`) and version 3 (no `presets`) are upgraded on import. Merge adds presets that are missing by id; replace loads them.
 
 Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable with a switch, reorder with arrows, add at the bottom of each group. Pain cannot be disabled. Renaming a default item changes only the current language; user-made items keep both languages in sync.
 
@@ -260,14 +279,14 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 - Every body region has a human accessible name ("Coscia sx", "Left thigh"); focus is visible on all controls; sheets take focus on open and give it back on close.
 - Dark mode via `prefers-color-scheme`, overridable.
 - Intensity colour ramp: neutral at 0, warm at 10, perceptually even, readable in both themes and by colour-blind users (ramp plus the number, never colour alone).
-- No spinners, no splash beyond the PWA one, no onboarding screens. At most one dismissable hint line on the log screen (§6.1 item 8).
+- No spinners, no splash beyond the PWA one, no onboarding screens. At most one dismissable hint line on the log screen (§6.1 item 9).
 - Respect `prefers-reduced-motion`.
 - Italian copy first, terse, informal ("Salva", "Annulla", "In corso").
 
 ## 11. Testing
 
 - **Unit (Vitest)**: data layer on `fake-indexeddb` (CRUD, episodes, migrations), stats and correlation functions, export/import round trip and merge semantics, region helpers (mirror, limb shortcuts, full body), area operations, i18n key parity.
-- **Component (Testing Library)**: the fast path (select region, set intensity, save, entry appears), undo, repeat last, episode end.
+- **Component (Testing Library)**: the fast path (select region, set intensity, save, entry appears), undo, episode end, the details sheet, presets.
 - **Manual checklist** before each release: see `CHECKLIST.md`.
 - **Bundle size gate**: `npm run size` fails the build above 150 KB gzipped JS; it runs in CI.
 - No e2e framework in v1.

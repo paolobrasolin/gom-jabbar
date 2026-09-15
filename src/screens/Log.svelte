@@ -4,17 +4,19 @@
   import EntrySummary from '../components/EntrySummary.svelte'
   import EditSheet from '../components/EditSheet.svelte'
   import EpisodeSheet from '../components/EpisodeSheet.svelte'
+  import PresetSheet from '../components/PresetSheet.svelte'
   import Sheet from '../components/Sheet.svelte'
   import { t, tl, locale } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, detailCount } from '../lib/draft'
-  import { addEntry, deleteEntry, endEpisode, reopenEpisode, lastEntry, repeatEntry, durationMs } from '../lib/entries'
+  import { addEntry, deleteEntry, endEpisode, reopenEpisode, durationMs } from '../lib/entries'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration, formatTime, dayKey } from '../lib/time'
-  import { PAIN, type Entry } from '../lib/types'
+  import { PAIN, type Entry, type Preset } from '../lib/types'
+  import { addPreset, presetFromDraft, lastByPreset } from '../lib/presets'
   import { headline, symptomName } from '../lib/summary'
   import { recentTags } from '../lib/vocab'
   import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
@@ -23,7 +25,8 @@
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const active = live(() => null, () => db.entries.filter((e) => e.ongoing).sortBy('at'), [])
-  const count = live(() => null, () => db.entries.count(), -1)
+  const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
+  const lastBy = live(() => null, async () => lastByPreset(await db.entries.filter((e) => !!e.preset).toArray()), {} as Record<string, Entry>)
   const recent = live(() => null, () => db.entries.orderBy('createdAt').reverse().limit(30).toArray(), [])
   const suggestions = $derived(recentTags(recent.value, tags.value))
   const oldest = live(() => null, async () => (await db.entries.orderBy('createdAt').first())?.createdAt ?? null, null)
@@ -102,12 +105,16 @@
     }
   }
 
-  async function repeatLast() {
-    const last = await lastEntry()
-    if (!last) return
-    const entry = await repeatEntry(last)
+  let presetOpen = $state.raw<Preset | null>(null)
+  let presetName = $state('')
+  async function createPreset() {
+    const name = presetName.trim()
+    if (!name) return
+    await addPreset(presetFromDraft(draft, name))
+    presetName = ''
+    detailsOpen = false
     haptic(20)
-    showToast(t('log.saved'), { label: t('log.undo'), run: () => void deleteEntry(entry.id) })
+    showToast(t('preset.created'))
   }
 
   async function end(id: string) {
@@ -132,6 +139,19 @@
           </button>
           <button class="btn" onclick={() => end(e.id)}>{t('episode.end')}</button>
         </div>
+      {/each}
+    </div>
+  {/if}
+
+  {#if presets.value.length}
+    <div class="chips presets" aria-label={t('preset.strip')}>
+      {#each presets.value as p (p.id)}
+        {@const last = lastBy.value[p.id]}
+        {@const hl = last ? headline(last.readings) : null}
+        <button class="chip small tchip" onclick={() => (presetOpen = p)}>
+          {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>{/if}
+          {p.name} · {last ? formatDuration(Math.max(0, tick - Date.parse(last.at)), units) : t('preset.never')}
+        </button>
       {/each}
     </div>
   {/if}
@@ -184,17 +204,18 @@
       {t('log.details')}
       {#if details}<span class="badge">{details}</span>{/if}
     </button>
-    <button class="btn" onclick={repeatLast} disabled={count.value <= 0} aria-label={t('log.repeatLast')} title={t('log.repeatLast')}>
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" />
-      </svg>
-    </button>
   </div>
 </div>
 
 <Sheet bind:open={detailsOpen} title={t('log.details')}>
   <EntryDetails bind:draft symptoms={symptoms.value} tags={tags.value} />
+  <div class="row newpreset">
+    <input class="grow" type="text" placeholder={t('preset.name')} aria-label={t('preset.name')} bind:value={presetName} onkeydown={(e) => e.key === 'Enter' && createPreset()} />
+    <button class="chip small" disabled={!presetName.trim()} onclick={createPreset}>{t('preset.create')}</button>
+  </div>
+  <p class="small muted">{t('preset.hint')}</p>
 </Sheet>
+<PresetSheet bind:preset={presetOpen} last={presetOpen ? lastBy.value[presetOpen.id] : undefined} symptoms={symptoms.value} tagDefs={tags.value} />
 <EpisodeSheet bind:entry={episode} tagDefs={tags.value} symptoms={symptoms.value} onedit={(e) => (editing = e)} />
 <EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
 <Sheet bind:open={howTo} title={t('install.title')}>
@@ -211,7 +232,10 @@
   .text { display: flex; flex-direction: column; min-width: 0; }
   .line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .today { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px; min-height: 34px; align-items: center; }
-  .today::-webkit-scrollbar { display: none; }
+  .today::-webkit-scrollbar, .presets::-webkit-scrollbar { display: none; }
+  .presets { flex: none; min-height: 38px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
+  .newpreset input { min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); min-width: 0; }
+  .newpreset .chip:disabled { opacity: 0.4; }
   .today .label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 12px; }
   .tchip { padding-left: 6px; gap: 6px; font-variant-numeric: tabular-nums; }
   .dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-weight: 700; font-size: 12px; }

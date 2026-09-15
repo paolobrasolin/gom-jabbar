@@ -3,11 +3,12 @@
   import DailyChart from '../components/DailyChart.svelte'
   import TagCompare from '../components/TagCompare.svelte'
   import Report from '../components/Report.svelte'
+  import PresetLines from '../components/PresetLines.svelte'
   import { t, tl } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, tagCounts, MIN_DAYS_PER_SIDE } from '../lib/stats'
+  import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, tagCounts, presetSeries, MIN_DAYS_PER_SIDE } from '../lib/stats'
   import { formatDuration } from '../lib/time'
 
   const RANGES = [7, 30, 90, 365]
@@ -18,6 +19,8 @@
   const entries = live(() => days, () => db.entries.where('at').aboveOrEqual(from.toISOString()).toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
+  const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
+  const byPreset = $derived(presetSeries(entries.value, presets.value))
 
   const series = $derived(dailySeries(entries.value, from, days))
   const summary = $derived(summarize(entries.value, days))
@@ -56,6 +59,14 @@
       <p class="small muted label">{t('trends.overTime')}</p>
       <DailyChart {series} />
     </div>
+
+    {#if byPreset.length}
+      <div class="card">
+        <p class="small muted label">{t('trends.presets')}</p>
+        <PresetLines rows={byPreset} {from} {days} />
+        <p class="small muted top">{t('trends.presetsHint')}</p>
+      </div>
+    {/if}
 
     <div class="card">
       <p class="small muted label">{t('trends.tags')}</p>
