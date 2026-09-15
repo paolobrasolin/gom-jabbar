@@ -65,7 +65,7 @@ export default defineConfig({
         'src/lib/**': { lines: 95, statements: 94, functions: 95, branches: 89 },
         lines: 76,
         statements: 70,
-        functions: 71,
+        functions: 72,
         branches: 67,
       },
     },
