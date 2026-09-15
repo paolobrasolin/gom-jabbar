@@ -2,11 +2,12 @@
   import BodyMap from './BodyMap.svelte'
   import IntensitySlider from './IntensitySlider.svelte'
   import EntrySummary from './EntrySummary.svelte'
+  import EntryDetails from './EntryDetails.svelte'
   import { regionText } from '../lib/summary'
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
-  import { PAIN, type Symptom, type Tag, type TagGroup } from '../lib/types'
+  import { PAIN, type Symptom, type Tag } from '../lib/types'
   import { LEG_IDS, ARM_IDS, limbOf, mirrorId } from '../lib/regions'
   import { isFull, tapRegion, tapSet, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
   import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
@@ -28,9 +29,6 @@
   const curRegions = $derived(draft.areas[draft.cur]?.regions ?? [])
   const legsOn = $derived(!full && LEG_IDS.every((id) => curRegions.includes(id)))
   const armsOn = $derived(!full && ARM_IDS.every((id) => curRegions.includes(id)))
-  const otherSymptoms = $derived(symptoms.filter((s) => s.enabled && s.id !== PAIN))
-  const groups: TagGroup[] = ['intervention', 'context', 'medication']
-  const tagsByGroup = $derived(groups.map((g) => ({ g, items: tags.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
   const painLabel = $derived.by(() => {
     const base = tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' })
     const cur = draft.areas[draft.cur]
@@ -85,12 +83,6 @@
   function setMirror(v: boolean) {
     prefs.mirror = v
     savePrefs()
-  }
-  function toggleTag(id: string) {
-    draft.tags = draft.tags.includes(id) ? draft.tags.filter((x) => x !== id) : [...draft.tags, id]
-  }
-  function setReading(id: string, v: number) {
-    draft.readings = { ...draft.readings, [id]: v }
   }
 </script>
 
@@ -155,22 +147,7 @@
   <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
 
   {#if detailsOpen}
-    <div class="details">
-      {#each otherSymptoms as s (s.id)}
-        <IntensitySlider compact label={tl(s.label)} value={draft.readings[s.id] ?? 0} onchange={(v) => setReading(s.id, v)} />
-      {/each}
-      {#each tagsByGroup as { g, items } (g)}
-        <div>
-          <p class="small muted group-title">{t(`tag.group.${g}`)}</p>
-          <div class="chips">
-            {#each items as tag (tag.id)}
-              <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
-            {/each}
-          </div>
-        </div>
-      {/each}
-      <textarea rows="2" placeholder={t('log.notePlaceholder')} bind:value={draft.note} aria-label={t('log.note')}></textarea>
-    </div>
+    <EntryDetails bind:draft {symptoms} {tags} />
   {/if}
 </div>
 
@@ -184,8 +161,6 @@
   .tools, .time, .areas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
   .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar { display: none; }
   .map { flex: 1 1 var(--map-h, 320px); min-height: var(--map-min, 320px); max-height: var(--map-max, 640px); }
-  .details { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
-  .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .chip:disabled { opacity: 0.4; }
   .area { background: var(--surface-2); color: var(--ink); border-color: transparent; padding-left: 6px; }
   .area[aria-pressed='true'] { background: var(--surface-2); color: var(--ink); border-color: var(--ink); }

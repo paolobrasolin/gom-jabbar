@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/svelte'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { install, initInstall } from '../lib/install.svelte'
@@ -10,6 +10,7 @@ beforeEach(() => {
   db = resetDb()
   prefs.lang = 'it'
   prefs.mirror = true
+  prefs.ongoing = false
 })
 
 describe('Log fast path', () => {
@@ -64,6 +65,45 @@ describe('Log fast path', () => {
       expect(e.ongoing).toBe(false)
       expect(e.endedAt).not.toBeNull()
     })
+  })
+})
+
+describe('Details sheet', () => {
+  it('keeps symptoms, tags and the note out of the form until asked', () => {
+    render(App)
+    expect(screen.queryByRole('textbox', { name: 'Note' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Riposo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('slider', { name: 'Gonfiore' })).not.toBeInTheDocument()
+  })
+
+  it('opens them in a sheet and counts what is set on the button', async () => {
+    render(App)
+    const btn = screen.getByRole('button', { name: /^Sintomi · rimedi · note/ })
+    await fireEvent.click(btn)
+    const sheet = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
+    await fireEvent.click(await within(sheet).findByRole('button', { name: 'Riposo' }))
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Gonfiore' }), { target: { value: '4' } })
+    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'dopo la corsa' } })
+    await fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(btn).toHaveTextContent('Sintomi · rimedi · note 3')
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    expect(e.tags).toEqual(['rest'])
+    expect(e.readings.swelling).toBe(4)
+    expect(e.note).toBe('dopo la corsa')
+    expect(btn).toHaveTextContent(/^Sintomi · rimedi · note$/)
+  })
+
+  it('the episode sheet offers to edit areas and note', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await fireEvent.click(await screen.findByRole('button', { name: 'Episodio in corso' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
+    expect(within(sheet).getByRole('button', { name: 'Modifica zone e note' })).toBeInTheDocument()
   })
 })
 

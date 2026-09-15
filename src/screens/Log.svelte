@@ -1,5 +1,6 @@
 <script lang="ts">
   import EntryForm from '../components/EntryForm.svelte'
+  import EntryDetails from '../components/EntryDetails.svelte'
   import EntrySummary from '../components/EntrySummary.svelte'
   import EditSheet from '../components/EditSheet.svelte'
   import EpisodeSheet from '../components/EpisodeSheet.svelte'
@@ -8,7 +9,7 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
-  import { emptyDraft, draftToInput } from '../lib/draft'
+  import { emptyDraft, draftToInput, detailCount } from '../lib/draft'
   import { addEntry, deleteEntry, endEpisode, reopenEpisode, lastEntry, repeatEntry, durationMs } from '../lib/entries'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
@@ -69,6 +70,7 @@
 
   let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
   let detailsOpen = $state(false)
+  const details = $derived(detailCount(draft))
   let saving = $state(false)
   let editing = $state.raw<Entry | null>(null)
   let episode = $state.raw<Entry | null>(null)
@@ -161,12 +163,13 @@
     </div>
   {/if}
 
-  <EntryForm bind:draft {detailsOpen} symptoms={symptoms.value} tags={tags.value} />
+  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value} />
 
   <div class="actions">
     <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
-    <button class="btn" class:active={detailsOpen} aria-expanded={detailsOpen} onclick={() => (detailsOpen = !detailsOpen)}>
-      {t('log.details')} {detailsOpen ? '▴' : '▾'}
+    <button class="btn details" onclick={() => (detailsOpen = true)}>
+      {t('log.details')}
+      {#if details}<span class="badge">{details}</span>{/if}
     </button>
     <button class="btn" onclick={repeatLast} disabled={count.value <= 0} aria-label={t('log.repeatLast')} title={t('log.repeatLast')}>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -176,6 +179,9 @@
   </div>
 </div>
 
+<Sheet bind:open={detailsOpen} title={t('log.details')}>
+  <EntryDetails bind:draft symptoms={symptoms.value} tags={tags.value} />
+</Sheet>
 <EpisodeSheet bind:entry={episode} tagDefs={tags.value} onedit={(e) => (editing = e)} />
 <EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
 <Sheet bind:open={howTo} title={t('install.title')}>
@@ -207,5 +213,10 @@
   }
   .actions .btn.primary { min-height: 56px; font-size: 18px; }
   .actions .btn:not(.primary) { min-height: 56px; padding: 0 14px; }
-  .actions .btn.active { box-shadow: inset 0 0 0 1.5px var(--ink-2); }
+  .actions .details { font-size: 15px; padding: 0 12px; }
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+    background: var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 700;
+  }
 </style>

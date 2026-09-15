@@ -49,3 +49,9 @@ export function draftToInput(d: EntryDraft): EntryInput {
     note: d.note.trim(),
   }
 }
+
+/** How many optional details are set: readings other than pain above 0, tags, and a non-blank note. */
+export function detailCount(d: EntryDraft): number {
+  const readings = Object.entries(d.readings).filter(([id, v]) => id !== PAIN && v > 0).length
+  return readings + d.tags.length + (d.note.trim() ? 1 : 0)
+}
