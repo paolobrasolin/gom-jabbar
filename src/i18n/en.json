@@ -7,7 +7,6 @@
   "log.saved": "Saved",
   "log.undo": "Undo",
   "log.ongoing": "Ongoing",
-  "log.details": "Symptoms · remedies · note",
   "log.note": "Note",
   "log.notePlaceholder": "Add a note…",
   "log.mirror": "Both sides",
@@ -84,8 +83,6 @@
   "settings.presets": "Presets",
   "trends.presets": "By preset",
   "trends.presetsHint": "Only the moments logged from the preset; days without stay empty.",
-  "log.hint": "Other symptoms, remedies and notes: button below.",
-  "log.hintDismiss": "Hide",
   "log.suggestions": "Recent tags",
   "log.noArea": "No area: tap the figures",
   "help.limb": "Press and hold an area to select the whole limb.",
@@ -193,5 +190,7 @@
   "report.share": "Share file",
   "report.shared": "Report shared",
   "preset.fromEntry": "Create a preset from this entry",
-  "log.noteWord": "note"
+  "log.clear": "Clear",
+  "log.cleared": "Form cleared",
+  "log.allTags": "All tags"
 }

@@ -66,7 +66,7 @@
 </script>
 
 <Sheet bind:open title={t('diary.edit')}>
-  <EntryForm bind:draft {symptoms} {tags} detailsOpen={true} />
+  <EntryForm bind:draft {symptoms} {tags} />
   <div class="row">
     <button class="btn danger" onclick={remove}>{t('diary.delete')}</button>
     <button class="btn primary grow" onclick={save}>{t('common.save')}</button>

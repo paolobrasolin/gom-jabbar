@@ -193,10 +193,12 @@ This screen is the product. Layout top to bottom:
 5. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
 6. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
 7. **Episode toggle**: "In corso" switch next to the slider. Off by default the first time, then remembers the last used value. The slider edits the current area's level (§5.4).
-8. **Suggestion strip**: one row of tag chips under the slider, no header, like the word suggestions above a keyboard. The 5 most recently used tags (from the last 30 entries), filled with the first enabled tags in vocabulary order on a fresh install, so the user meets the tags without opening anything. Tap toggles the tag on the draft; everything else is in the details sheet (#4). A tag set in the details sheet that is not among the five is appended to the strip, pressed, so it can be seen and toggled off without reopening the sheet; appended rather than moved to the front, so the strip never reorders under a finger (#15).
-9. **Hint line** (until dismissed, `hintDismissed` pref): "Altri sintomi, rimedi e note: bottone qui sotto." with a dismiss. The one hint the log screen is allowed (§10).
-10. **Save** button, bottom anchored, with **Sintomi · rimedi · note** beside it. (Repeat last was absorbed by presets, §5.6.) While the details sheet holds anything, a one-line muted **summary** sits above the buttons in the same sticky bar: `Gonfiore 3 · Stress · nota` (readings other than pain in symptom order, tags in vocabulary order, then "nota"), so closing the sheet visibly loses nothing (#15).
-11. **Sintomi · rimedi · note** opens a bottom sheet with the other symptom sliders, tag chips grouped by type, the note field and a sticky **Salva** at the bottom that saves the entry exactly like the main button (same toast and undo, sheet closes, form resets). The sheet is page two of the form: fill it, save. Swiping it down keeps everything in the draft. The button carries a count badge while anything in it is set (readings other than pain, tags, note); the badge clears with the form on save. Nothing of this lives inline in the form: on a phone the form already fills the screen, and an inline expander opened out of sight under the action bar (#1). The sheet has one primary action and no other button: a preset field at the bottom read as the only way to keep the input, and swiping down as discard (#15).
+8. **Suggestion strip**: one row of tag chips under the slider, no header, like the word suggestions above a keyboard. The 5 most recently used tags (from the last 30 entries), filled with the first enabled tags in vocabulary order on a fresh install, so the user meets the tags without opening anything. Tap toggles the tag on the draft (#4). A tag set from the full list that is not among the five is appended to the strip, pressed, so it can be toggled off there; appended rather than moved to the front, so the strip never reorders under a finger (#15). The strip ends with a **Tutti i tag** toggle chip that unfolds every enabled tag, grouped by type, in place under the strip; a new draft (save, Azzera, another entry to edit) folds it away again.
+9. **Other symptom sliders**, compact, one per enabled symptom other than pain, in vocabulary order. The vocabulary editor (§6.5) decides how long the form is: disable what is never tracked.
+10. **Note**: a one-line field that grows with the text.
+11. **Azzera** and **Salva**, bottom anchored in a sticky bar. Salva is the primary, full width beside Azzera. Azzera is enabled while the draft holds anything beyond the pain level (areas, a time, tags, a note, another reading) and empties the form with an undo toast "Modulo azzerato · Annulla"; the episode toggle stays. (Repeat last was absorbed by presets, §5.6.)
+
+The form is one page: everything is in the flow and the fast path never scrolls. The first version hid symptoms, tags and note behind a **Dettagli** expander, then behind a **Sintomi · rimedi · note** sheet with a count badge (#1, #4); the tester read the sheet as a separate thing whose input was lost on closing (#15). One scrolling form with a single sticky Salva replaced both: the edit sheet had always been that form and nobody struggled with it. No hint line is needed any more, so the log screen has none.
 
 Fast path: tap region(s) → drag slider → Save. Regions are optional; an entry with only intensity is valid.
 
@@ -205,7 +207,7 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 ### 6.2 Diary
 
 - Reverse-chronological list grouped by day. Each row: time, headline reading as a coloured pill (§5.1), the symptom name when it is not pain, region summary ("gambe, fianchi", "tutto il corpo"), tags, note preview, duration and level trail if episode.
-- Tap a row → edit sheet, same form as Log, prefilled, with Delete (undo toast) and, at the bottom, **Crea preset da questa voce** (§5.6).
+- Tap a row → edit sheet, the same one-page form as Log, prefilled, with Delete and Salva and, at the bottom, **Crea preset da questa voce** (§5.6).
 - Shows the last 30 days; a **Mostra altre** button at the bottom loads 60 more days at a time while older entries exist.
 - Search by note text and a tag filter are planned (#10).
 
@@ -279,14 +281,14 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 - Every body region has a human accessible name ("Coscia sx", "Left thigh"); focus is visible on all controls; sheets take focus on open and give it back on close.
 - Dark mode via `prefers-color-scheme`, overridable.
 - Intensity colour ramp: neutral at 0, warm at 10, perceptually even, readable in both themes and by colour-blind users (ramp plus the number, never colour alone).
-- No spinners, no splash beyond the PWA one, no onboarding screens. At most one dismissable hint line on the log screen (§6.1 item 9).
+- No spinners, no splash beyond the PWA one, no onboarding screens, no hint lines: what needs explaining gets redesigned instead.
 - Respect `prefers-reduced-motion`.
 - Italian copy first, terse, informal ("Salva", "Annulla", "In corso").
 
 ## 11. Testing
 
 - **Unit (Vitest)**: data layer on `fake-indexeddb` (CRUD, episodes, migrations), stats and correlation functions, export/import round trip and merge semantics, region helpers (mirror, limb shortcuts, full body), area operations, i18n key parity.
-- **Component (Testing Library)**: every screen and sheet, against the real Dexie on `fake-indexeddb`: the fast path (select region, set intensity, save, entry appears), undo, the details sheet, presets, the episode sheet (history, update and end with undo, hand-off to edit), the diary (day groups, row content, load more, edit and delete with undo), trends (ranges, heatmap, chart tap, tag comparison, symptom means), the report (numbers, sections, share as one HTML file), settings (language, theme, backup export and import with merge, replace and undo) and the vocabulary editor.
+- **Component (Testing Library)**: every screen and sheet, against the real Dexie on `fake-indexeddb`: the fast path (select region, set intensity, save, entry appears), undo, the inline details and Tutti i tag, Azzera with undo, presets, the episode sheet (history, update and end with undo, hand-off to edit), the diary (day groups, row content, load more, edit and delete with undo), trends (ranges, heatmap, chart tap, tag comparison, symptom means), the report (numbers, sections, share as one HTML file), settings (language, theme, backup export and import with merge, replace and undo) and the vocabulary editor.
 - **Manual checklist** before each release: see `CHECKLIST.md`.
 - **Bundle size gate**: `npm run size` fails the build above 150 KB gzipped JS; it runs in CI.
 - No e2e framework in v1.

@@ -2,27 +2,36 @@
   import BodyMap from './BodyMap.svelte'
   import IntensitySlider from './IntensitySlider.svelte'
   import EntrySummary from './EntrySummary.svelte'
-  import EntryDetails from './EntryDetails.svelte'
   import { regionText } from '../lib/summary'
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
-  import { PAIN, type Symptom, type Tag } from '../lib/types'
+  import { PAIN, type Symptom, type Tag, type TagGroup } from '../lib/types'
+  import { db } from '../lib/db'
+  import { live } from '../lib/live.svelte'
+  import { recentTags } from '../lib/vocab'
   import { LEG_IDS, ARM_IDS, limbOf, mirrorId } from '../lib/regions'
   import { isFull, tapRegion, tapSet, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
   import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
   import type { EntryDraft } from '../lib/draft'
   import { haptic } from '../lib/toast.svelte'
 
-  let {
-    draft = $bindable(),
-    symptoms = [],
-    tags = [],
-    detailsOpen = false,
-    suggestions = [],
-  }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[]; detailsOpen?: boolean; suggestions?: Tag[] } = $props()
+  let { draft = $bindable(), symptoms = [], tags = [] }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[] } = $props()
 
   let showPicker = $state(false)
+
+  // The strip: recent tags plus whatever the draft has set (§6.1 item 8). Behind it, on demand, every tag by group.
+  const recent = live(() => null, () => db.entries.orderBy('createdAt').reverse().limit(30).toArray(), [])
+  const suggestions = $derived(recentTags(recent.value, tags, 5, draft.tags))
+  let allTags = $state(false)
+  // A new draft (save, clear, another entry to edit) folds the full list away again.
+  $effect(() => {
+    void draft
+    allTags = false
+  })
+  const groups: TagGroup[] = ['intervention', 'context', 'medication']
+  const tagsByGroup = $derived(groups.map((g) => ({ g, items: tags.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
+  const otherSymptoms = $derived(symptoms.filter((s) => s.enabled && s.id !== PAIN))
 
   /** Brush = the level the slider shows: the current area's, or the entry-level pain when there are no areas. */
   const brush = $derived(draft.areas[draft.cur]?.intensity ?? draft.readings[PAIN] ?? 0)
@@ -88,6 +97,9 @@
   function toggleTag(id: string) {
     draft.tags = draft.tags.includes(id) ? draft.tags.filter((x) => x !== id) : [...draft.tags, id]
   }
+  function setReading(id: string, v: number) {
+    draft.readings = { ...draft.readings, [id]: v }
+  }
 </script>
 
 <div class="form">
@@ -150,17 +162,33 @@
 
   <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
 
-  {#if suggestions.length}
-    <div class="chips suggest" aria-label={t('log.suggestions')}>
-      {#each suggestions as tag (tag.id)}
-        <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+  <div class="chips suggest" aria-label={t('log.suggestions')}>
+    {#each suggestions as tag (tag.id)}
+      <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+    {/each}
+    <button class="chip small outline" aria-pressed={allTags} onclick={() => (allTags = !allTags)}>{t('log.allTags')}</button>
+  </div>
+
+  {#if allTags}
+    <div class="groups">
+      {#each tagsByGroup as { g, items } (g)}
+        <div>
+          <p class="small muted group-title">{t(`tag.group.${g}`)}</p>
+          <div class="chips">
+            {#each items as tag (tag.id)}
+              <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+            {/each}
+          </div>
+        </div>
       {/each}
     </div>
   {/if}
 
-  {#if detailsOpen}
-    <EntryDetails bind:draft {symptoms} {tags} />
-  {/if}
+  {#each otherSymptoms as s (s.id)}
+    <IntensitySlider compact label={tl(s.label)} value={draft.readings[s.id] ?? 0} onchange={(v) => setReading(s.id, v)} />
+  {/each}
+
+  <textarea class="note" rows="1" placeholder={t('log.notePlaceholder')} bind:value={draft.note} aria-label={t('log.note')}></textarea>
 </div>
 
 <style>
@@ -174,6 +202,10 @@
   .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar, .suggest::-webkit-scrollbar { display: none; }
   .map { flex: 1 1 var(--map-h, 320px); min-height: var(--map-min, 320px); max-height: var(--map-max, 640px); }
   .chip:disabled { opacity: 0.4; }
+  .groups { display: flex; flex-direction: column; gap: 12px; }
+  .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
+  /* One line that grows with the text; no drag handle on a phone. */
+  .note { field-sizing: content; min-height: var(--tap); max-height: 40dvh; resize: none; }
   .area { background: var(--surface-2); color: var(--ink); border-color: transparent; padding-left: 6px; }
   .area[aria-pressed='true'] { background: var(--surface-2); color: var(--ink); border-color: var(--ink); }
   .dot {

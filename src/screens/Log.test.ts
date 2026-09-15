@@ -13,7 +13,6 @@ beforeEach(() => {
   prefs.lang = 'it'
   prefs.mirror = true
   prefs.ongoing = false
-  prefs.hintDismissed = false
 })
 
 describe('Log fast path', () => {
@@ -71,75 +70,80 @@ describe('Log fast path', () => {
   })
 })
 
-describe('Details sheet', () => {
-  it('keeps symptoms, tags and the note out of the form until asked', () => {
+describe('Details inline', () => {
+  it('shows the other symptoms and the note on the page, the full tag list behind Tutti i tag', async () => {
     render(App)
-    expect(screen.queryByRole('textbox', { name: 'Note' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(await screen.findByRole('slider', { name: 'Gonfiore' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Note' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Freddo' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('slider', { name: 'Gonfiore' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Contesto')).not.toBeInTheDocument()
+    const all = screen.getByRole('button', { name: 'Tutti i tag' })
+    expect(all).toHaveAttribute('aria-pressed', 'false')
+    await fireEvent.click(all)
+    expect(all).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByText('Rimedi')).toBeInTheDocument()
+    expect(screen.getByText('Contesto')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Freddo' })).toBeInTheDocument()
+    await fireEvent.click(all)
+    expect(screen.queryByRole('button', { name: 'Freddo' })).not.toBeInTheDocument()
   })
 
-  it('opens them in a sheet and counts what is set on the button', async () => {
+  it('saves what is set inline and leaves the form clean', async () => {
     render(App)
-    const btn = screen.getByRole('button', { name: /^Sintomi · rimedi · note/ })
-    await fireEvent.click(btn)
-    const sheet = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
-    await fireEvent.click(await within(sheet).findByRole('button', { name: 'Riposo' }))
-    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Gonfiore' }), { target: { value: '4' } })
-    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'dopo la corsa' } })
-    await fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(btn).toHaveTextContent('Sintomi · rimedi · note 3')
-
+    await fireEvent.click(await screen.findByRole('button', { name: 'Riposo' }))
+    await fireEvent.input(screen.getByRole('slider', { name: 'Gonfiore' }), { target: { value: '4' } })
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Note' }), { target: { value: 'dopo la corsa' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.tags).toEqual(['rest'])
     expect(e.readings.swelling).toBe(4)
     expect(e.note).toBe('dopo la corsa')
-    expect(btn).toHaveTextContent(/^Sintomi · rimedi · note$/)
+    expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveValue('0')
+    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('')
   })
 
-  it('saves straight from the sheet', async () => {
+  it('a tag picked from the full list joins the strip, pressed, and can be toggled off there', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
-    const btn = screen.getByRole('button', { name: /^Sintomi · rimedi · note/ })
-    await fireEvent.click(btn)
-    const sheet = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
-    await fireEvent.click(await within(sheet).findByRole('button', { name: 'Riposo' }))
-    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'dopo la corsa' } })
-    expect(within(sheet).queryByRole('textbox', { name: 'Nome del preset' })).not.toBeInTheDocument()
-    await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
-    await waitFor(async () => expect(await db.entries.count()).toBe(1))
-    const [e] = await db.entries.toArray()
-    expect(e.areas).toEqual([{ regions: ['thigh.l', 'thigh.r'], intensity: 5 }])
-    expect(e.tags).toEqual(['rest'])
-    expect(e.note).toBe('dopo la corsa')
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    expect(await screen.findByText('Salvato')).toBeInTheDocument()
-    expect(btn).toHaveTextContent(/^Sintomi · rimedi · note$/)
-  })
-
-  it('keeps what the sheet set in view: a summary line and the chosen tag in the strip', async () => {
-    render(App)
-    expect(screen.queryByTestId('details-summary')).not.toBeInTheDocument()
-    await fireEvent.click(screen.getByRole('button', { name: /^Sintomi · rimedi · note/ }))
-    const sheet = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
+    const strip = await screen.findByLabelText('Tag recenti')
+    await waitFor(() => expect(within(strip).getAllByRole('button')).toHaveLength(6))
+    await fireEvent.click(screen.getByRole('button', { name: 'Tutti i tag' }))
     // Stress is a context tag: never among the five suggested remedies on a fresh install.
-    await fireEvent.click(await within(sheet).findByRole('button', { name: 'Stress' }))
-    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
-    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'dopo la corsa' } })
-    await fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.getByTestId('details-summary')).toHaveTextContent('Gonfiore 3 · Stress · nota')
-    const strip = screen.getByLabelText('Tag recenti')
+    await fireEvent.click(screen.getByRole('button', { name: 'Stress' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Tutti i tag' }))
     const chip = within(strip).getByRole('button', { name: 'Stress' })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
-    expect(within(strip).getAllByRole('button')).toHaveLength(6)
+    expect(within(strip).getAllByRole('button')).toHaveLength(7)
+    expect(within(strip).getAllByRole('button').at(-1)).toHaveTextContent('Tutti i tag')
     await fireEvent.click(chip)
     expect(within(strip).queryByRole('button', { name: 'Stress' })).not.toBeInTheDocument()
-    expect(screen.getByTestId('details-summary')).toHaveTextContent('Gonfiore 3 · nota')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
-    await waitFor(() => expect(screen.queryByTestId('details-summary')).not.toBeInTheDocument())
+  })
+
+  it('Azzera empties the form and the toast undoes it', async () => {
+    render(App)
+    const clear = screen.getByRole('button', { name: 'Azzera' })
+    expect(clear).toBeDisabled()
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
+    await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Note' }), { target: { value: 'dopo la corsa' } })
+    expect(clear).toBeEnabled()
+    await fireEvent.click(clear)
+    expect(screen.getByRole('button', { name: 'Coscia dx' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByText('Nessuna zona: tocca le figure')).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Dolore' })).toHaveValue('5')
+    expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveValue('0')
+    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('')
+    expect(clear).toBeDisabled()
+    expect(await db.entries.count()).toBe(0)
+    expect(await screen.findByText('Modulo azzerato')).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(screen.getByRole('button', { name: 'Coscia dx' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('slider', { name: 'Dolore' })).toHaveValue('8')
+    expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveValue('3')
+    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('dopo la corsa')
+    expect(clear).toBeEnabled()
   })
 
   it('the episode sheet offers to edit areas and note', async () => {
@@ -156,7 +160,7 @@ describe('Tag discoverability', () => {
   it('offers the first remedies in a strip under the slider and toggles them on the draft', async () => {
     render(App)
     const strip = await screen.findByLabelText('Tag recenti')
-    await waitFor(() => expect(within(strip).getAllByRole('button').map((b) => b.textContent)).toEqual(['Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Calore']))
+    await waitFor(() => expect(within(strip).getAllByRole('button').map((b) => b.textContent)).toEqual(['Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Calore', 'Tutti i tag']))
     await fireEvent.click(within(strip).getByRole('button', { name: 'Calore' }))
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
@@ -164,15 +168,6 @@ describe('Tag discoverability', () => {
     // Once used, a tag moves to the front of the strip and the form is clean again.
     await waitFor(() => expect(within(strip).getAllByRole('button')[0]).toHaveTextContent('Calore'))
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'false')
-  })
-
-  it('shows a first-run hint pointing at the details sheet until dismissed', async () => {
-    render(App)
-    expect(screen.getByText(/Altri sintomi, rimedi e note/)).toBeInTheDocument()
-    await fireEvent.click(screen.getByRole('button', { name: 'Nascondi' }))
-    expect(screen.queryByText(/Altri sintomi, rimedi e note/)).not.toBeInTheDocument()
-    expect(prefs.hintDismissed).toBe(true)
-    expect(localStorage.getItem('gj.prefs')).toContain('"hintDismissed":true')
   })
 
   it('records remedies from the episode sheet on Aggiorna and Termina', async () => {
@@ -201,10 +196,7 @@ describe('Tag discoverability', () => {
 describe('Headline reading', () => {
   it('shows swelling as the headline when pain is 0', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: /^Sintomi · rimedi · note/ }))
-    const sheet = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
-    await fireEvent.input(await within(sheet).findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
-    await fireEvent.keyDown(window, { key: 'Escape' })
+    await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '0' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     const chip = await screen.findByRole('button', { name: /^3 gonfiore/ })
@@ -213,10 +205,7 @@ describe('Headline reading', () => {
 
   it('the episode sheet has a slider per symptom and Aggiorna updates all of them', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: /^Sintomi · rimedi · note/ }))
-    const details = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
-    await fireEvent.input(await within(details).findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
-    await fireEvent.keyDown(window, { key: 'Escape' })
+    await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
     await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await fireEvent.click(await screen.findByRole('button', { name: 'Episodio in corso' }))
