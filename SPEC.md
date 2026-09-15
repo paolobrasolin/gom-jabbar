@@ -86,7 +86,7 @@ Rules:
 - An area with `regions: ['*']` means full body and is always the only area.
 - Intensity is 0..10 integer. 0 is allowed (useful to record "no pain today").
 - **Areas are "where", readings are "what".** "Legs, pain 0, swelling 3" means legs swollen, no pain. There is no per-area reading and no symptom switch on the slider; two areas with different symptoms are two entries.
-- **Headline reading.** An entry's headline is its highest reading; pain wins ties. Every list (today chips, diary rows, episode cards, report) shows the headline value in the pill, coloured by it, and names the symptom when it is not pain: `3 gonfiore · gambe` (#3).
+- **Headline reading.** An entry's headline is its highest reading; pain wins ties. Every list (diary rows, episode cards, preset chips, report) shows the headline value in the pill, coloured by it, and names the symptom when it is not pain: `3 gonfiore · gambe` (#3).
 
 ### 5.2 Vocabulary (editable, shipped with defaults)
 
@@ -187,8 +187,7 @@ This screen is the product. Layout top to bottom:
 
 1. **Active episode cards** (only if any): "7 · gambe · da 3h", or "3 · gonfiore · gambe · da 3h" when the headline is not pain (§5.1), with a **Termina** button. Tap the card → update sheet (§5.5).
 2. **Preset strip** (only if any presets, §5.6): one chip per preset, `4 Schiena · 2g`. Tap → preset sheet.
-3. **Today strip**: "Oggi" followed by one small chip per entry logged today (headline level, symptom name when not pain, time). Tap to edit. Shows "niente ancora" when empty.
-   Under it, while the app is not installed (no `display-mode: standalone`, no `installedAt` pref): an inline **install nudge** in the backup banner style, "Aggiungi alla schermata Home per tenere i dati al sicuro", with **Aggiungi** and a dismiss. It shows on every launch until the app is installed; dismiss hides it for the current session only. Aggiungi replays the browser install prompt when captured, else opens the how-to sheet (§4.1).
+3. While the app is not installed (no `display-mode: standalone`, no `installedAt` pref): an inline **install nudge** in the backup banner style, "Aggiungi alla schermata Home per tenere i dati al sicuro", with **Aggiungi** and a dismiss. It shows on every launch until the app is installed; dismiss hides it for the current session only. Aggiungi replays the browser install prompt when captured, else opens the how-to sheet (§4.1).
 4. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
 5. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
 6. **Tag strip**: one scrolling row of chips after the time chips, no header, so the chip rows (areas, time, tags) sit together and the sliders form one block. First a chevron chip (**Tutti i tag**), then **every enabled tag**, the most used first (count over every entry, ties in vocabulary order; a fresh install shows vocabulary order). What gets used sits under the thumb, the long tail is a swipe away, and nothing needs a cutoff or a "keep the selected ones visible" rule. Tap toggles the tag on the draft; the order never changes under a finger, it follows usage across saves (#4, #15). The chevron replaces the strip with the same tags grouped by type, for browsing by category: the chip stays in its slot (now pointing up) and a thin rail drops from it along the left of everything it folds, group titles and chips indented together to its right. Group titles use the slider label style: they are field labels, not section markers. Tapping the chip folds it back, and so does a new draft (save, Azzera, another entry to edit).
@@ -199,6 +198,8 @@ This screen is the product. Layout top to bottom:
 11. **Azzera** and **Salva**, bottom anchored in a sticky bar. Salva is the primary, full width beside Azzera. Azzera is enabled while the draft holds anything beyond the pain level (areas, a time, tags, a note, another reading) and empties the form with an undo toast "Modulo azzerato · Annulla"; the episode toggle stays. (Repeat last was absorbed by presets, §5.6.)
 
 The form is one page: everything is in the flow and the fast path never scrolls. The first version hid symptoms, tags and note behind a **Dettagli** expander, then behind a **Sintomi · rimedi · note** sheet with a count badge (#1, #4); the tester read the sheet as a separate thing whose input was lost on closing (#15). One scrolling form with a single sticky Salva replaced both: the edit sheet had always been that form and nobody struggled with it. No hint line is needed any more, so the log screen has none.
+
+There is no "Oggi" strip of today's entries either. It duplicated the top of the diary, sat right under the preset strip looking like it (same chips, opposite action: edit an old entry versus log a new one), and cost a row on the screen that must not scroll. The save toast is the receipt; the diary is the review.
 
 Fast path: tap region(s) → drag slider → Save. Regions are optional; an entry with only intensity is valid.
 
