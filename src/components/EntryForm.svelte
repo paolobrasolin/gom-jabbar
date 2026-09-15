@@ -176,21 +176,24 @@
       {/each}
     </div>
   {:else}
-    <div class="groups">
-      {#if tagsByGroup.length === 0}{@render expander()}{/if}
-      {#each tagsByGroup as { g, items }, i (g)}
-        <div>
-          <div class="row head">
-            {#if i === 0}{@render expander()}{/if}
-            <p class="small muted group-title">{t(`tag.group.${g}`)}</p>
+    <div class="expanded">
+      <!-- The chevron keeps its slot; a rail drops from it along everything it folds. -->
+      <div class="rail">
+        {@render expander()}
+        <div class="line"></div>
+      </div>
+      <div class="groups">
+        {#each tagsByGroup as { g, items } (g)}
+          <div>
+            <p class="group-title">{t(`tag.group.${g}`)}</p>
+            <div class="chips">
+              {#each items as tag (tag.id)}
+                <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+              {/each}
+            </div>
           </div>
-          <div class="chips">
-            {#each items as tag (tag.id)}
-              <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
-            {/each}
-          </div>
-        </div>
-      {/each}
+        {/each}
+      </div>
     </div>
   {/if}
 
@@ -214,10 +217,13 @@
   .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar, .suggest::-webkit-scrollbar { display: none; }
   .map { flex: 1 1 var(--map-h, 320px); min-height: var(--map-min, 320px); max-height: var(--map-max, 640px); }
   .chip:disabled { opacity: 0.4; }
-  .groups { display: flex; flex-direction: column; gap: 12px; }
-  .head { margin-bottom: 6px; min-height: 34px; }
+  .expanded { display: flex; gap: 10px; align-items: stretch; }
+  .rail { display: flex; flex-direction: column; align-items: center; flex: none; }
+  .line { flex: 1; width: 2px; margin-top: 6px; border-radius: 1px; background: var(--border); }
+  .groups { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; }
   .expand { padding: 0 10px; flex: none; color: var(--ink-2); }
-  .group-title { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
+  /* Same style as the slider labels: a field label, not a section marker. */
+  .group-title { font-size: 13px; font-weight: 600; color: var(--ink-2); padding-left: 2px; margin-bottom: 6px; }
   /* One line that grows with the text; no drag handle on a phone. */
   .note { field-sizing: content; min-height: var(--tap); max-height: 40dvh; resize: none; }
   .area { background: var(--surface-2); color: var(--ink); border-color: transparent; padding-left: 6px; }
