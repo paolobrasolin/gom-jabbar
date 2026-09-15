@@ -179,6 +179,7 @@
     </div>
   {:else}
     <div class="groups">
+      {#if tagsByGroup.length === 0}{@render expander()}{/if}
       {#each tagsByGroup as { g, items }, i (g)}
         <div>
           <div class="row head">
