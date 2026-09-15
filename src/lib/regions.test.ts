@@ -53,6 +53,26 @@ describe('regions', () => {
     expect(toggleRegion([FULL_BODY], 'thigh.l', true)).toEqual([FULL_BODY])
   })
 
+  it('draws hips on the outer edge of the pelvis and a pelvis in the middle', () => {
+    const front = regionsFor('front')
+    const hip = front.find((x) => x.id === 'hip.r')!
+    const thigh = front.find((x) => x.id === 'thigh.r')!
+    const abdomen = front.find((x) => x.id === 'abdomen')!
+    const pelvis = front.find((x) => x.id === 'pelvis')!
+    // hip.r is on the viewer's left: its centre sits further out than the thigh's.
+    expect(shapeCenter(hip.shape)[0]).toBeLessThan(shapeCenter(thigh.shape)[0])
+    if (hip.shape.kind === 'poly') expect(Math.max(...hip.shape.points.map((p) => p[0]))).toBeLessThan(VIEWBOX.w / 2 - 12)
+    expect(pelvis.side).toBeUndefined()
+    expect(pelvis.group).toBe('torso')
+    expect(shapeCenter(pelvis.shape)[0]).toBeCloseTo(VIEWBOX.w / 2, 5)
+    expect(shapeCenter(pelvis.shape)[1]).toBeGreaterThan(shapeCenter(abdomen.shape)[1])
+    expect(shapeCenter(pelvis.shape)[1]).toBeLessThan(shapeCenter(thigh.shape)[1])
+    expect(LEG_IDS).toContain('hip.l')
+    expect(LEG_IDS).not.toContain('pelvis')
+    expect(limbOf('pelvis')).toEqual(['abdomen', 'chest', 'pelvis'])
+    expect(summarizeRegions(['pelvis'])).toEqual([{ group: 'torso', side: 'none' }])
+  })
+
   it('limbOf selects the whole limb on one side, both views', () => {
     const leg = limbOf('thigh.l')
     expect(leg).toContain('hip.l')
@@ -60,7 +80,7 @@ describe('regions', () => {
     expect(leg).toContain('foot.l')
     expect(leg).not.toContain('thigh.r')
     expect(limbOf('shoulder.r')).toEqual(expect.arrayContaining(['hand.r', 'elbow.r', 'forearm.back.r']))
-    expect(limbOf('chest')).toEqual(['abdomen', 'chest'])
+    expect(limbOf('chest')).toEqual(['abdomen', 'chest', 'pelvis'])
     expect(limbOf('neck.back')).toEqual(['head', 'head.back', 'neck', 'neck.back'])
   })
 

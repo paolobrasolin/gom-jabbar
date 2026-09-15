@@ -149,6 +149,7 @@
   "reg.shoulder": "Shoulder",
   "reg.chest": "Chest",
   "reg.abdomen": "Abdomen",
+  "reg.pelvis": "Pelvis",
   "reg.upperarm": "Upper arm",
   "reg.elbow": "Elbow",
   "reg.forearm": "Forearm",
