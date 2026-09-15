@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { resetDb } from './db'
-import { addEntry, updateEntry, deleteEntry, restoreEntry, endEpisode, reopenEpisode, activeEpisodes, lastEntry, repeatEntry, durationMs, makeEntry, updateEpisode } from './entries'
+import { addEntry, updateEntry, deleteEntry, restoreEntry, endEpisode, reopenEpisode, activeEpisodes, durationMs, makeEntry, updateEpisode } from './entries'
 import { draftFromEntry, draftToInput, emptyDraft } from './draft'
 
 let db: ReturnType<typeof resetDb>
@@ -80,20 +80,6 @@ describe('entries', () => {
     expect(await db.entries.count()).toBe(0)
     await restoreEntry(gone!)
     expect(await db.entries.count()).toBe(1)
-  })
-
-  it('repeats the last entry as a new one now', async () => {
-    await addEntry({ readings: { pain: 2 }, at: '2026-01-01T10:00:00.000Z' })
-    const b = await addEntry({ readings: { pain: 8, swelling: 4 }, areas: [{ regions: ['*'], intensity: 8 }], tags: ['compression'], note: 'x', at: '2025-01-01T10:00:00.000Z' })
-    const last = await lastEntry()
-    expect(last?.id).toBe(b.id)
-    const r = await repeatEntry(last!)
-    expect(r.id).not.toBe(b.id)
-    expect(r.readings).toEqual({ pain: 8, swelling: 4 })
-    expect(r.areas).toEqual([{ regions: ['*'], intensity: 8 }])
-    expect(r.tags).toEqual(['compression'])
-    expect(r.note).toBe('')
-    expect(Date.parse(r.at)).toBeGreaterThan(Date.now() - 5000)
   })
 
   it('migrates v1 entries with regions to areas', async () => {

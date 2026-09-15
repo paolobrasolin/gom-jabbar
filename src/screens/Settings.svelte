@@ -8,8 +8,15 @@
   import type { Lang } from '../lib/types'
   import { buildExport, parseImport, previewImport, applyImport, toCsv, shareOrDownload, exportFilename, type ExportFile, type ImportPreview } from '../lib/backup'
   import { showToast, haptic } from '../lib/toast.svelte'
+  import { deletePreset, restorePreset } from '../lib/presets'
 
   const count = live(() => null, () => db.entries.count(), 0)
+  const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
+  async function removePreset(id: string) {
+    const gone = await deletePreset(id)
+    haptic(20)
+    if (gone) showToast(t('preset.deleted'), { label: t('log.undo'), run: () => void restorePreset(gone) })
+  }
   const standalone = typeof matchMedia !== 'undefined' && (matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true)
 
   function setLang(l: Lang) {
@@ -133,6 +140,22 @@
   </div>
 
   <div class="card">
+    <p class="small muted label">{t('settings.presets')}</p>
+    {#if presets.value.length}
+      <div class="plist">
+        {#each presets.value as p (p.id)}
+          <div class="row preset">
+            <span class="grow">{p.name}</span>
+            <button class="chip small outline" onclick={() => removePreset(p.id)} aria-label="{t('diary.delete')} {p.name}">{t('diary.delete')}</button>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <p class="small muted">{t('preset.none')}</p>
+    {/if}
+  </div>
+
+  <div class="card">
     <p class="small muted label">{t('settings.language')}</p>
     <div class="chips">
       <button class="chip" aria-pressed={prefs.lang === 'it'} onclick={() => setLang('it')}>Italiano</button>
@@ -182,4 +205,6 @@
   .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
   .chip:disabled { opacity: 0.5; }
   .center { text-align: center; }
+  .plist { display: flex; flex-direction: column; gap: 4px; }
+  .preset { min-height: 40px; }
 </style>

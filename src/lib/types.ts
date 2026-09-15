@@ -25,6 +25,8 @@ export type Entry = {
   /** Readings over time while an episode was ongoing: the starting point first, then one per update. */
   history?: HistoryPoint[]
   tags: TagId[]
+  /** The preset this moment was logged from, if any (§5.6). */
+  preset?: string
   note: string
   createdAt: string
   updatedAt: string
@@ -44,6 +46,19 @@ export type Tag = {
   label: LocalizedString
   group: TagGroup
   enabled: boolean
+  order: number
+}
+
+/** A named, saved shape of an entry: tap it, set the level(s), save. Each tap logs an ordinary moment. */
+export type Preset = {
+  id: string
+  name: string
+  areas: Area[]
+  /** Symptoms the sheet asks for, pain first when present. */
+  symptomIds: SymptomId[]
+  tags: TagId[]
+  /** Logging from this preset starts an episode. */
+  ongoing: boolean
   order: number
 }
 

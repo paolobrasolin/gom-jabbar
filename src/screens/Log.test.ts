@@ -4,6 +4,8 @@ import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { install, initInstall } from '../lib/install.svelte'
 import App from '../App.svelte'
+import { LEG_IDS } from '../lib/regions'
+import { addPreset } from '../lib/presets'
 
 let db: ReturnType<typeof resetDb>
 beforeEach(() => {
@@ -189,6 +191,44 @@ describe('Headline reading', () => {
     })
     // The card now leads with swelling, the highest reading.
     await waitFor(() => expect(screen.getByRole('button', { name: 'Episodio in corso' })).toHaveTextContent(/^6\s*gonfiore/))
+  })
+})
+
+describe('Presets', () => {
+  it('creates a preset from the form, logs from its chip and shows the last value', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
+    await fireEvent.click(screen.getByRole('button', { name: /^Sintomi · rimedi · note/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Sintomi · rimedi · note' })
+    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Le gambe' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Crea preset' }))
+    const strip = await screen.findByLabelText('Preset')
+    const chip = await within(strip).findByRole('button', { name: /Le gambe/ })
+    expect(chip).toHaveTextContent('mai')
+    expect(await db.presets.count()).toBe(1)
+    await fireEvent.click(chip)
+    const ps = await screen.findByRole('dialog', { name: 'Le gambe' })
+    await fireEvent.input(within(ps).getByRole('slider', { name: 'Dolore' }), { target: { value: '6' } })
+    await fireEvent.click(within(ps).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => {
+      const [e] = await db.entries.toArray()
+      expect(e.preset).toBe((await db.presets.toArray())[0].id)
+      expect(e.readings.pain).toBe(6)
+      expect(e.areas).toEqual([{ regions: [...LEG_IDS].sort(), intensity: 6 }])
+    })
+    await waitFor(() => expect(within(strip).getByRole('button', { name: /Le gambe/ })).toHaveTextContent(/^6\s*Le gambe · 0m$/))
+  })
+
+  it('starts the preset sheet from the last logged levels', async () => {
+    const p = await addPreset({ name: 'Schiena', areas: [{ regions: ['lowerback'], intensity: 5 }], symptomIds: ['pain', 'swelling'], tags: [], ongoing: false })
+    const { logPreset } = await import('../lib/presets')
+    await logPreset(p, { pain: 3, swelling: 7 })
+    render(App)
+    const strip = await screen.findByLabelText('Preset')
+    await fireEvent.click(await within(strip).findByRole('button', { name: /Schiena/ }))
+    const ps = await screen.findByRole('dialog', { name: 'Schiena' })
+    await waitFor(() => expect(within(ps).getByRole('slider', { name: 'Dolore' })).toHaveValue('3'))
+    expect(within(ps).getByRole('slider', { name: 'Gonfiore' })).toHaveValue('7')
   })
 })
 

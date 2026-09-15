@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
 import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, rangeStart, inRange, tagCounts } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
+import { presetSeries } from './stats'
+import type { Preset } from './types'
 
 const at = (d: string, h = 12) => new Date(2026, 2, Number(d), h).toISOString() // March 2026, local time
 const e = (day: string, pain: number, extra: Parameters<typeof makeEntry>[0] = {}) =>
@@ -76,5 +78,40 @@ describe('stats', () => {
     const now = new Date(2026, 2, 10, 15)
     expect(rangeStart(7, now).getTime()).toBe(new Date(2026, 2, 4).getTime())
     expect(inRange([e('3'.toString(), 1), e('5', 1)], rangeStart(7, now))).toHaveLength(1)
+  })
+})
+
+describe('presetSeries', () => {
+  it('gives one line per preset with samples only, following the preset first symptom', () => {
+    const presets: Preset[] = [
+      { id: 'a', name: 'Schiena', areas: [], symptomIds: ['pain'], tags: [], ongoing: false, order: 0 },
+      { id: 'b', name: 'Gambe', areas: [], symptomIds: ['swelling', 'pain'], tags: [], ongoing: false, order: 1 },
+      { id: 'c', name: 'Unused', areas: [], symptomIds: ['pain'], tags: [], ongoing: false, order: 2 },
+    ]
+    const mk = (id: string, at: string, readings: Record<string, number>, preset?: string) => ({ ...makeEntry({ at, readings }), id, ...(preset ? { preset } : {}) })
+    const entries = [
+      mk('1', '2026-09-03T10:00:00.000Z', { pain: 4 }, 'a'),
+      mk('2', '2026-09-01T10:00:00.000Z', { pain: 6 }, 'a'),
+      mk('3', '2026-09-02T10:00:00.000Z', { pain: 1, swelling: 5 }, 'b'),
+      mk('4', '2026-09-02T12:00:00.000Z', { pain: 7 }),
+    ]
+    const rows = presetSeries(entries, presets)
+    expect(rows.map((r) => r.preset.id)).toEqual(['a', 'b'])
+    expect(rows[0].points.map((p) => [p.at, p.value])).toEqual([[Date.parse('2026-09-01T10:00:00.000Z'), 6], [Date.parse('2026-09-03T10:00:00.000Z'), 4]])
+    expect(rows[1].points.map((p) => p.value)).toEqual([5])
+  })
+})
+
+describe('presetSeries edge cases', () => {
+  it('falls back to pain for a preset without symptoms and to 0 for a missing reading', () => {
+    const presets: Preset[] = [
+      { id: 'x', name: 'X', areas: [], symptomIds: [], tags: [], ongoing: false, order: 0 },
+      { id: 'y', name: 'Y', areas: [], symptomIds: ['swelling'], tags: [], ongoing: false, order: 1 },
+    ]
+    const entries = [
+      { ...makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 } }), preset: 'x' },
+      { ...makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 } }), preset: 'y' },
+    ]
+    expect(presetSeries(entries, presets).map((r) => r.points[0].value)).toEqual([3, 0])
   })
 })

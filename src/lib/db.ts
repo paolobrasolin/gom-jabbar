@@ -1,11 +1,12 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Entry, Symptom, Tag } from './types'
+import type { Entry, Preset, Symptom, Tag } from './types'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 
 export class GomJabbarDB extends Dexie {
   entries!: EntityTable<Entry, 'id'>
   symptoms!: EntityTable<Symptom, 'id'>
   tags!: EntityTable<Tag, 'id'>
+  presets!: EntityTable<Preset, 'id'>
 
   constructor(name = 'gom-jabbar') {
     super(name)
@@ -34,6 +35,11 @@ export class GomJabbarDB extends Dexie {
           })
         }),
       )
+    // 4: presets table; entries gain an optional `preset` id, indexed for the "last value" lookup.
+    this.version(4).stores({
+      entries: 'id, at, createdAt, updatedAt, preset',
+      presets: 'id, order',
+    })
     this.on('populate', () => {
       this.symptoms.bulkAdd(DEFAULT_SYMPTOMS)
       this.tags.bulkAdd(DEFAULT_TAGS)

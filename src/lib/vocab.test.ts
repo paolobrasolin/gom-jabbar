@@ -16,3 +16,18 @@ describe('recentTags', () => {
     expect(recentTags(entries, tags, 5).map((t) => t.id)).toEqual(['rest', 'period', 'heat', 'stress', 'compression'])
   })
 })
+
+describe('vocabulary edits on unknown or edge items', async () => {
+  const { resetDb } = await import('./db')
+  const { addTag, rename, move } = await import('./vocab')
+  it('ignore unknown ids and out-of-range moves, and slug symbol-only names', async () => {
+    const db = resetDb()
+    await rename('tags', 'nope', 'it', 'x')
+    await move('tags', 'nope', 1)
+    const first = (await db.tags.orderBy('order').toArray())[0]
+    await move('tags', first.id, -1)
+    expect((await db.tags.orderBy('order').toArray())[0].id).toBe(first.id)
+    const t = await addTag('!!!', 'medication')
+    expect(t.id).toMatch(/^item_/)
+  })
+})

@@ -1,4 +1,4 @@
-import { PAIN, type Entry, type Symptom, type Tag } from './types'
+import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
 import { REGIONS, FULL_BODY } from './regions'
 import { durationMs } from './entries'
 import { dayKey } from './time'
@@ -149,4 +149,20 @@ export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; count: num
     .map((tag) => ({ tag, count: c.get(tag.id) ?? 0 }))
     .filter((x) => x.count > 0)
     .sort((a, b) => b.count - a.count)
+}
+
+export type PresetPoint = { at: number; value: number }
+
+/** One line per preset that has samples: the preset's first symptom over time, samples only, no carry-forward. */
+export function presetSeries(entries: Entry[], presets: Preset[]): { preset: Preset; points: PresetPoint[] }[] {
+  return presets
+    .map((preset) => {
+      const id = preset.symptomIds[0] ?? PAIN
+      const points = entries
+        .filter((e) => e.preset === preset.id)
+        .map((e) => ({ at: Date.parse(e.at), value: e.readings[id] ?? 0 }))
+        .sort((a, b) => a.at - b.at)
+      return { preset, points }
+    })
+    .filter((r) => r.points.length > 0)
 }
