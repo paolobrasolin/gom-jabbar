@@ -15,7 +15,7 @@ Installable pain diary PWA (Svelte 5, Vite, Dexie), Italian first, for one Andro
 - No confirmation dialogs anywhere. Destructive actions get an undo toast (`lib/toast.svelte.ts`).
 - Schema change: follow "User data is never lost" below, no exceptions.
 - No chart or UI libraries. Charts and the body map are hand-written SVG; colours come from the intensity ramp in `lib/color.ts`.
-- jsdom lacks `scrollTo` and `matchMedia`: guard or avoid them in code that runs under tests. `ResizeObserver` (behind `bind:clientWidth`) is stubbed in `src/test/setup.ts`.
+- jsdom lacks `scrollTo` and `matchMedia`: guard or avoid them in code that runs under tests. `ResizeObserver` (behind `bind:clientWidth`) and `PointerEvent` are stubbed in `src/test/setup.ts`.
 
 ## Verifying UI
 Screenshot in Pixel 7 emulation with `playwright-core` using the installed Chrome (`chromium.launch({ channel: 'chrome' })`) against `npm run preview`. Block service workers in the context. Seed data through the app's own Settings → Importa with the output of `node scripts/seed.mjs`. Do not use Chrome's `--screenshot` flag: it hangs and its minimum window width fakes overflow bugs. Playwright download paths have no extension; `saveAs` before opening a downloaded file.
