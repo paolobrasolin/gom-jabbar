@@ -15,6 +15,11 @@ describe('recentTags', () => {
     const tags = DEFAULT_TAGS.map((t) => (t.id === 'mld' ? { ...t, enabled: false } : t))
     expect(recentTags(entries, tags, 5).map((t) => t.id)).toEqual(['rest', 'period', 'heat', 'stress', 'compression'])
   })
+
+  it('appends selected tags that would otherwise be out of the strip, without reordering it', () => {
+    const tags = DEFAULT_TAGS.map((t) => (t.id === 'mld' ? { ...t, enabled: false } : t))
+    expect(recentTags([], tags, 3, ['heat', 'compression', 'mld', 'gone']).map((t) => t.id)).toEqual(['compression', 'exercise', 'rest', 'heat'])
+  })
 })
 
 describe('vocabulary edits on unknown or edge items', async () => {

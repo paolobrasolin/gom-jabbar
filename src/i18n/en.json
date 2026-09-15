@@ -79,8 +79,8 @@
   "preset.created": "Preset created",
   "preset.deleted": "Preset deleted",
   "preset.never": "never",
-  "preset.hint": "A preset saves the areas, symptoms and tags of this form: on the Log screen you tap it, set the level, save.",
-  "preset.none": "No presets yet. Fill the log form, then “Create preset” in the Symptoms · remedies · note sheet.",
+  "preset.hint": "A preset saves the areas, symptoms and tags of this entry: on the Log screen you tap it, set the level, save.",
+  "preset.none": "No presets yet. Tap an entry (in the Today strip or the Diary), then “Create a preset from this entry”.",
   "settings.presets": "Presets",
   "trends.presets": "By preset",
   "trends.presetsHint": "Only the moments logged from the preset; days without stay empty.",
@@ -191,5 +191,7 @@
   "settings.version": "Version {v}",
   "app.dbError": "Cannot open the data store in this browser. Try opening the app in Chrome or Safari, not in a private window.",
   "report.share": "Share file",
-  "report.shared": "Report shared"
+  "report.shared": "Report shared",
+  "preset.fromEntry": "Create a preset from this entry",
+  "log.noteWord": "note"
 }

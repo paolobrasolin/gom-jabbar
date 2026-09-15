@@ -62,7 +62,7 @@ describe('Settings presets', () => {
 
   it('explains how to create the first preset', async () => {
     await openSettings()
-    expect(await screen.findByText(/Nessun preset/)).toBeInTheDocument()
+    expect(await screen.findByText(/Nessun preset.*Crea preset da questa voce/)).toBeInTheDocument()
   })
 })
 

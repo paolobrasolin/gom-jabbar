@@ -79,8 +79,8 @@
   "preset.created": "Preset creato",
   "preset.deleted": "Preset eliminato",
   "preset.never": "mai",
-  "preset.hint": "Un preset salva zone, sintomi e tag di questo modulo: dalla schermata Registra lo tocchi, metti il livello, salvi.",
-  "preset.none": "Nessun preset. Compila il modulo di registrazione, poi «Crea preset» nel foglio Sintomi · rimedi · note.",
+  "preset.hint": "Un preset salva zone, sintomi e tag di questa voce: dalla schermata Registra lo tocchi, metti il livello, salvi.",
+  "preset.none": "Nessun preset. Tocca una voce (nella riga Oggi o nel Diario), poi «Crea preset da questa voce».",
   "settings.presets": "Preset",
   "trends.presets": "Per preset",
   "trends.presetsHint": "Solo i momenti registrati dal preset; i giorni senza restano vuoti.",
@@ -191,5 +191,7 @@
   "settings.version": "Versione {v}",
   "app.dbError": "Non riesco ad aprire l'archivio dei dati su questo browser. Prova ad aprire l'app in Chrome o Safari, non in una finestra privata.",
   "report.share": "Condividi file",
-  "report.shared": "Report condiviso"
+  "report.shared": "Report condiviso",
+  "preset.fromEntry": "Crea preset da questa voce",
+  "log.noteWord": "nota"
 }

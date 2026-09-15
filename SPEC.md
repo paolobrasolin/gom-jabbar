@@ -171,7 +171,7 @@ Two kinds of pain: **episodic** (a migraine starts and ends; episodes cover it) 
 type Preset = { id: string; name: string; areas: Area[]; symptomIds: SymptomId[]; tags: TagId[]; ongoing: boolean; order: number };
 ```
 
-- Created from a filled log form: **Crea preset** with a name at the bottom of the Sintomi · rimedi · note sheet. It captures the areas, pain plus every other symptom set above 0 (`symptomIds`, pain first), the tags and the episode toggle.
+- Created from a saved entry: **Crea preset da questa voce** at the bottom of the edit sheet (§6.2, reached from a Today chip or a Diary row) reveals a name field and **Crea preset**. It captures the entry as it stands in the form: the areas, pain plus every other symptom set above 0 (`symptomIds`, pain first), the tags and the episode toggle. The sheet stays open and nothing else is saved. Presets come about after a shape has been logged a few times, so creation lives with the entries, not on the everyday path of the log form (#15).
 - The home screen shows a strip of preset chips: `4 Schiena · 2g` (headline of the last entry logged from it, and how long ago; "mai" before the first). Tap → a sheet named after the preset with one slider per `symptomIds`, starting from the last logged levels, and **Salva**. Two taps.
 - Each save logs an **ordinary moment** carrying `preset`: its areas at the pain level, its tags, an empty note, an episode when `ongoing` is set (the existing card handles the end). The diary stays honest and every existing feature works.
 - Trends draws one line per preset (§6.3). Presets are deleted from Settings (undo toast) and travel in the backup (§8).
@@ -193,10 +193,10 @@ This screen is the product. Layout top to bottom:
 5. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
 6. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
 7. **Episode toggle**: "In corso" switch next to the slider. Off by default the first time, then remembers the last used value. The slider edits the current area's level (§5.4).
-8. **Suggestion strip**: one row of tag chips under the slider, no header, like the word suggestions above a keyboard. The 5 most recently used tags (from the last 30 entries), filled with the first enabled tags in vocabulary order on a fresh install, so the user meets the tags without opening anything. Tap toggles the tag on the draft; everything else is in the details sheet (#4).
+8. **Suggestion strip**: one row of tag chips under the slider, no header, like the word suggestions above a keyboard. The 5 most recently used tags (from the last 30 entries), filled with the first enabled tags in vocabulary order on a fresh install, so the user meets the tags without opening anything. Tap toggles the tag on the draft; everything else is in the details sheet (#4). A tag set in the details sheet that is not among the five is appended to the strip, pressed, so it can be seen and toggled off without reopening the sheet; appended rather than moved to the front, so the strip never reorders under a finger (#15).
 9. **Hint line** (until dismissed, `hintDismissed` pref): "Altri sintomi, rimedi e note: bottone qui sotto." with a dismiss. The one hint the log screen is allowed (§10).
-10. **Save** button, bottom anchored, with **Sintomi · rimedi · note** beside it. (Repeat last was absorbed by presets, §5.6.)
-11. **Sintomi · rimedi · note** opens a bottom sheet with the other symptom sliders, tag chips grouped by type, the note field and, at the bottom, **Crea preset** with a name field (§5.6). The button carries a count badge while anything in it is set (readings other than pain, tags, note); the badge clears with the form on save. Nothing of this lives inline in the form: on a phone the form already fills the screen, and an inline expander opened out of sight under the action bar (#1).
+10. **Save** button, bottom anchored, with **Sintomi · rimedi · note** beside it. (Repeat last was absorbed by presets, §5.6.) While the details sheet holds anything, a one-line muted **summary** sits above the buttons in the same sticky bar: `Gonfiore 3 · Stress · nota` (readings other than pain in symptom order, tags in vocabulary order, then "nota"), so closing the sheet visibly loses nothing (#15).
+11. **Sintomi · rimedi · note** opens a bottom sheet with the other symptom sliders, tag chips grouped by type, the note field and a sticky **Salva** at the bottom that saves the entry exactly like the main button (same toast and undo, sheet closes, form resets). The sheet is page two of the form: fill it, save. Swiping it down keeps everything in the draft. The button carries a count badge while anything in it is set (readings other than pain, tags, note); the badge clears with the form on save. Nothing of this lives inline in the form: on a phone the form already fills the screen, and an inline expander opened out of sight under the action bar (#1). The sheet has one primary action and no other button: a preset field at the bottom read as the only way to keep the input, and swiping down as discard (#15).
 
 Fast path: tap region(s) → drag slider → Save. Regions are optional; an entry with only intensity is valid.
 
@@ -205,7 +205,7 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 ### 6.2 Diary
 
 - Reverse-chronological list grouped by day. Each row: time, headline reading as a coloured pill (§5.1), the symptom name when it is not pain, region summary ("gambe, fianchi", "tutto il corpo"), tags, note preview, duration and level trail if episode.
-- Tap a row → edit sheet, same form as Log, prefilled, with Delete (undo toast).
+- Tap a row → edit sheet, same form as Log, prefilled, with Delete (undo toast) and, at the bottom, **Crea preset da questa voce** (§5.6).
 - Shows the last 30 days; a **Mostra altre** button at the bottom loads 60 more days at a time while older entries exist.
 - Search by note text and a tag filter are planned (#10).
 
@@ -226,7 +226,7 @@ Range picker: 7, 30, 90, 365 days.
 - Language (it / en, follows device by default).
 - Theme (system / light / dark).
 - Vocabulary editors: symptoms, tags (three groups), reorder by drag, enable/disable, rename, add.
-- **Preset** list with delete (undo toast); creation happens from the log form (§5.6).
+- **Preset** list with delete (undo toast); creation happens from an entry's edit sheet (§5.6), and the empty state says so.
 - **Backup**: last backup date, Export JSON (share), Export CSV (share), Import JSON (merge or replace, with a preview of counts before applying).
 - Install to home screen hint (shown until installed).
 - About and data location note ("your data only lives on this phone").

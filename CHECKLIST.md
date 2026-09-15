@@ -22,10 +22,10 @@ Manual, on a real phone, before telling anyone to update:
 - [ ] "+ Altra zona" with a second level: chips show both, diary line shows "gambe 8 · spalle 3".
 - [ ] "In corso", save, tap the episode card: update the level, then end it. Undo the end.
 - [ ] Time chips: "Ieri sera" lands on yesterday in the diary.
-- [ ] Details: other symptoms, tags, note. Diary row shows the tag and the note.
+- [ ] Details: other symptoms, a tag not in the strip, note. Swipe the sheet down: summary line above Salva, the tag appended to the strip. Reopen, tap Salva inside the sheet with the keyboard up: entry saved, sheet gone. Diary row shows the tag and the note.
 - [ ] Settings → Esporta backup: share sheet opens, file lands in Drive or Files. Toast "Backup esportato".
 - [ ] Settings → Importa the same file: preview counts, Unisci. Then Sostituisci tutto and Undo.
-- [ ] Preset: fill the form, Crea preset from the details sheet, chip appears; tap it, set a level, Salva; the chip shows the level and "0m"; Andamento has a Per preset line; delete it from Impostazioni and undo.
+- [ ] Preset: tap a Today chip, Crea preset da questa voce, name it, Crea preset; chip appears on the log screen; tap it, set a level, Salva; the chip shows the level and "0m"; Andamento has a Per preset line; delete it from Impostazioni and undo.
 - [ ] Vocabolario: add a medication tag, rename, disable, reorder. It shows up (or not) in the Sintomi · rimedi · note sheet.
 - [ ] Andamento with data: heatmap, chart tap shows a day, range chips.
 - [ ] Report → Stampa / PDF → Save as PDF. Report → Condividi file → open the HTML from Drive.
