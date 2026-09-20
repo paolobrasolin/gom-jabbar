@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { regionsFor, shapeArea, shapeOf, pathFor, figureBox, type View, type RegionDef } from '../lib/regions'
+  import { regionsFor, shapeArea, shapeOf, pathFor, figureBox, MIND, MIND_SHAPE, type View, type RegionDef } from '../lib/regions'
   import { prefs } from '../lib/prefs.svelte'
   import { intensityColor } from '../lib/color'
   import { isFull, type Area } from '../lib/areas'
@@ -13,7 +13,7 @@
     onToggle,
     onLongPress,
     readonly = false,
-    labels = { front: '', back: '' },
+    labels = { front: '', back: '', mind: '' },
     heat,
   }: {
     areas?: Area[]
@@ -22,7 +22,7 @@
     onToggle?: (id: string) => void
     onLongPress?: (id: string) => void
     readonly?: boolean
-    labels?: { front: string; back: string }
+    labels?: { front: string; back: string; mind?: string }
     /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity. Overrides `areas`. */
     heat?: Map<string, { mean: number; weight: number }>
   } = $props()
@@ -38,6 +38,9 @@
   })
   const outlined = $derived(new Set(areas.length > 1 && cur >= 0 ? (areas[cur]?.regions ?? []) : []))
   const views: View[] = ['front', 'back']
+  /** The mind is one region of its own (§5.3): coloured by its area, or by the heat like any other. */
+  const mindHeat = $derived(heat?.get(MIND))
+  const mindColor = $derived(heat ? (mindHeat ? ic(mindHeat.mean) : undefined) : fill.get(MIND))
   // Long press: fire after a hold, then swallow the click that follows.
   const HOLD_MS = 450
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -67,6 +70,35 @@
 
 {#snippet shape(r: RegionDef, cls: string, extra: Record<string, unknown>)}
   <path class={cls} d={pathFor(shapeOf(fig, r))} {...extra} />
+{/snippet}
+
+{#snippet mind()}
+  <div class="figure mind">
+    <svg viewBox="-4 -4 {MIND_SHAPE.w + 8} {MIND_SHAPE.h + 8}" role="group" aria-label={labels.mind}>
+      <g class="paint">
+        <path
+          class="region{mindColor ? ' on' : ''}{outlined.has(MIND) ? ' hi' : ''}"
+          data-region={MIND}
+          d={MIND_SHAPE.outline}
+          style={mindColor ? `fill:${mindColor}${mindHeat ? `;fill-opacity:${(0.35 + 0.65 * mindHeat.weight).toFixed(2)}` : ''}` : undefined} />
+        <path class="seam" d={MIND_SHAPE.seams} />
+      </g>
+      {#if !readonly}
+        <g class="hits">
+          <path
+            class="hit"
+            d={MIND_SHAPE.outline}
+            role="button"
+            tabindex="0"
+            aria-pressed={fill.has(MIND)}
+            aria-label={regionLabel(MIND, t)}
+            onclick={() => onToggle?.(MIND)}
+            onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onToggle?.(MIND))} />
+        </g>
+      {/if}
+    </svg>
+    {#if labels.mind}<span class="label">{labels.mind}</span>{/if}
+  </div>
 {/snippet}
 
 <div class="maps" class:readonly>
@@ -103,6 +135,7 @@
       </svg>
       {#if labels[view]}<span class="label">{labels[view]}</span>{/if}
     </div>
+    {#if view === 'front'}{@render mind()}{/if}
   {/each}
 </div>
 
@@ -130,6 +163,11 @@
     display: block;
     touch-action: manipulation;
   }
+  /* The mind sits between the two heads, in the air the columns leave there, and takes no room of its own: the bodies stay put. */
+  .maps { position: relative; }
+  .figure.mind { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 20%; max-width: 80px; height: auto; justify-content: flex-start; }
+  .figure.mind svg { flex: none; }
+  .seam { fill: none; stroke: var(--bg); stroke-width: 1.5; stroke-linecap: round; }
   .label {
     font-size: 12px;
     font-weight: 600;

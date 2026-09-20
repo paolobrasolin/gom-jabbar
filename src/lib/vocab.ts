@@ -1,5 +1,6 @@
 import { db } from './db'
-import { PAIN, type Entry, type Symptom, type Tag, type TagGroup, type Lang } from './types'
+import { PAIN, type Entry, type Symptom, type SymptomCategory, type Tag, type TagGroup, type Lang } from './types'
+import { isMindSymptom } from './vocabulary'
 
 type Table = 'symptoms' | 'tags'
 
@@ -13,9 +14,9 @@ function slug(text: string): string {
   return (base || 'item') + '_' + Math.random().toString(36).slice(2, 6)
 }
 
-export async function addSymptom(text: string): Promise<Symptom> {
+export async function addSymptom(text: string, category: SymptomCategory = 'body'): Promise<Symptom> {
   const last = await db.symptoms.orderBy('order').last()
-  const s: Symptom = { id: slug(text), label: { it: text, en: text }, enabled: true, order: (last?.order ?? -1) + 1 }
+  const s: Symptom = { id: slug(text), label: { it: text, en: text }, category, enabled: true, order: (last?.order ?? -1) + 1 }
   await db.symptoms.add(s)
   return s
 }
@@ -41,12 +42,15 @@ export async function setEnabled(table: Table, id: string, enabled: boolean): Pr
   await db[table].update(id, { enabled })
 }
 
-/** Swap order with the previous or next item in the same list (tags: same group). */
+/** Swap order with the previous or next item in the same list (tags: same group; symptoms: same category). */
 export async function move(table: Table, id: string, dir: -1 | 1): Promise<void> {
   const all = (await db[table].orderBy('order').toArray()) as (Symptom | Tag)[]
   const me = all.find((x) => x.id === id)
   if (!me) return
-  const list = table === 'tags' ? all.filter((x) => (x as Tag).group === (me as Tag).group) : all
+  const list =
+    table === 'tags'
+      ? all.filter((x) => (x as Tag).group === (me as Tag).group)
+      : all.filter((x) => isMindSymptom(x as Symptom) === isMindSymptom(me as Symptom))
   const i = list.indexOf(me)
   const j = i + dir
   if (j < 0 || j >= list.length) return

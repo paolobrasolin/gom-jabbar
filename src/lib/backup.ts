@@ -3,9 +3,9 @@ import { PAIN, type Entry, type HistoryPoint, type Preset, type Symptom, type Ta
 import { regionText } from './summary'
 import type { Area } from './areas'
 import { upgradeRegions } from './regions'
-import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
+import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
 
-export const EXPORT_VERSION = 5
+export const EXPORT_VERSION = 6
 
 export type ExportFile = {
   app: 'gom-jabbar'
@@ -50,13 +50,18 @@ export function parseImport(text: string): ExportFile {
     app: 'gom-jabbar',
     version: EXPORT_VERSION,
     exportedAt: typeof o.exportedAt === 'string' ? o.exportedAt : new Date().toISOString(),
-    vocabulary: { symptoms: Array.isArray(vocab.symptoms) ? vocab.symptoms : [], tags: Array.isArray(vocab.tags) ? vocab.tags : [] },
+    vocabulary: { symptoms: Array.isArray(vocab.symptoms) ? vocab.symptoms.map(normalizeSymptom) : [], tags: Array.isArray(vocab.tags) ? vocab.tags : [] },
     entries,
     presets: Array.isArray(o.presets) ? (o.presets as Preset[]).map((p) => (version < 5 ? { ...p, areas: upgradeAreas(p.areas) } : p)) : [],
   }
 }
 
 type Row = Record<string, unknown>
+
+/** Before version 6 a symptom had no category; it gets the default for its id (fog mind, the rest body). Nothing else is touched. */
+function normalizeSymptom(s: Symptom): Symptom {
+  return s.category ? s : { ...s, category: defaultCategory(s.id) }
+}
 
 /** Before version 3 a history point carried a single `pain` value; it became `readings` (converted, never dropped). */
 function normalizePoint(h: Row, version: number): HistoryPoint {

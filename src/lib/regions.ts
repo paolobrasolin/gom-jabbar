@@ -2,6 +2,19 @@ import { FIGURES, FIGURE_SIZE, type FigureId } from './figures'
 
 export type { FigureId }
 export const FULL_BODY = '*'
+/**
+ * The mind (§5.3): a figure beside the body, selectable like a region and stored as one, where the
+ * mind symptoms live. Not a CHOIR segment, no side, no view; always alone in its area (§5.4).
+ */
+export const MIND = 'mind'
+export const isMind = (id: string): boolean => id === MIND
+/** The mind figure, a brain seen from above with lobed edges and a central fissure: the outline and the seams drawn over it, in a 120×100 box. */
+export const MIND_SHAPE = {
+  w: 120,
+  h: 100,
+  outline: 'M 60 10 C 66 4 78 6 82 12 C 92 8 104 16 102 26 C 112 30 116 44 108 50 C 116 60 108 74 98 74 C 98 86 84 92 76 86 C 70 96 60 94 60 88 C 60 94 50 96 44 86 C 36 92 22 86 22 74 C 12 74 4 60 12 50 C 4 44 8 30 18 26 C 16 16 28 8 38 12 C 42 6 54 4 60 10 Z',
+  seams: 'M 60 12 C 57 30 63 60 60 88 M 30 36 C 38 30 46 36 42 46 M 26 60 C 34 54 44 60 38 70 M 90 36 C 82 30 74 36 78 46 M 94 60 C 86 54 76 60 82 70 M 44 22 C 50 26 50 34 44 36 M 76 22 C 70 26 70 34 76 36',
+}
 export type View = 'front' | 'back'
 export type Side = 'l' | 'r'
 /** Display groups, for summaries and the limb shortcuts. */
@@ -203,9 +216,9 @@ export function toggleFullBody(selected: string[]): string[] {
   return isFullBody(selected) ? [] : [FULL_BODY]
 }
 
-export type RegionSummaryItem = { group: Group | 'full'; side: 'both' | Side | 'none' }
+export type RegionSummaryItem = { group: Group | 'full' | 'mind'; side: 'both' | Side | 'none' }
 
-/** Collapse region ids into coarse groups with side info, for display. */
+/** Collapse region ids into coarse groups with side info, for display. The mind comes first, full body stands alone. */
 export function summarizeRegions(regions: string[]): RegionSummaryItem[] {
   if (isFullBody(regions)) return [{ group: 'full', side: 'none' }]
   const order: Group[] = ['head', 'arm', 'torso', 'back', 'hip', 'leg']
@@ -216,13 +229,17 @@ export function summarizeRegions(regions: string[]): RegionSummaryItem[] {
     if (!sides.has(def.group)) sides.set(def.group, new Set())
     sides.get(def.group)!.add(def.side)
   }
-  return order
-    .filter((g) => sides.has(g))
-    .map((g) => {
-      const s = sides.get(g)!
-      const side: RegionSummaryItem['side'] = s.has('l') && s.has('r') ? 'both' : s.has('l') ? 'l' : 'r'
-      return { group: g, side }
-    })
+  const mind: RegionSummaryItem[] = regions.includes(MIND) ? [{ group: 'mind', side: 'none' }] : []
+  return [
+    ...mind,
+    ...order
+      .filter((g) => sides.has(g))
+      .map((g) => {
+        const s = sides.get(g)!
+        const side: RegionSummaryItem['side'] = s.has('l') && s.has('r') ? 'both' : s.has('l') ? 'l' : 'r'
+        return { group: g, side }
+      }),
+  ]
 }
 
 /**

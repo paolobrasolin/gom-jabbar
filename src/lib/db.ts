@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Entry, Preset, Symptom, Tag } from './types'
-import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
+import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, MIND_DEFAULTS_V6, defaultCategory } from './vocabulary'
 import { upgradeRegions } from './regions'
 import type { Area } from './areas'
 
@@ -51,6 +51,18 @@ export class GomJabbarDB extends Dexie {
         }
         await tx.table('entries').toCollection().modify(convert)
         await tx.table('presets').toCollection().modify(convert)
+      })
+    // 6: symptoms gain a category (§5.2): fog is a mind symptom, everything else body, unless the row already says.
+    // The mind defaults that came with this version are added when their ids are free; nothing is touched otherwise.
+    this.version(6)
+      .stores({})
+      .upgrade(async (tx) => {
+        const symptoms = tx.table('symptoms')
+        await symptoms.toCollection().modify((s: Symptom) => {
+          if (!s.category) s.category = defaultCategory(s.id)
+        })
+        const have = new Set((await symptoms.toArray()).map((s: Symptom) => s.id))
+        await symptoms.bulkAdd(MIND_DEFAULTS_V6.filter((s) => !have.has(s.id)))
       })
     this.on('populate', () => {
       this.symptoms.bulkAdd(DEFAULT_SYMPTOMS)

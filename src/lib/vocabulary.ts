@@ -1,14 +1,31 @@
-import type { Symptom, Tag } from './types'
+import type { Symptom, SymptomCategory, Tag } from './types'
+
+/** The category a symptom gets when its row has none (rows written before version 6): fog is mind, the rest body. */
+export function defaultCategory(id: string): SymptomCategory {
+  return id === 'fog' ? 'mind' : 'body'
+}
+
+export const isMindSymptom = (s: Symptom): boolean => (s.category ?? defaultCategory(s.id)) === 'mind'
+
+/** The level of the mind area: the highest mental reading, 0 when none is set. */
+export function mindMax(readings: Record<string, number>, symptoms: Symptom[]): number {
+  return Math.max(0, ...symptoms.filter(isMindSymptom).map((s) => readings[s.id] ?? 0))
+}
 
 export const DEFAULT_SYMPTOMS: Symptom[] = [
-  { id: 'pain', label: { it: 'Dolore', en: 'Pain' }, enabled: true, order: 0 },
-  { id: 'swelling', label: { it: 'Gonfiore', en: 'Swelling' }, enabled: true, order: 1 },
-  { id: 'heaviness', label: { it: 'Pesantezza', en: 'Heaviness' }, enabled: true, order: 2 },
-  { id: 'fatigue', label: { it: 'Stanchezza', en: 'Fatigue' }, enabled: true, order: 3 },
-  { id: 'fog', label: { it: 'Nebbia mentale', en: 'Brain fog' }, enabled: true, order: 4 },
-  { id: 'tenderness', label: { it: 'Dolorabilità al tatto', en: 'Tenderness' }, enabled: true, order: 5 },
-  { id: 'stiffness', label: { it: 'Rigidità', en: 'Stiffness' }, enabled: true, order: 6 },
+  { id: 'pain', label: { it: 'Dolore', en: 'Pain' }, category: 'body', enabled: true, order: 0 },
+  { id: 'swelling', label: { it: 'Gonfiore', en: 'Swelling' }, category: 'body', enabled: true, order: 1 },
+  { id: 'heaviness', label: { it: 'Pesantezza', en: 'Heaviness' }, category: 'body', enabled: true, order: 2 },
+  { id: 'fatigue', label: { it: 'Stanchezza', en: 'Fatigue' }, category: 'body', enabled: true, order: 3 },
+  { id: 'fog', label: { it: 'Nebbia mentale', en: 'Brain fog' }, category: 'mind', enabled: true, order: 4 },
+  { id: 'tenderness', label: { it: 'Dolorabilità al tatto', en: 'Tenderness' }, category: 'body', enabled: true, order: 5 },
+  { id: 'stiffness', label: { it: 'Rigidità', en: 'Stiffness' }, category: 'body', enabled: true, order: 6 },
+  { id: 'anxiety', label: { it: 'Ansia', en: 'Anxiety' }, category: 'mind', enabled: true, order: 7 },
+  { id: 'depression', label: { it: 'Depressione', en: 'Depression' }, category: 'mind', enabled: true, order: 8 },
 ]
+
+/** Mind symptoms that arrived with version 6: a database upgraded from before gets them too, when their ids are free. */
+export const MIND_DEFAULTS_V6 = DEFAULT_SYMPTOMS.filter((s) => s.id === 'anxiety' || s.id === 'depression')
 
 export const DEFAULT_TAGS: Tag[] = [
   { id: 'compression', group: 'intervention', label: { it: 'Compressione', en: 'Compression' }, enabled: true, order: 0 },

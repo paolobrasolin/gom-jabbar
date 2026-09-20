@@ -1,7 +1,24 @@
 import { describe, it, expect } from 'vitest'
 import { frequentTags } from './vocab'
 import { makeEntry } from './entries'
-import { DEFAULT_TAGS } from './vocabulary'
+import { DEFAULT_TAGS, DEFAULT_SYMPTOMS, defaultCategory, isMindSymptom, mindMax } from './vocabulary'
+
+describe('symptom categories', () => {
+  it('fog is a mind symptom by default, the rest body; a row without a category reads as its default', () => {
+    expect(defaultCategory('fog')).toBe('mind')
+    expect(defaultCategory('pain')).toBe('body')
+    expect(DEFAULT_SYMPTOMS.filter(isMindSymptom).map((s) => s.id)).toEqual(['fog', 'anxiety', 'depression'])
+    expect(isMindSymptom({ ...DEFAULT_SYMPTOMS[4], category: undefined as never })).toBe(true)
+    expect(isMindSymptom({ ...DEFAULT_SYMPTOMS[1], category: 'mind' })).toBe(true)
+  })
+  it('mindMax is the highest mental reading, 0 when none', () => {
+    const symptoms = [...DEFAULT_SYMPTOMS, { id: 'irritability', label: { it: 'Irritabilità', en: 'Irritabilità' }, category: 'mind' as const, enabled: false, order: 9 }]
+    expect(mindMax({ pain: 9, fog: 4, irritability: 7 }, symptoms)).toBe(7)
+    expect(mindMax({ anxiety: 3, depression: 5 }, symptoms)).toBe(5)
+    expect(mindMax({ pain: 9, swelling: 8 }, symptoms)).toBe(0)
+    expect(mindMax({}, [])).toBe(0)
+  })
+})
 
 describe('frequentTags', () => {
   const e = (createdAt: string, tags: string[]) => ({ ...makeEntry({ tags }), createdAt })

@@ -51,6 +51,11 @@ describe('stats', () => {
     expect(h.get('152')).toEqual({ mean: 14 / 3, count: 3, weight: 1 })
     expect(h.get('110')?.count).toBe(2)
     expect(h.get('261')).toEqual({ mean: 2, count: 1, weight: 1 / 3 })
+    // The mind is one more region; full body does not cover it.
+    expect(h.get('mind')).toBeUndefined()
+    const b = regionHeat([e('4', 0, { readings: { fog: 6 }, areas: [{ regions: ['mind'], intensity: 6 }] })])
+    expect(b.get('mind')).toEqual({ mean: 6, count: 1, weight: 1 })
+    expect(b.get('152')).toBeUndefined()
   })
 
   it('compares tags on days with vs without, with a minimum', () => {

@@ -1,7 +1,7 @@
 {
   "app": "gom-jabbar",
-  "version": 5,
-  "exportedAt": "2026-09-15T20:00:00.000Z",
+  "version": 6,
+  "exportedAt": "2026-09-20T10:00:00.000Z",
   "vocabulary": {
     "symptoms": [
       {
@@ -11,7 +11,8 @@
           "en": "Pain"
         },
         "enabled": true,
-        "order": 0
+        "order": 0,
+        "category": "body"
       },
       {
         "id": "swelling",
@@ -20,7 +21,8 @@
           "en": "Swelling"
         },
         "enabled": true,
-        "order": 1
+        "order": 1,
+        "category": "body"
       },
       {
         "id": "heaviness",
@@ -29,7 +31,8 @@
           "en": "Heaviness"
         },
         "enabled": true,
-        "order": 2
+        "order": 2,
+        "category": "body"
       },
       {
         "id": "fog",
@@ -38,7 +41,8 @@
           "en": "Brain fog"
         },
         "enabled": true,
-        "order": 4
+        "order": 4,
+        "category": "mind"
       },
       {
         "id": "stiffness",
@@ -47,7 +51,28 @@
           "en": "Stiffness"
         },
         "enabled": false,
-        "order": 6
+        "order": 6,
+        "category": "body"
+      },
+      {
+        "id": "anxiety",
+        "label": {
+          "it": "Ansia",
+          "en": "Anxiety"
+        },
+        "category": "mind",
+        "enabled": true,
+        "order": 7
+      },
+      {
+        "id": "depression",
+        "label": {
+          "it": "Depressione",
+          "en": "Depression"
+        },
+        "category": "mind",
+        "enabled": false,
+        "order": 8
       },
       {
         "id": "sym-u7",
@@ -56,7 +81,18 @@
           "en": "Tingling"
         },
         "enabled": true,
-        "order": 7
+        "order": 7,
+        "category": "body"
+      },
+      {
+        "id": "sym-u8",
+        "label": {
+          "it": "Ansia",
+          "en": "Anxiety"
+        },
+        "category": "mind",
+        "enabled": true,
+        "order": 9
       }
     ],
     "tags": [
@@ -303,6 +339,99 @@
       "preset": "p-schiena",
       "createdAt": "2026-09-15T13:00:00.000Z",
       "updatedAt": "2026-09-15T13:00:00.000Z"
+    },
+    {
+      "id": "v6-mind",
+      "at": "2026-09-18T09:00:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 0,
+        "fog": 6,
+        "sym-u8": 3
+      },
+      "areas": [
+        {
+          "regions": [
+            "mind"
+          ],
+          "intensity": 6
+        }
+      ],
+      "tags": [
+        "badsleep"
+      ],
+      "note": "testa vuota",
+      "createdAt": "2026-09-18T09:00:00.000Z",
+      "updatedAt": "2026-09-18T09:00:00.000Z"
+    },
+    {
+      "id": "v6-mind-episode",
+      "at": "2026-09-19T08:00:00.000Z",
+      "endedAt": null,
+      "ongoing": true,
+      "readings": {
+        "pain": 0,
+        "fog": 4
+      },
+      "areas": [
+        {
+          "regions": [
+            "mind"
+          ],
+          "intensity": 4
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-09-19T08:00:00.000Z",
+          "readings": {
+            "pain": 0,
+            "fog": 7
+          }
+        },
+        {
+          "at": "2026-09-19T11:00:00.000Z",
+          "readings": {
+            "pain": 0,
+            "fog": 4
+          }
+        }
+      ],
+      "preset": "p-testa",
+      "tags": [],
+      "note": "",
+      "createdAt": "2026-09-19T08:00:00.000Z",
+      "updatedAt": "2026-09-19T11:00:00.000Z"
+    },
+    {
+      "id": "v6-full-brain",
+      "at": "2026-09-19T20:00:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 4,
+        "heaviness": 5,
+        "fog": 5
+      },
+      "areas": [
+        {
+          "regions": [
+            "*"
+          ],
+          "intensity": 4
+        },
+        {
+          "regions": [
+            "mind"
+          ],
+          "intensity": 5
+        }
+      ],
+      "tags": [],
+      "note": "",
+      "createdAt": "2026-09-19T20:00:00.000Z",
+      "updatedAt": "2026-09-19T20:00:00.000Z"
     }
   ],
   "presets": [
@@ -324,6 +453,25 @@
       "tags": [],
       "ongoing": false,
       "order": 0
+    },
+    {
+      "id": "p-testa",
+      "name": "Testa",
+      "areas": [
+        {
+          "regions": [
+            "mind"
+          ],
+          "intensity": 6
+        }
+      ],
+      "symptomIds": [
+        "fog",
+        "sym-u8"
+      ],
+      "tags": [],
+      "ongoing": true,
+      "order": 1
     }
   ]
 }

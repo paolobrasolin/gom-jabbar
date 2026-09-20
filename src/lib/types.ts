@@ -32,9 +32,13 @@ export type Entry = {
   updatedAt: string
 }
 
+/** Where a symptom lives: on the body (the pain slider and its siblings) or in the head (§5.2). */
+export type SymptomCategory = 'body' | 'mind'
+
 export type Symptom = {
   id: SymptomId
   label: LocalizedString
+  category: SymptomCategory
   enabled: boolean
   order: number
 }

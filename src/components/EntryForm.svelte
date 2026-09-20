@@ -10,8 +10,9 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { frequentTags } from '../lib/vocab'
-  import { LEG_IDS, ARM_IDS, limbOf, mirrorId } from '../lib/regions'
-  import { isFull, tapRegion, tapSet, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
+  import { LEG_IDS, ARM_IDS, MIND, limbOf, mirrorId } from '../lib/regions'
+  import { isFull, isMindArea, bodyAreas, hasMind, tapRegion, tapSet, toggleMind, setMindLevel, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
+  import { isMindSymptom, mindMax } from '../lib/vocabulary'
   import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
   import type { EntryDraft } from '../lib/draft'
   import { haptic } from '../lib/toast.svelte'
@@ -31,17 +32,28 @@
   })
   const groups: TagGroup[] = ['intervention', 'context', 'medication']
   const tagsByGroup = $derived(groups.map((g) => ({ g, items: tags.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
-  const otherSymptoms = $derived(symptoms.filter((s) => s.enabled && s.id !== PAIN))
+  const bodySymptoms = $derived(symptoms.filter((s) => s.enabled && s.id !== PAIN && !isMindSymptom(s)))
+  const mindSymptoms = $derived(symptoms.filter((s) => s.enabled && isMindSymptom(s)))
 
-  /** Brush = the level the slider shows: the current area's, or the entry-level pain when there are no areas. */
-  const brush = $derived(draft.areas[draft.cur]?.intensity ?? draft.readings[PAIN] ?? 0)
+  const curArea = $derived(draft.areas[draft.cur])
+  /** Which sliders show (§6.1) follows what is selected: body areas → pain and the body symptoms, the mind → the mind symptoms, both or nothing → both. */
+  const showBody = $derived(bodyAreas(draft.areas).length > 0 || !hasMind(draft.areas))
+  const showMind = $derived(hasMind(draft.areas) || bodyAreas(draft.areas).length === 0)
+  /** The body area the pain slider edits: the current one, or the last one while the mind chip is current. -1 without body areas. */
+  const curBody = $derived.by(() => {
+    if (curArea && !isMindArea(curArea)) return draft.cur
+    for (let i = draft.areas.length - 1; i >= 0; i--) if (!isMindArea(draft.areas[i])) return i
+    return -1
+  })
+  /** Brush = the level the pain slider shows: that body area's, else the entry-level pain (the free value). */
+  const brush = $derived(draft.areas[curBody]?.intensity ?? draft.readings[PAIN] ?? 0)
   const full = $derived(isFull(draft.areas))
   const curRegions = $derived(draft.areas[draft.cur]?.regions ?? [])
   const legsOn = $derived(!full && LEG_IDS.every((id) => curRegions.includes(id)))
   const armsOn = $derived(!full && ARM_IDS.every((id) => curRegions.includes(id)))
   const painLabel = $derived.by(() => {
     const base = tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' })
-    const cur = draft.areas[draft.cur]
+    const cur = draft.areas[curBody]
     return draft.areas.length > 1 && cur?.regions.length ? `${base} · ${regionText(cur.regions, t)}` : base
   })
 
@@ -68,10 +80,12 @@
   function apply(next: { areas: EntryDraft['areas']; cur: number }) {
     draft.areas = next.areas
     draft.cur = next.cur
-    draft.readings = { ...draft.readings, [PAIN]: overallPain(draft.areas, brush) }
+    // The pain slider keeps its value while hidden behind the mind; the entry gets 0 at save (§5.4).
+    if (bodyAreas(draft.areas).length) draft.readings = { ...draft.readings, [PAIN]: overallPain(draft.areas, brush) }
   }
   function onRegion(id: string) {
-    apply(tapRegion({ areas: draft.areas, cur: draft.cur }, id, prefs.mirror, brush))
+    const state = { areas: draft.areas, cur: draft.cur }
+    apply(id === MIND ? toggleMind(state, mindMax(draft.readings, symptoms)) : tapRegion(state, id, prefs.mirror, brush))
     haptic(6)
   }
   function onSet(ids: string[]) {
@@ -87,7 +101,7 @@
     apply(toggleFull({ areas: draft.areas, cur: draft.cur }, brush))
   }
   function onSlider(v: number) {
-    if (draft.areas.length) apply(setIntensity({ areas: draft.areas, cur: draft.cur }, v))
+    if (curBody >= 0) apply({ areas: setIntensity({ areas: draft.areas, cur: curBody }, v).areas, cur: draft.cur })
     else draft.readings = { ...draft.readings, [PAIN]: v }
   }
   function setMirror(v: boolean) {
@@ -99,6 +113,7 @@
   }
   function setReading(id: string, v: number) {
     draft.readings = { ...draft.readings, [id]: v }
+    if (hasMind(draft.areas)) draft.areas = setMindLevel(draft.areas, mindMax(draft.readings, symptoms))
   }
 </script>
 
@@ -111,7 +126,7 @@
   </div>
 
   <div class="map">
-    <BodyMap areas={draft.areas} cur={draft.cur} onToggle={onRegion} onLongPress={onLimb} labels={{ front: t('log.front'), back: t('log.back') }} />
+    <BodyMap areas={draft.areas} cur={draft.cur} onToggle={onRegion} onLongPress={onLimb} labels={{ front: t('log.front'), back: t('log.back'), mind: t('log.mind') }} />
   </div>
 
   <div class="chips areas">
@@ -197,11 +212,17 @@
     </div>
   {/if}
 
-  <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
-
-  {#each otherSymptoms as s (s.id)}
-    <IntensitySlider compact label={tl(s.label)} value={draft.readings[s.id] ?? 0} onchange={(v) => setReading(s.id, v)} />
-  {/each}
+  {#if showBody}
+    <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
+    {#each bodySymptoms as s (s.id)}
+      <IntensitySlider compact label={tl(s.label)} value={draft.readings[s.id] ?? 0} onchange={(v) => setReading(s.id, v)} />
+    {/each}
+  {/if}
+  {#if showMind}
+    {#each mindSymptoms as s (s.id)}
+      <IntensitySlider compact label={tl(s.label)} value={draft.readings[s.id] ?? 0} onchange={(v) => setReading(s.id, v)} />
+    {/each}
+  {/if}
 
   <textarea class="note" rows="1" placeholder={t('log.notePlaceholder')} bind:value={draft.note} aria-label={t('log.note')}></textarea>
 </div>

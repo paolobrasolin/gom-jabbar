@@ -59,6 +59,18 @@ describe('backup', () => {
     expect(parsed.vocabulary.tags).toEqual([])
   })
 
+  it('gives symptoms without a category the default for their id, and keeps one that is set', () => {
+    const symptoms = [
+      { id: 'pain', label: { it: 'Dolore', en: 'Pain' }, enabled: true, order: 0 },
+      { id: 'fog', label: { it: 'Nebbia', en: 'Fog' }, enabled: true, order: 4 },
+      { id: 'ansia_x1', label: { it: 'Ansia', en: 'Ansia' }, category: 'mind', enabled: true, order: 7 },
+      { id: 'fog_x2', label: { it: 'Nebbia 2', en: 'Fog 2' }, category: 'body', enabled: false, order: 8 },
+    ]
+    const parsed = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 5, entries: [], vocabulary: { symptoms, tags: [] } }))
+    expect(parsed.vocabulary.symptoms.map((s) => s.category)).toEqual(['body', 'mind', 'mind', 'body'])
+    expect(parsed.vocabulary.symptoms[2]).toEqual(symptoms[2])
+  })
+
   it('replace with an empty vocabulary keeps the defaults', async () => {
     const parsed = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 2, entries: [] }))
     await applyImport(parsed, 'replace')
@@ -102,7 +114,14 @@ describe('vocab', () => {
   it('adds, renames, toggles and reorders', async () => {
     const s = await addSymptom('Formicolio')
     expect(s.label).toEqual({ it: 'Formicolio', en: 'Formicolio' })
+    expect(s.category).toBe('body')
     expect(s.order).toBeGreaterThan(0)
+    const m = await addSymptom('Ansia', 'mind')
+    expect(m.category).toBe('mind')
+    // Symptoms move within their category: fog swaps with anxiety, the body ones stay put.
+    await move('symptoms', 'fog', 1)
+    expect((await db.symptoms.orderBy('order').toArray()).filter((x) => x.category === 'mind').map((x) => x.id)).toEqual(['anxiety', 'fog', 'depression', m.id])
+    expect((await db.symptoms.get('tenderness'))?.order).toBe(5)
     await rename('symptoms', s.id, 'en', 'Tingling')
     expect((await db.symptoms.get(s.id))?.label).toEqual({ it: 'Tingling', en: 'Tingling' })
     await rename('symptoms', 'pain', 'it', 'Male')

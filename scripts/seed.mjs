@@ -36,6 +36,14 @@ for (let d = 59; d >= 0; d--) {
     const readings = { pain: Math.max(...areas.map((a) => a.intensity)) }
     if (rnd() < 0.5) readings.swelling = 2 + Math.floor(rnd() * 6)
     if (rnd() < 0.4) readings.fatigue = 3 + Math.floor(rnd() * 6)
+    // The mind (§5.3): a foggy, anxious or low head beside the body now and then, alone in its area at the highest mind level.
+    if (rnd() < 0.3) {
+      if (rnd() < 0.7) readings.fog = 2 + Math.floor(rnd() * 7)
+      if (rnd() < 0.5) readings.anxiety = 2 + Math.floor(rnd() * 7)
+      if (rnd() < 0.3) readings.depression = 2 + Math.floor(rnd() * 6)
+      const mind = Math.max(readings.fog ?? 0, readings.anxiety ?? 0, readings.depression ?? 0)
+      if (mind > 0) areas.push({ regions: ['mind'], intensity: mind })
+    }
     const iso = at.toISOString()
     entries.push({
       id: `seed-${d}-${k}`,
