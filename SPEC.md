@@ -82,7 +82,7 @@ Rules:
 - A **moment** is an entry with `ongoing: false` and `endedAt: null`. It is a sample, "this is how it is right now" (or at a backfilled time).
 - An **episode** is an entry created with `ongoing: true`. It shows as an active chip until ended. Ending sets `endedAt` and `ongoing: false`. Duration is derived.
 - `readings` always has at least one key. The fast path only sets `pain`.
-- **Areas.** `type Area = { regions: RegionId[]; intensity: number }`. An entry has zero or more areas, each a set of regions sharing one level. `readings.pain` is the max over areas when there are any, otherwise a free value (used for "no pain today" or entries with no location).
+- **Areas.** `type Area = { regions: RegionId[]; intensity: number; strokes?: Stroke[] }`. An entry has zero or more areas, each a set of regions sharing one level, optionally shaded by hand inside it (§5.3). `readings.pain` is the max over areas when there are any, otherwise a free value (used for "no pain today" or entries with no location).
 - An area with `regions: ['*']` means full body and is always the only area.
 - Intensity is 0..10 integer. 0 is allowed (useful to record "no pain today").
 - **Areas are "where", readings are "what".** "Legs, pain 0, swelling 3" means legs swollen, no pain. There is no per-area reading and no symptom switch on the slider; two areas with different symptoms are two entries.
@@ -155,6 +155,8 @@ Every region is bilateral. `REGIONS` in `lib/regions.ts` carries, per code, the 
 
 Before version 5 the ids were names (`thigh.l`, `chest`, `hand.l` shared by both views). `LEGACY_REGIONS` maps each of them to today's codes: an unsided id to both sides, a hand to the front and the back hand. Dexie version 5 and the importer convert every area of entries and presets; nothing is dropped (§4.1).
 
+**Drawing** (#18). The tester can shade exactly where it hurts without picking a segment, as on a clinical pain drawing. A **Disegna** chip in the tools row enters drawing mode: the map shows one figure enlarged (2.5× the fitted size) around the current area's regions. One finger paints; two fingers pan and pinch (1.5× to 6×), and a second finger cancels the stroke in progress, nothing painting again until every finger is up. Two chips under the map switch between the front and back figure; the one holding most of the current area's regions opens first. The pan and zoom are a transform on the SVG, since native pinch zooms the whole app. A stroke is `{ fig, view, points: [x, y][], w }`: the figure it was drawn on, the view, the points in that figure's viewBox coordinates and the brush width, simplified (Ramer–Douglas–Peucker) and rounded before saving; a tap is a one-point stroke, drawn as a dot. Strokes live on the area, so they inherit its level. When a stroke ends, every segment it crossed (the smallest one containing each sampled point, or the nearest one when a point falls outside the figure) is added to the current area exactly as taps would, mirror never applying, so summaries, the heatmap and the stats keep working on regions. **Annulla tratto** takes back the last stroke and **Cancella disegno** all of the current area's, with an undo toast; the regions stay, they may have been tapped as well. An area emptied of regions is dropped with its strokes (§5.4). Strokes are drawn in the area's colour, clipped to the figure, on both views in the ordinary map, and only on the figure they were drawn on: after a switch in Settings the regions still show, the shading waits for a switch back. On the Trends heatmap and on the report (§6.3, §7) every stroke in range on the current figure is laid over it at low opacity, so overlap builds density the way a stack of pain drawings does. Drawing mode ends with the draft (save, Azzera, another entry).
+
 Special: `*` = full body. When selected, both figures fill and individual regions cannot be toggled until it is deselected.
 
 Multi-region is the norm. Helpers:
@@ -204,7 +206,7 @@ This screen is the product. Layout top to bottom:
 1. **Active episode cards** (only if any): "7 · gambe · da 3h", or "3 · gonfiore · gambe · da 3h" when the headline is not pain (§5.1), with a **Termina** button. Tap the card → update sheet (§5.5).
 2. **Preset strip** (only if any presets, §5.6): one chip per preset, `4 Schiena · 2g`. Tap → preset sheet.
 3. While the app is not installed (no `display-mode: standalone`, no `installedAt` pref): an inline **install nudge** in the backup banner style, "Aggiungi alla schermata Home per tenere i dati al sicuro", with **Aggiungi** and a dismiss. It shows on every launch until the app is installed; dismiss hides it for the current session only. Aggiungi replays the browser install prompt when captured, else opens the how-to sheet (§4.1).
-4. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
+4. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms / **Disegna** chips (§5.3). Area chips under the map (§5.4).
 5. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
 6. **Tag strip**: one scrolling row of chips after the time chips, no header, so the chip rows (areas, time, tags) sit together and the sliders form one block. First a chevron chip (**Tutti i tag**), then **every enabled tag**, the most used first (count over every entry, ties in vocabulary order; a fresh install shows vocabulary order). What gets used sits under the thumb, the long tail is a swipe away, and nothing needs a cutoff or a "keep the selected ones visible" rule. Tap toggles the tag on the draft; the order never changes under a finger, it follows usage across saves (#4, #15). The chevron replaces the strip with the same tags grouped by type, for browsing by category: the chip stays in its slot (now pointing up) and a thin rail drops from it along the left of everything it folds, group titles and chips indented together to its right. Group titles use the slider label style: they are field labels, not section markers. Tapping the chip folds it back, and so does a new draft (save, Azzera, another entry to edit).
 7. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
@@ -232,7 +234,7 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 Range picker: 7, 30, 90, 365 days.
 
-- **Body heatmap**: the same body SVG, regions coloured by how often and how intensely they appeared in range.
+- **Body heatmap**: the same body SVG, regions coloured by how often and how intensely they appeared in range, every stroke in range laid over it at low opacity in its level's colour (§5.3).
 - **Intensity over time**: daily max and mean pain as a bar/line chart. Other symptoms selectable.
 - **Per preset** (only when a preset has samples in range): one small line per preset, its first symptom over time, dots coloured by the intensity ramp. Samples only: days without a sample stay empty, no carry-forward (§5.6).
 - **Episodes**: count and mean duration.
@@ -256,7 +258,7 @@ Range picker: 7, 30, 90, 365 days.
 A full-screen overlay in a fixed light palette, opened for the current range from Trends, with print CSS for A4; `@media print` hides the app behind it. No library. Contents:
 
 1. Header: date range, generated on, number of entries and episodes.
-2. Body heatmap (front and back side by side).
+2. Body heatmap (front and back side by side), strokes as shading (§5.3).
 3. Intensity over time chart.
 4. Summary numbers: mean/max pain, days with pain ≥ 5, episode count and durations.
 5. Tag summary table.
@@ -281,7 +283,7 @@ Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** sha
 
 CSV export is one row per entry, one column per symptom, regions and tags joined with `|`. Meant for spreadsheets, not for reimport.
 
-Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `updatedAt` winning and adds vocabulary items that are missing. A sheet shows the file date and counts (new, updated) before committing. Replace is undoable from the toast: the previous state is snapshotted and restored on undo. Every version ever written is accepted: version 1 files (with `regions`), version 2 (history points with `pain`), version 3 (no `presets`) and version 4 (named region ids, §5.3) are upgraded on import. Merge adds presets that are missing by id; replace loads them.
+Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `updatedAt` winning and adds vocabulary items that are missing. A sheet shows the file date and counts (new, updated) before committing. Replace is undoable from the toast: the previous state is snapshotted and restored on undo. Every version ever written is accepted: version 1 files (with `regions`), version 2 (history points with `pain`), version 3 (no `presets`) and version 4 (named region ids, §5.3) are upgraded on import. `strokes` on an area (§5.3) is additive: files without it import unchanged and the version did not move. Merge adds presets that are missing by id; replace loads them.
 
 Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable with a switch, reorder with arrows, add at the bottom of each group. Pain cannot be disabled. Renaming a default item changes only the current language; user-made items keep both languages in sync.
 

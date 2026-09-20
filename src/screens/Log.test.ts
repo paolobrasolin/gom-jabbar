@@ -4,8 +4,9 @@ import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { install, initInstall } from '../lib/install.svelte'
 import App from '../App.svelte'
-import { LEG_IDS } from '../lib/regions'
+import { LEG_IDS, REGION_BY_ID, shapeOf, shapeCenter } from '../lib/regions'
 import { addPreset } from '../lib/presets'
+import { addEntry } from '../lib/entries'
 
 let db: ReturnType<typeof resetDb>
 beforeEach(() => {
@@ -369,5 +370,125 @@ describe('Install nudge', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }))
     await waitFor(() => expect(e.prompt).toHaveBeenCalled())
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})
+
+describe('Drawing', () => {
+  /** Client coordinates of a figure point on the zoomed svg (jsdom rects sit at 0,0). */
+  function at(svg: Element, x: number, y: number) {
+    const k = Number(svg.getAttribute('data-k'))
+    return { clientX: Number(svg.getAttribute('data-tx')) + k * x, clientY: Number(svg.getAttribute('data-ty')) + k * y }
+  }
+  const centre = (id: string) => shapeCenter(shapeOf(prefs.figure, REGION_BY_ID[id]))
+  const finger = (id: number, xy: { clientX: number; clientY: number }) => ({ ...xy, pointerId: id, button: 0, buttons: 1, isPrimary: id === 1 })
+  async function paint(svg: Element, from: [number, number], to: [number, number]) {
+    await fireEvent.pointerDown(svg, finger(1, at(svg, ...from)))
+    const mid: [number, number] = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2 + 0.3]
+    await fireEvent.pointerMove(svg, finger(1, at(svg, ...mid)))
+    await fireEvent.pointerMove(svg, finger(1, at(svg, ...to)))
+    await fireEvent.pointerUp(svg, finger(1, at(svg, ...to)))
+  }
+
+  it('Disegna zooms one figure; a finger paints a stroke that pulls in the regions it crosses; a tap is a dot', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
+    const front = screen.getByRole('img', { name: 'Davanti' })
+    expect(screen.queryByRole('group', { name: 'Davanti' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Annulla tratto' })).toBeDisabled()
+
+    await paint(front, centre('152'), centre('160'))
+    expect(document.querySelectorAll('.stroke')).toHaveLength(1)
+    expect(screen.getByText('gamba sx')).toBeInTheDocument()
+    // Mirror is on, but a drawing is one-sided.
+    expect(screen.queryByText('gambe')).not.toBeInTheDocument()
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Dietro' }))
+    const back = screen.getByRole('img', { name: 'Dietro' })
+    const [cx, cy] = centre('261')
+    await fireEvent.pointerDown(back, finger(1, at(back, cx, cy)))
+    await fireEvent.pointerUp(back, finger(1, at(back, cx, cy)))
+    expect(document.querySelectorAll('.stroke')).toHaveLength(1)
+    expect(document.querySelector('.stroke')!.getAttribute('d')).toMatch(/ l 0.01 0$/)
+    expect(screen.getByText('gambe')).toBeInTheDocument()
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Annulla tratto' }))
+    expect(document.querySelectorAll('.stroke')).toHaveLength(0)
+    // The regions the dot pulled in stay.
+    expect(screen.getByText('gambe')).toBeInTheDocument()
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
+    expect(screen.getByRole('group', { name: 'Davanti' })).toBeInTheDocument()
+    expect(document.querySelectorAll('.stroke')).toHaveLength(1)
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    const [ax, ay] = centre('152')
+    const [bx, by] = centre('160')
+    const r1 = (n: number) => Math.round(n * 10) / 10
+    expect(e.areas).toEqual([{ regions: ['152', '154', '160', '261'], intensity: 5, strokes: [{ fig: 'female', view: 'front', points: [[r1(ax), r1(ay)], [r1(bx), r1(by)]], w: 8 }] }])
+  })
+
+  it('two fingers pan and pinch without painting; the zoom opens on the current area', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Spalla sx' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
+    const svg = screen.getByRole('img', { name: 'Davanti' })
+    const k = Number(svg.getAttribute('data-k'))
+    const ty = Number(svg.getAttribute('data-ty'))
+    // Mirror is on: the view centres on both shoulders, whose hand-drawn polygons differ a little in height.
+    const shoulderY = (centre('130')[1] + centre('131')[1]) / 2
+    expect(ty + k * shoulderY).toBeCloseTo(160, 0)
+    // A finger down, then a second one: the first stroke is dropped, the pair pans.
+    await fireEvent.pointerDown(svg, finger(1, { clientX: 100, clientY: 100 }))
+    await fireEvent.pointerMove(svg, finger(1, { clientX: 105, clientY: 100 }))
+    await fireEvent.pointerDown(svg, finger(2, { clientX: 140, clientY: 100 }))
+    await fireEvent.pointerMove(svg, finger(1, { clientX: 125, clientY: 130 }))
+    await fireEvent.pointerMove(svg, finger(2, { clientX: 160, clientY: 130 }))
+    expect(Number(svg.getAttribute('data-k'))).toBeCloseTo(k, 5)
+    expect(Number(svg.getAttribute('data-ty'))).toBeCloseTo(ty + 30, 5)
+    // Spreading the fingers zooms in around them.
+    await fireEvent.pointerMove(svg, finger(2, { clientX: 195, clientY: 130 }))
+    expect(Number(svg.getAttribute('data-k'))).toBeCloseTo(k * 2, 5)
+    await fireEvent.pointerUp(svg, finger(2, { clientX: 195, clientY: 130 }))
+    await fireEvent.pointerMove(svg, finger(1, { clientX: 130, clientY: 140 }))
+    await fireEvent.pointerUp(svg, finger(1, { clientX: 130, clientY: 140 }))
+    expect(document.querySelectorAll('.stroke')).toHaveLength(0)
+    // Every finger up: painting works again.
+    await fireEvent.pointerDown(svg, finger(1, { clientX: 100, clientY: 100 }))
+    await fireEvent.pointerUp(svg, finger(1, { clientX: 100, clientY: 100 }))
+    expect(document.querySelectorAll('.stroke')).toHaveLength(1)
+  })
+
+  it('full body takes strokes without touching the regions, and Cancella disegno is undoable', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Tutto il corpo' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
+    const svg = screen.getByRole('img', { name: 'Davanti' })
+    await paint(svg, centre('110'), centre('112'))
+    await paint(svg, centre('152'), centre('154'))
+    expect(document.querySelectorAll('.stroke')).toHaveLength(2)
+    await fireEvent.click(screen.getByRole('button', { name: 'Cancella disegno' }))
+    expect(document.querySelectorAll('.stroke')).toHaveLength(0)
+    expect(await screen.findByText('Disegno cancellato')).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(document.querySelectorAll('.stroke')).toHaveLength(2)
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    expect(e.areas[0].regions).toEqual(['*'])
+    expect(e.areas[0].strokes).toHaveLength(2)
+  })
+
+  it('a stroke drawn on the other figure keeps its regions but is not drawn on this one', async () => {
+    await addEntry({ areas: [{ regions: ['152'], intensity: 6, strokes: [{ fig: 'male', view: 'front', points: [[100, 300]], w: 8 }] }] })
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+    await fireEvent.click(await screen.findByText('gamba sx'))
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+    expect(document.querySelectorAll('.stroke')).toHaveLength(0)
+    prefs.figure = 'male'
+    await waitFor(() => expect(document.querySelectorAll('.stroke')).toHaveLength(1))
+    prefs.figure = 'female'
   })
 })

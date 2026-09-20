@@ -1,7 +1,10 @@
-import { FULL_BODY, isFullBody, mirrorId } from './regions'
+import { FULL_BODY, isFullBody, mirrorId, type View, type FigureId } from './regions'
 
-/** A set of regions sharing one intensity. An entry has zero or more areas. */
-export type Area = { regions: string[]; intensity: number }
+/** A brush stroke on one figure (§5.3): points in that figure's viewBox coordinates and the brush width. One point is a dot. */
+export type Stroke = { fig: FigureId; view: View; points: [number, number][]; w: number }
+
+/** A set of regions sharing one intensity. An entry has zero or more areas. Strokes, when any, shade exact spots inside it. */
+export type Area = { regions: string[]; intensity: number; strokes?: Stroke[] }
 
 export type AreaState = { areas: Area[]; cur: number }
 
@@ -87,7 +90,14 @@ export function setIntensity(state: AreaState, v: number): AreaState {
 export function finalize(areas: Area[]): Area[] {
   return areas
     .filter((a) => a.regions.length > 0)
-    .map((a) => ({ regions: isFullBody(a.regions) ? [FULL_BODY] : sortU(a.regions), intensity: clamp(a.intensity) }))
+    .map((a) => ({
+      regions: isFullBody(a.regions) ? [FULL_BODY] : sortU(a.regions),
+      intensity: clamp(a.intensity),
+      ...(a.strokes?.length
+        ? { strokes: a.strokes.map((s) => ({ fig: s.fig, view: s.view, points: s.points.map(([x, y]) => [round1(x), round1(y)] as [number, number]), w: round1(s.w) })) }
+        : {}),
+    }))
 }
 
 const clamp = (n: number) => Math.max(0, Math.min(10, Math.round(n)))
+const round1 = (n: number) => Math.round(n * 10) / 10

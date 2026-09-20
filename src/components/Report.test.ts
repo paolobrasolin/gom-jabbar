@@ -140,3 +140,13 @@ describe('Report page', () => {
     await waitFor(() => expect(toastState.current?.message).toBe('Esportazione non riuscita'))
   })
 })
+
+describe('Report strokes', () => {
+  it('shades the strokes over the figures', () => {
+    const onclose = vi.fn()
+    const { from, entries } = fixture()
+    entries[0].areas[0].strokes = [{ fig: 'female', view: 'front', points: [[180, 300], [184, 330]], w: 8 }]
+    render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose })
+    expect(document.querySelectorAll('.stroke')).toHaveLength(1)
+  })
+})

@@ -145,6 +145,19 @@ export function shapeArea(s: Shape): number {
   return Math.abs(a) / 2
 }
 
+/** Point in shape. Polygons are tested on their corners; the rounding is cosmetic. */
+export function shapeContains(s: Shape, x: number, y: number): boolean {
+  if (s.kind === 'ellipse') return ((x - s.cx) / s.rx) ** 2 + ((y - s.cy) / s.ry) ** 2 <= 1
+  let on = false
+  const pts = s.points
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i]
+    const [xj, yj] = pts[j]
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) on = !on
+  }
+  return on
+}
+
 export function shapeCenter(s: Shape): [number, number] {
   if (s.kind === 'ellipse') return [s.cx, s.cy]
   const n = s.points.length

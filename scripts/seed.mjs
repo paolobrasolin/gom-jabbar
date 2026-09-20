@@ -1,6 +1,7 @@
 // Generates a demo export file (60 days of plausible entries) for testing trends and the report.
 // Usage: node scripts/seed.mjs [out.json]   then Settings → Importa → Sostituisci tutto.
 import { writeFileSync } from 'node:fs'
+import { FIGURES } from '../src/lib/figures.ts'
 
 const out = process.argv[2] ?? 'seed.json'
 const regionSets = [
@@ -11,6 +12,12 @@ const regionSets = [
   ['*'],
   ['140', '141', '144', '145'],
 ]
+/** Shaded spots (§5.3) for some sets: a squiggle around the centre of a CHOIR segment on the female figure. */
+const centroid = (view, code) => {
+  const pts = FIGURES.female[view][code]
+  return [pts.reduce((t, p) => t + p[0], 0) / pts.length, pts.reduce((t, p) => t + p[1], 0) / pts.length]
+}
+const spots = { 0: { view: 'front', at: centroid('front', '127') }, 3: { view: 'back', at: centroid('back', '223') } }
 const tagPool = ['compression', 'mld', 'exercise', 'rest', 'heat', 'period', 'stress', 'badsleep', 'standing', 'sitting', 'hot_weather']
 let seed = 7
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
@@ -29,7 +36,15 @@ for (let d = 59; d >= 0; d--) {
     const tags = tagPool.filter(() => rnd() < 0.18)
     if (bad && rnd() < 0.6) tags.push('badsleep')
     const base = bad ? 6 + Math.floor(rnd() * 4) : 2 + Math.floor(rnd() * 4)
-    const areas = [{ regions: regionSets[Math.floor(rnd() * regionSets.length)], intensity: base }]
+    const set = Math.floor(rnd() * regionSets.length)
+    const areas = [{ regions: regionSets[set], intensity: base }]
+    const spot = spots[set]
+    if (spot && rnd() < 0.7) {
+      const x0 = spot.at[0] + (rnd() - 0.5) * 16
+      const y0 = spot.at[1] + (rnd() - 0.5) * 24
+      const points = [0, 1, 2, 3].map((i) => [Math.round((x0 + i * 4 + (rnd() - 0.5) * 5) * 10) / 10, Math.round((y0 + i * 7 + (rnd() - 0.5) * 5) * 10) / 10])
+      areas[0].strokes = [{ fig: 'female', view: spot.view, points, w: 8 }]
+    }
     if (rnd() < 0.3) areas.push({ regions: regionSets[2], intensity: Math.max(1, base - 3) })
     const episode = rnd() < 0.3
     const endedAt = episode ? new Date(at.getTime() + (1 + rnd() * 6) * 3600e3).toISOString() : null

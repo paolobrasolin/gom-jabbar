@@ -123,3 +123,16 @@ describe('vocab', () => {
     expect((await db.tags.orderBy('order').toArray()).filter((x) => x.group === 'context')[0].id).toBe(after[0])
   })
 })
+
+describe('strokes survive backup', () => {
+  it('export → import → export keeps every stroke', async () => {
+    const strokes = [{ fig: 'female' as const, view: 'front' as const, points: [[100.1, 250.2], [104, 260]] as [number, number][], w: 8 }]
+    await addEntry({ areas: [{ regions: ['152'], intensity: 6, strokes }] })
+    const text = JSON.stringify(await buildExport())
+    resetDb()
+    await applyImport(parseImport(text), 'replace')
+    const again = await buildExport()
+    expect(again.entries[0].areas[0].strokes).toEqual(strokes)
+    expect(JSON.stringify(again.entries)).toBe(JSON.stringify(JSON.parse(text).entries))
+  })
+})

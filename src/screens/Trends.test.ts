@@ -155,3 +155,17 @@ describe('Trends presets', () => {
     expect(card.querySelectorAll('circle')).toHaveLength(2)
   })
 })
+
+describe('Trends strokes', () => {
+  it('shades every stroke in the range drawn on the current figure over the heatmap', async () => {
+    await addEntry({ at: at(0), areas: [{ regions: ['152'], intensity: 8, strokes: [{ fig: 'female', view: 'front', points: [[180, 300], [184, 330]], w: 8 }] }] })
+    await addEntry({ at: at(1), areas: [{ regions: ['261'], intensity: 3, strokes: [{ fig: 'female', view: 'back', points: [[80, 450]], w: 8 }, { fig: 'male', view: 'back', points: [[82, 452]], w: 8 }] }] })
+    await addEntry({ at: at(2), ...legs(2) })
+    await openTrends()
+    await waitFor(() => expect(document.querySelectorAll('.stroke')).toHaveLength(2))
+    const front = screen.getByRole('group', { name: 'Davanti' })
+    expect(front.querySelectorAll('.stroke')).toHaveLength(1)
+    expect(front.querySelector('.stroke')).toHaveAttribute('stroke', intensityColor(8))
+    expect(front.querySelector('.strokes')).toHaveClass('heat')
+  })
+})
