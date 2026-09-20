@@ -1,6 +1,8 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Entry, Preset, Symptom, Tag } from './types'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
+import { upgradeRegions } from './regions'
+import type { Area } from './areas'
 
 export class GomJabbarDB extends Dexie {
   entries!: EntityTable<Entry, 'id'>
@@ -40,6 +42,16 @@ export class GomJabbarDB extends Dexie {
       entries: 'id, at, createdAt, updatedAt, preset',
       presets: 'id, order',
     })
+    // 5: region ids became CHOIR-based codes (§5.3); every area in entries and presets is converted.
+    this.version(5)
+      .stores({})
+      .upgrade(async (tx) => {
+        const convert = (row: { areas?: Area[] }) => {
+          if (Array.isArray(row.areas)) row.areas = row.areas.map((a) => ({ ...a, regions: upgradeRegions(a.regions) }))
+        }
+        await tx.table('entries').toCollection().modify(convert)
+        await tx.table('presets').toCollection().modify(convert)
+      })
     this.on('populate', () => {
       this.symptoms.bulkAdd(DEFAULT_SYMPTOMS)
       this.tags.bulkAdd(DEFAULT_TAGS)

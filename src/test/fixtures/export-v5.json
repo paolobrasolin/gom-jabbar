@@ -1,0 +1,311 @@
+{
+  "app": "gom-jabbar",
+  "version": 5,
+  "exportedAt": "2026-09-15T20:00:00.000Z",
+  "vocabulary": {
+    "symptoms": [
+      {
+        "id": "pain",
+        "label": {
+          "it": "Dolore",
+          "en": "Pain"
+        },
+        "enabled": true,
+        "order": 0
+      },
+      {
+        "id": "swelling",
+        "label": {
+          "it": "Gonfiore",
+          "en": "Swelling"
+        },
+        "enabled": true,
+        "order": 1
+      },
+      {
+        "id": "heaviness",
+        "label": {
+          "it": "Pesantezza",
+          "en": "Heaviness"
+        },
+        "enabled": true,
+        "order": 2
+      },
+      {
+        "id": "sym-u7",
+        "label": {
+          "it": "Formicolio",
+          "en": "Tingling"
+        },
+        "enabled": true,
+        "order": 7
+      }
+    ],
+    "tags": [
+      {
+        "id": "compression",
+        "label": {
+          "it": "Compressione",
+          "en": "Compression"
+        },
+        "group": "intervention",
+        "enabled": true,
+        "order": 0
+      },
+      {
+        "id": "period",
+        "label": {
+          "it": "Ciclo",
+          "en": "Period"
+        },
+        "group": "context",
+        "enabled": false,
+        "order": 0
+      },
+      {
+        "id": "med-x1",
+        "label": {
+          "it": "Tachipirina",
+          "en": "Tachipirina"
+        },
+        "group": "medication",
+        "enabled": true,
+        "order": 0
+      }
+    ]
+  },
+  "entries": [
+    {
+      "id": "v2-two-areas",
+      "at": "2026-09-01T07:30:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 8,
+        "swelling": 4,
+        "sym-u7": 2
+      },
+      "areas": [
+        {
+          "regions": [
+            "150",
+            "151",
+            "152",
+            "153"
+          ],
+          "intensity": 8
+        },
+        {
+          "regions": [
+            "130",
+            "131"
+          ],
+          "intensity": 3
+        }
+      ],
+      "tags": [
+        "compression",
+        "med-x1"
+      ],
+      "note": "gambe e spalle",
+      "createdAt": "2026-09-01T07:31:00.000Z",
+      "updatedAt": "2026-09-01T07:31:00.000Z"
+    },
+    {
+      "id": "v2-ended-episode",
+      "at": "2026-09-02T20:00:00.000Z",
+      "endedAt": "2026-09-03T02:00:00.000Z",
+      "ongoing": false,
+      "readings": {
+        "pain": 4
+      },
+      "areas": [
+        {
+          "regions": [
+            "100",
+            "101",
+            "102",
+            "103"
+          ],
+          "intensity": 4
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-09-02T22:00:00.000Z",
+          "readings": {
+            "pain": 7
+          }
+        },
+        {
+          "at": "2026-09-03T00:30:00.000Z",
+          "readings": {
+            "pain": 4
+          }
+        }
+      ],
+      "tags": [
+        "med-x1"
+      ],
+      "note": "",
+      "createdAt": "2026-09-02T20:00:30.000Z",
+      "updatedAt": "2026-09-03T02:00:10.000Z"
+    },
+    {
+      "id": "v2-ongoing",
+      "at": "2026-09-14T09:00:00.000Z",
+      "endedAt": null,
+      "ongoing": true,
+      "readings": {
+        "pain": 5
+      },
+      "areas": [
+        {
+          "regions": [
+            "224",
+            "225"
+          ],
+          "intensity": 5
+        }
+      ],
+      "tags": [],
+      "note": "",
+      "createdAt": "2026-09-14T09:00:00.000Z",
+      "updatedAt": "2026-09-14T09:00:00.000Z"
+    },
+    {
+      "id": "v2-fullbody",
+      "at": "2026-09-10T22:00:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 9,
+        "heaviness": 7
+      },
+      "areas": [
+        {
+          "regions": [
+            "*"
+          ],
+          "intensity": 9
+        }
+      ],
+      "tags": [
+        "period"
+      ],
+      "note": "tutto",
+      "createdAt": "2026-09-10T22:00:00.000Z",
+      "updatedAt": "2026-09-10T22:05:00.000Z"
+    },
+    {
+      "id": "v2-no-pain",
+      "at": "2026-09-11T12:00:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 0,
+        "swelling": 3
+      },
+      "areas": [
+        {
+          "regions": [
+            "160",
+            "161"
+          ],
+          "intensity": 0
+        }
+      ],
+      "tags": [],
+      "note": "solo gonfiore",
+      "createdAt": "2026-09-11T12:00:00.000Z",
+      "updatedAt": "2026-09-11T12:00:00.000Z"
+    },
+    {
+      "id": "v3-swelling-episode",
+      "at": "2026-09-15T08:00:00.000Z",
+      "endedAt": null,
+      "ongoing": true,
+      "readings": {
+        "pain": 0,
+        "swelling": 4
+      },
+      "areas": [
+        {
+          "regions": [
+            "152",
+            "153",
+            "160",
+            "161"
+          ],
+          "intensity": 0
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-09-15T08:00:00.000Z",
+          "readings": {
+            "pain": 0,
+            "swelling": 2
+          }
+        },
+        {
+          "at": "2026-09-15T12:00:00.000Z",
+          "readings": {
+            "pain": 0,
+            "swelling": 4
+          }
+        }
+      ],
+      "tags": [
+        "compression"
+      ],
+      "note": "gambe gonfie",
+      "createdAt": "2026-09-15T08:00:00.000Z",
+      "updatedAt": "2026-09-15T12:00:00.000Z"
+    },
+    {
+      "id": "v4-preset-moment",
+      "at": "2026-09-15T13:00:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 4
+      },
+      "areas": [
+        {
+          "regions": [
+            "224",
+            "225"
+          ],
+          "intensity": 4
+        }
+      ],
+      "tags": [],
+      "note": "",
+      "preset": "p-schiena",
+      "createdAt": "2026-09-15T13:00:00.000Z",
+      "updatedAt": "2026-09-15T13:00:00.000Z"
+    }
+  ],
+  "presets": [
+    {
+      "id": "p-schiena",
+      "name": "Schiena",
+      "areas": [
+        {
+          "regions": [
+            "224",
+            "225"
+          ],
+          "intensity": 5
+        }
+      ],
+      "symptomIds": [
+        "pain"
+      ],
+      "tags": [],
+      "ongoing": false,
+      "order": 0
+    }
+  ]
+}

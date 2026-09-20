@@ -2,9 +2,10 @@ import { db } from './db'
 import { PAIN, type Entry, type HistoryPoint, type Preset, type Symptom, type Tag, type Lang } from './types'
 import { regionText } from './summary'
 import type { Area } from './areas'
+import { upgradeRegions } from './regions'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 
-export const EXPORT_VERSION = 4
+export const EXPORT_VERSION = 5
 
 export type ExportFile = {
   app: 'gom-jabbar'
@@ -51,7 +52,7 @@ export function parseImport(text: string): ExportFile {
     exportedAt: typeof o.exportedAt === 'string' ? o.exportedAt : new Date().toISOString(),
     vocabulary: { symptoms: Array.isArray(vocab.symptoms) ? vocab.symptoms : [], tags: Array.isArray(vocab.tags) ? vocab.tags : [] },
     entries,
-    presets: Array.isArray(o.presets) ? (o.presets as Preset[]) : [],
+    presets: Array.isArray(o.presets) ? (o.presets as Preset[]).map((p) => (version < 5 ? { ...p, areas: upgradeAreas(p.areas) } : p)) : [],
   }
 }
 
@@ -66,6 +67,9 @@ function normalizePoint(h: Row, version: number): HistoryPoint {
   return h as HistoryPoint
 }
 
+/** Before version 5 regions were named ids, some unsided; they became codes (§5.3), converted, never dropped. */
+const upgradeAreas = (areas: Area[]): Area[] => (Array.isArray(areas) ? areas.map((a) => ({ ...a, regions: upgradeRegions(a.regions) })) : areas)
+
 function normalizeEntry(e: Record<string, unknown>, version: number): Entry {
   if (typeof e.id !== 'string' || typeof e.at !== 'string') throw new Error('invalid-entry')
   const readings = (e.readings && typeof e.readings === 'object' ? e.readings : { [PAIN]: 0 }) as Record<string, number>
@@ -73,6 +77,7 @@ function normalizeEntry(e: Record<string, unknown>, version: number): Entry {
   if (version < 2 && Array.isArray(e.regions) && (e.regions as string[]).length) {
     areas = [{ regions: e.regions as string[], intensity: readings[PAIN] ?? 0 }]
   }
+  if (version < 5) areas = upgradeAreas(areas)
   const ts = typeof e.updatedAt === 'string' ? e.updatedAt : e.at
   // Spread first: a field this version does not know about is still the user's data and must survive.
   const out: Entry = {

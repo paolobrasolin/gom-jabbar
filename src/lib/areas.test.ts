@@ -6,28 +6,28 @@ const empty = { areas: [], cur: 0 }
 
 describe('areas', () => {
   it('creates the first area on first tap with the brush level', () => {
-    const s = tapRegion(empty, 'thigh.l', true, 6)
-    expect(s.areas).toEqual([{ regions: ['thigh.l', 'thigh.r'], intensity: 6 }])
+    const s = tapRegion(empty, '152', true, 6)
+    expect(s.areas).toEqual([{ regions: ['152', '153'], intensity: 6 }])
     expect(s.cur).toBe(0)
   })
 
   it('toggles a region off within the current area', () => {
-    let s = tapRegion(empty, 'thigh.l', false, 5)
-    s = tapRegion(s, 'thigh.l', false, 5)
+    let s = tapRegion(empty, '152', false, 5)
+    s = tapRegion(s, '152', false, 5)
     expect(s.areas).toEqual([{ regions: [], intensity: 5 }])
   })
 
   it('moves a region from another area into the current one', () => {
-    let s = tapRegion(empty, 'thigh.l', false, 8)
+    let s = tapRegion(empty, '152', false, 8)
     s = addArea(s, 8)
     s = setIntensity(s, 3)
-    s = tapRegion(s, 'thigh.l', false, 3)
-    expect(s.areas).toEqual([{ regions: ['thigh.l'], intensity: 3 }])
+    s = tapRegion(s, '152', false, 3)
+    expect(s.areas).toEqual([{ regions: ['152'], intensity: 3 }])
     expect(s.cur).toBe(0)
   })
 
   it('adds and selects areas, dropping empties', () => {
-    let s = tapRegion(empty, 'chest', false, 4)
+    let s = tapRegion(empty, '110', false, 4)
     s = addArea(s, 4)
     expect(s.areas).toHaveLength(2)
     expect(s.cur).toBe(1)
@@ -46,10 +46,10 @@ describe('areas', () => {
   })
 
   it('full body replaces all areas and blocks taps', () => {
-    let s = tapRegion(empty, 'chest', false, 4)
+    let s = tapRegion(empty, '110', false, 4)
     s = toggleFull(s, 9)
     expect(s.areas).toEqual([{ regions: ['*'], intensity: 4 }])
-    expect(tapRegion(s, 'chest', false, 4)).toEqual(s)
+    expect(tapRegion(s, '110', false, 4)).toEqual(s)
     expect(toggleFull(s, 9).areas).toEqual([])
   })
 
@@ -64,11 +64,11 @@ describe('areas', () => {
 
 describe('areas edge cases', async () => {
   const A = await import('./areas')
-  it('mirror on an unsided region adds only that region, and a set already present is removed', () => {
-    const s = A.tapRegion({ areas: [], cur: 0 }, 'chest', true, 4)
-    expect(s.areas).toEqual([{ regions: ['chest'], intensity: 4 }])
-    const legs = A.tapSet({ areas: [], cur: 0 }, ['thigh.l', 'thigh.r'], 4)
-    const off = A.tapSet(legs, ['thigh.l', 'thigh.r'], 4)
+  it('mirror pairs a trunk region with its other side too, and a set already present is removed', () => {
+    const s = A.tapRegion({ areas: [], cur: 0 }, '110', true, 4)
+    expect(s.areas).toEqual([{ regions: ['110', '111'], intensity: 4 }])
+    const legs = A.tapSet({ areas: [], cur: 0 }, ['152', '153'], 4)
+    const off = A.tapSet(legs, ['152', '153'], 4)
     expect(off.areas[0]?.regions ?? []).toEqual([])
   })
 })

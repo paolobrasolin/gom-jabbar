@@ -4,12 +4,12 @@ import { writeFileSync } from 'node:fs'
 
 const out = process.argv[2] ?? 'seed.json'
 const regionSets = [
-  ['thigh.l', 'thigh.r', 'shin.l', 'shin.r', 'hip.l', 'hip.r'],
-  ['thigh.l', 'thigh.r', 'knee.l', 'knee.r'],
-  ['shoulder.l', 'shoulder.r', 'neck'],
-  ['lowerback', 'buttock.l', 'buttock.r'],
+  ['152', '153', '160', '161', '150', '151'],
+  ['152', '153', '154', '155'],
+  ['130', '131', '104'],
+  ['224', '226', '227'],
   ['*'],
-  ['forearm.l', 'forearm.r', 'hand.l', 'hand.r'],
+  ['140', '141', '144', '145'],
 ]
 const tagPool = ['compression', 'mld', 'exercise', 'rest', 'heat', 'period', 'stress', 'badsleep', 'standing', 'sitting', 'hot_weather']
 let seed = 7

@@ -6,16 +6,16 @@ import { prefs } from '../lib/prefs.svelte'
 import it_ from '../i18n/it.json'
 
 describe('regionLabel', () => {
-  it('names every region in both languages', () => {
+  it('names every region in both languages, with its side', () => {
     prefs.lang = 'it'
-    expect(regionLabel('thigh.l', t)).toBe('Coscia sx')
-    expect(regionLabel('chest', t)).toBe('Petto')
+    expect(regionLabel('152', t)).toBe('Coscia sx')
+    expect(regionLabel('110', t)).toBe('Petto sx')
+    expect(regionLabel('227', t)).toBe('Gluteo dx')
     for (const r of REGIONS) expect(regionLabel(r.id, t)).not.toMatch(/^reg\./)
     prefs.lang = 'en'
-    expect(regionLabel('calf.r', t)).toBe('Right Calf')
+    expect(regionLabel('261', t)).toBe('Right Calf')
     for (const r of REGIONS) expect(regionLabel(r.id, t)).not.toMatch(/^reg\./)
     prefs.lang = 'it'
-    const bases = new Set(REGIONS.map((r) => (r.side ? r.id.slice(0, -2) : r.id)))
-    for (const b of bases) expect((it_ as Record<string, string>)[`reg.${b}`], b).toBeTruthy()
+    for (const r of REGIONS) expect((it_ as Record<string, string>)[`reg.${r.name}`], r.name).toBeTruthy()
   })
 })

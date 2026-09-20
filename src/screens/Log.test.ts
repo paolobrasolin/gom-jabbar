@@ -24,7 +24,7 @@ describe('Log fast path', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.areas).toEqual([{ regions: ['thigh.l', 'thigh.r'], intensity: 7 }])
+    expect(e.areas).toEqual([{ regions: ['152', '153'], intensity: 7 }])
     expect(e.readings.pain).toBe(7)
     expect(e.ongoing).toBe(false)
     expect(await screen.findByText('Salvato')).toBeInTheDocument()
@@ -45,7 +45,7 @@ describe('Log fast path', () => {
     const [e] = await db.entries.toArray()
     expect(e.areas).toHaveLength(2)
     expect(e.areas[0].intensity).toBe(8)
-    expect(e.areas[1]).toEqual({ regions: ['shoulder.l', 'shoulder.r'], intensity: 3 })
+    expect(e.areas[1]).toEqual({ regions: ['130', '131'], intensity: 3 })
     expect(e.readings.pain).toBe(8)
   })
 
@@ -282,7 +282,7 @@ describe('Presets', () => {
 
   it('a preset made from an entry with other symptoms and tags tracks them', async () => {
     const { addEntry } = await import('../lib/entries')
-    await addEntry({ areas: [{ regions: ['lowerback'], intensity: 4 }], readings: { pain: 4, swelling: 2 }, tags: ['heat'], note: 'x' })
+    await addEntry({ areas: [{ regions: ['224'], intensity: 4 }], readings: { pain: 4, swelling: 2 }, tags: ['heat'], note: 'x' })
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
@@ -292,11 +292,11 @@ describe('Presets', () => {
     await fireEvent.keyDown(within(edit).getByRole('textbox', { name: 'Nome del preset' }), { key: 'Enter' })
     await waitFor(async () => expect(await db.presets.count()).toBe(1))
     const [p] = await db.presets.toArray()
-    expect(p).toMatchObject({ name: 'Schiena', symptomIds: ['pain', 'swelling'], tags: ['heat'], ongoing: false, areas: [{ regions: ['lowerback'], intensity: 4 }] })
+    expect(p).toMatchObject({ name: 'Schiena', symptomIds: ['pain', 'swelling'], tags: ['heat'], ongoing: false, areas: [{ regions: ['224'], intensity: 4 }] })
   })
 
   it('starts the preset sheet from the last logged levels', async () => {
-    const p = await addPreset({ name: 'Schiena', areas: [{ regions: ['lowerback'], intensity: 5 }], symptomIds: ['pain', 'swelling'], tags: [], ongoing: false })
+    const p = await addPreset({ name: 'Schiena', areas: [{ regions: ['224'], intensity: 5 }], symptomIds: ['pain', 'swelling'], tags: [], ongoing: false })
     const { logPreset } = await import('../lib/presets')
     await logPreset(p, { pain: 3, swelling: 7 })
     render(App)

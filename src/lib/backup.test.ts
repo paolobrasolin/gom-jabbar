@@ -13,7 +13,7 @@ const t = (k: string) => k
 
 describe('backup', () => {
   it('round-trips export → parse → replace', async () => {
-    await addEntry({ areas: [{ regions: ['thigh.l'], intensity: 6 }], tags: ['rest'], note: 'x' })
+    await addEntry({ areas: [{ regions: ['152'], intensity: 6 }], tags: ['rest'], note: 'x' })
     await addEntry({ ongoing: true, areas: [{ regions: ['*'], intensity: 9 }] })
     const file = await buildExport()
     expect(file.entries).toHaveLength(2)
@@ -51,10 +51,10 @@ describe('backup', () => {
     const text = JSON.stringify({
       app: 'gom-jabbar',
       version: 1,
-      entries: [{ id: 'v1', at: '2026-01-01T00:00:00.000Z', readings: { pain: 5 }, regions: ['knee.l'], tags: [], note: '' }],
+      entries: [{ id: 'v1', at: '2026-01-01T00:00:00.000Z', readings: { pain: 5 }, regions: ['154'], tags: [], note: '' }],
     })
     const parsed = parseImport(text)
-    expect(parsed.entries[0].areas).toEqual([{ regions: ['knee.l'], intensity: 5 }])
+    expect(parsed.entries[0].areas).toEqual([{ regions: ['154'], intensity: 5 }])
     expect(parsed.entries[0].updatedAt).toBe('2026-01-01T00:00:00.000Z')
     expect(parsed.vocabulary.tags).toEqual([])
   })
@@ -73,13 +73,13 @@ describe('backup', () => {
   })
 
   it('writes csv with one row per entry and escaped notes', async () => {
-    await addEntry({ areas: [{ regions: ['thigh.l', 'thigh.r'], intensity: 6 }], readings: { swelling: 3 }, tags: ['rest'], note: 'he said "ow", twice' })
+    await addEntry({ areas: [{ regions: ['152', '153'], intensity: 6 }], readings: { swelling: 3 }, tags: ['rest'], note: 'he said "ow", twice' })
     const file = await buildExport()
     const csv = toCsv(file.entries, file.vocabulary.symptoms, file.vocabulary.tags, 'it', t)
     const lines = csv.trim().split('\r\n')
     expect(lines).toHaveLength(2)
     expect(lines[0].startsWith('id,at,endedAt,ongoing,pain,swelling')).toBe(true)
-    expect(lines[1]).toContain('thigh.l+thigh.r:6')
+    expect(lines[1]).toContain('152+153:6')
     expect(lines[1]).toContain('Riposo')
     expect(lines[1]).toContain('"he said ""ow"", twice"')
   })

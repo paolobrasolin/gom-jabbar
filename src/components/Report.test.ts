@@ -29,8 +29,8 @@ const fmt = (d: Date) => new Intl.DateTimeFormat('it-IT', { day: 'numeric', mont
 /** Seven days: an entry with a note today, a 2h episode two days ago that eased from 6 to 3, a quiet swelling reading before that. */
 function fixture(): { from: Date; entries: Entry[] } {
   const from = rangeStart(7)
-  const today = makeEntry({ at: at(0), areas: [{ regions: ['thigh.l'], intensity: 8 }], tags: ['rest'], note: 'nota uno' })
-  const episode = makeEntry({ at: at(2, 9), areas: [{ regions: ['thigh.l', 'thigh.r'], intensity: 6 }] })
+  const today = makeEntry({ at: at(0), areas: [{ regions: ['152'], intensity: 8 }], tags: ['rest'], note: 'nota uno' })
+  const episode = makeEntry({ at: at(2, 9), areas: [{ regions: ['152', '153'], intensity: 6 }] })
   episode.endedAt = at(2, 11)
   episode.readings = { pain: 3 }
   episode.history = [{ at: at(2, 9), readings: { pain: 6 } }, { at: at(2, 10), readings: { pain: 3 } }]
@@ -71,7 +71,7 @@ describe('Report page', () => {
     open()
     const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
     expect(names).toEqual(['Dove', 'Nel tempo', 'Altri sintomi', 'Tag', 'Episodi e note'])
-    expect(document.querySelector('[data-region="thigh.l"]')).toHaveClass('on')
+    expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
     // The chart is static on paper: no tap targets.
     expect(screen.queryAllByRole('button', { name: /\d/ })).toHaveLength(0)
     const sym = screen.getByRole('heading', { name: 'Altri sintomi' }).nextElementSibling!

@@ -3,6 +3,7 @@
   import VocabEditor from '../components/VocabEditor.svelte'
   import { t, locale } from '../i18n/index.svelte'
   import { prefs, savePrefs, type Theme } from '../lib/prefs.svelte'
+  import type { FigureId } from '../lib/figures'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import type { Lang } from '../lib/types'
@@ -25,6 +26,10 @@
   }
   function setTheme(th: Theme) {
     prefs.theme = th
+    savePrefs()
+  }
+  function setFigure(f: FigureId) {
+    prefs.figure = f
     savePrefs()
   }
 
@@ -168,6 +173,15 @@
     <div class="chips">
       {#each ['system', 'light', 'dark'] as const as th (th)}
         <button class="chip" aria-pressed={prefs.theme === th} onclick={() => setTheme(th)}>{t(`settings.theme.${th}`)}</button>
+      {/each}
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="small muted label">{t('settings.figure')}</p>
+    <div class="chips">
+      {#each ['female', 'male'] as const as f (f)}
+        <button class="chip" aria-pressed={prefs.figure === f} onclick={() => setFigure(f)}>{t(`settings.figure.${f}`)}</button>
       {/each}
     </div>
   </div>

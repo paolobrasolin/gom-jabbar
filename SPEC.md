@@ -133,11 +133,27 @@ Users can add, rename, reorder, and disable symptoms and tags. Disabled items st
 
 ### 5.3 Regions
 
-Body map with front and back figures side by side, labelled, both always visible. Region ids are stable strings; the SVG shapes carry them as `data-region`.
+Body map with front and back figures side by side, labelled, both always visible. The figures and their segmentation are the **CHOIR body map** (Collaborative Health Outcomes Information Registry, Stanford; Scherrer et al., PAIN Reports 2021), a validated 74-segment pain map: 36 front and 38 back segments, in a female and a male silhouette with identical segmentation, chosen in Settings (§6.4). The polygons come from the MIT-licensed CHOIRBM R package, vendored in `scripts/choir/` with attribution; `scripts/choir.mjs` writes `src/lib/figures.ts`, keyed by CHOIR code with the female 112–117 renumbered to the male order so a code means the same segment on both figures.
 
-Front: `head`, `neck`, `shoulder.l/r`, `upperarm.l/r`, `elbow.l/r`, `forearm.l/r`, `hand.l/r`, `chest`, `abdomen`, `pelvis`, `hip.l/r`, `thigh.l/r`, `knee.l/r`, `shin.l/r`, `ankle.l/r`, `foot.l/r`. The hips are narrow strips on the outer edge of the pelvis (hips and flanks); `pelvis` is the unsided middle between abdomen and thighs, grouped with the torso. Lipedema hips and pelvic pain are different things (#2).
+Region ids are three-digit codes, one per CHOIR segment, stable strings stored in user data; the SVG shapes carry them as `data-region`:
 
-Back: `head.back`, `neck.back`, `upperback`, `lowerback`, `shoulder.back.l/r`, `upperarm.back.l/r`, `elbow.back.l/r`, `forearm.back.l/r`, `buttock.l/r`, `thigh.back.l/r`, `knee.back.l/r`, `calf.l/r`, `heel.l/r`, `foot.back.l/r`. The hands are drawn on both figures and share the front ids.
+- first digit: view, 1 front, 2 back;
+- second digit: family, 0 head, 1 front trunk, 2 back trunk, 3 upper arm, 4 lower arm, 5 upper leg, 6 lower leg (digit 2 is only used at the back, digit 1 only in front);
+- third digit: the part, top to bottom, with the parity giving the side: even left, odd right.
+
+| family | parts (even/odd) | front | back |
+|---|---|---|---|
+| 0 head | top 0/1, face or nape 2/3, neck 4/5 | 100–105 | 200–205 |
+| 1 front trunk | chest 0/1, abdomen 2/3, groin 4/5 | 110–115 | |
+| 2 back trunk | upper 0/1, mid 2/3, lower 4/5, buttock 6/7 | | 220–227 |
+| 3 upper arm | shoulder 0/1, upper arm 2/3, elbow 4/5 | 130–135 | 230–235 |
+| 4 lower arm | forearm 0/1, wrist 2/3, hand 4/5 | 140–145 | 240–245 |
+| 5 upper leg | hip 0/1, thigh 2/3, knee 4/5 | 150–155 | 250–255 |
+| 6 lower leg | shin or calf 0/1, ankle or heel 2/3, foot 4/5 | 160–165 | 260–265 |
+
+Every region is bilateral. `REGIONS` in `lib/regions.ts` carries, per code, the view, the display group (head, arm, torso, back, hip, leg), the side, the name key and the CHOIR code, so an export can speak CHOIR. A knee is x5x in every view; the trunk families differ front and back because their segments do not correspond. A segment added later takes the next free slot of its family, so it may sort out of top-to-bottom order.
+
+Before version 5 the ids were names (`thigh.l`, `chest`, `hand.l` shared by both views). `LEGACY_REGIONS` maps each of them to today's codes: an unsided id to both sides, a hand to the front and the back hand. Dexie version 5 and the importer convert every area of entries and presets; nothing is dropped (§4.1).
 
 Special: `*` = full body. When selected, both figures fill and individual regions cannot be toggled until it is deselected.
 
@@ -228,6 +244,7 @@ Range picker: 7, 30, 90, 365 days.
 
 - Language (it / en, follows device by default).
 - Theme (system / light / dark).
+- Figure: which CHOIR silhouette the body map draws, female or male (§5.3). Same regions either way, so switching loses nothing.
 - Vocabulary editors: symptoms, tags (three groups), reorder by drag, enable/disable, rename, add.
 - **Preset** list with delete (undo toast); creation happens from an entry's edit sheet (§5.6), and the empty state says so.
 - **Backup**: last backup date, Export JSON (share), Export CSV (share), Import JSON (merge or replace, with a preview of counts before applying).
@@ -254,7 +271,7 @@ Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** sha
 ```json
 {
   "app": "gom-jabbar",
-  "version": 4,
+  "version": 5,
   "exportedAt": "2026-09-13T18:00:00Z",
   "vocabulary": { "symptoms": [], "tags": [] },
   "entries": [],
@@ -264,7 +281,7 @@ Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** sha
 
 CSV export is one row per entry, one column per symptom, regions and tags joined with `|`. Meant for spreadsheets, not for reimport.
 
-Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `updatedAt` winning and adds vocabulary items that are missing. A sheet shows the file date and counts (new, updated) before committing. Replace is undoable from the toast: the previous state is snapshotted and restored on undo. Every version ever written is accepted: version 1 files (with `regions`), version 2 (history points with `pain`) and version 3 (no `presets`) are upgraded on import. Merge adds presets that are missing by id; replace loads them.
+Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `updatedAt` winning and adds vocabulary items that are missing. A sheet shows the file date and counts (new, updated) before committing. Replace is undoable from the toast: the previous state is snapshotted and restored on undo. Every version ever written is accepted: version 1 files (with `regions`), version 2 (history points with `pain`), version 3 (no `presets`) and version 4 (named region ids, §5.3) are upgraded on import. Merge adds presets that are missing by id; replace loads them.
 
 Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable with a switch, reorder with arrows, add at the bottom of each group. Pain cannot be disabled. Renaming a default item changes only the current language; user-made items keep both languages in sync.
 
