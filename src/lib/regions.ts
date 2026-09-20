@@ -1,29 +1,110 @@
+import { FIGURES, FIGURE_SIZE, type FigureId } from './figures'
+
+export type { FigureId }
 export const FULL_BODY = '*'
 export type View = 'front' | 'back'
 export type Side = 'l' | 'r'
+/** Display groups, for summaries and the limb shortcuts. */
 export type Group = 'head' | 'arm' | 'torso' | 'back' | 'hip' | 'leg'
 
 export type Shape =
   | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number }
   | { kind: 'poly'; points: [number, number][]; r: number }
 
+/**
+ * A region id is a three-digit code (§5.3): view (1 front, 2 back), part family
+ * (0 head, 1 front trunk, 2 back trunk, 3 upper arm, 4 lower arm, 5 upper leg, 6 lower leg),
+ * then the part top to bottom with the parity giving the side: even left, odd right.
+ * Every region is one segment of the CHOIR body map; `choir` is its code there.
+ */
 export type RegionDef = {
   id: string
   view: View
   group: Group
-  side?: Side
-  shape: Shape
+  side: Side
+  /** i18n key suffix: `reg.<name>`. */
+  name: string
+  choir: number
 }
 
-export const VIEWBOX = { w: 170, h: 420 }
+/** Corner rounding applied to the traced polygons when drawn. */
+const ROUND = 2
 
-const ell = (cx: number, cy: number, rx: number, ry: number): Shape => ({ kind: 'ellipse', cx, cy, rx, ry })
-const poly = (r: number, ...points: [number, number][]): Shape => ({ kind: 'poly', points, r })
+/** Pair rows: our code prefix (two digits), name, display group, and the CHOIR pair as [viewer's left, viewer's right]. */
+type Pair = [prefix: string, name: string, group: Group, choir: [number, number]]
 
-function mirror(s: Shape): Shape {
-  return s.kind === 'ellipse'
-    ? { ...s, cx: VIEWBOX.w - s.cx }
-    : { ...s, points: s.points.map(([x, y]) => [VIEWBOX.w - x, y] as [number, number]) }
+const FRONT: Pair[] = [
+  ['10', 'head', 'head', [101, 102]],
+  ['10', 'face', 'head', [103, 104]],
+  ['10', 'neck', 'head', [105, 106]],
+  ['11', 'chest', 'torso', [108, 109]],
+  ['11', 'abdomen', 'torso', [116, 117]],
+  ['11', 'groin', 'torso', [121, 122]],
+  ['13', 'shoulder', 'arm', [107, 110]],
+  ['13', 'upperarm', 'arm', [111, 112]],
+  ['13', 'elbow', 'arm', [113, 114]],
+  ['14', 'forearm', 'arm', [115, 118]],
+  ['14', 'wrist', 'arm', [119, 124]],
+  ['14', 'hand', 'arm', [125, 128]],
+  ['15', 'hip', 'hip', [120, 123]],
+  ['15', 'thigh', 'leg', [126, 127]],
+  ['15', 'knee', 'leg', [129, 130]],
+  ['16', 'shin', 'leg', [131, 132]],
+  ['16', 'ankle', 'leg', [133, 134]],
+  ['16', 'foot', 'leg', [135, 136]],
+]
+const BACK: Pair[] = [
+  ['20', 'head.back', 'head', [201, 202]],
+  ['20', 'nape', 'head', [203, 204]],
+  ['20', 'neck.back', 'head', [205, 206]],
+  ['22', 'upperback', 'back', [208, 209]],
+  ['22', 'midback', 'back', [212, 213]],
+  ['22', 'lowerback', 'back', [218, 219]],
+  ['22', 'buttock', 'hip', [223, 224]],
+  ['23', 'shoulder.back', 'arm', [207, 210]],
+  ['23', 'upperarm.back', 'arm', [211, 214]],
+  ['23', 'elbow.back', 'arm', [215, 216]],
+  ['24', 'forearm.back', 'arm', [217, 220]],
+  ['24', 'wrist.back', 'arm', [221, 226]],
+  ['24', 'hand.back', 'arm', [227, 230]],
+  ['25', 'hip.back', 'hip', [222, 225]],
+  ['25', 'thigh.back', 'leg', [228, 229]],
+  ['25', 'knee.back', 'leg', [231, 232]],
+  ['26', 'calf', 'leg', [233, 234]],
+  ['26', 'heel', 'leg', [235, 236]],
+  ['26', 'foot.back', 'leg', [237, 238]],
+]
+
+function expand(pairs: Pair[], view: View): RegionDef[] {
+  const next: Record<string, number> = {}
+  return pairs.flatMap(([prefix, name, group, choir]) => {
+    const n = next[prefix] ?? 0
+    next[prefix] = n + 2
+    // The CHOIR pair is viewer's left first: the figure's right in front, its left at the back.
+    const [leftCode, rightCode] = view === 'front' ? [choir[1], choir[0]] : choir
+    return [
+      { id: `${prefix}${n}`, view, group, side: 'l' as Side, name, choir: leftCode },
+      { id: `${prefix}${n + 1}`, view, group, side: 'r' as Side, name, choir: rightCode },
+    ]
+  })
+}
+
+export const REGIONS: RegionDef[] = [...expand(FRONT, 'front'), ...expand(BACK, 'back')]
+export const REGION_BY_ID: Record<string, RegionDef> = Object.fromEntries(REGIONS.map((r) => [r.id, r]))
+export const ALL_REGION_IDS = REGIONS.map((r) => r.id)
+
+export function regionsFor(view: View): RegionDef[] {
+  return REGIONS.filter((r) => r.view === view)
+}
+
+/** The region's polygon on one of the figures. */
+export function shapeOf(fig: FigureId, r: RegionDef): Shape {
+  return { kind: 'poly', points: FIGURES[fig][r.view][String(r.choir)], r: ROUND }
+}
+
+/** The viewBox of a figure, both views. */
+export function figureBox(fig: FigureId): { w: number; h: number } {
+  return FIGURE_SIZE[fig]
 }
 
 /** SVG path for a polygon with rounded corners. */
@@ -42,7 +123,7 @@ export function pathFor(s: Shape): string {
     const toward = (a: [number, number], b: [number, number]) => {
       const dx = b[0] - a[0]
       const dy = b[1] - a[1]
-      const len = Math.hypot(dx, dy)
+      const len = Math.hypot(dx, dy) || 1
       const d = Math.min(s.r, len / 2)
       return [a[0] + (dx / len) * d, a[1] + (dy / len) * d]
     }
@@ -70,103 +151,27 @@ export function shapeCenter(s: Shape): [number, number] {
   return [s.points.reduce((t, p) => t + p[0], 0) / n, s.points.reduce((t, p) => t + p[1], 0) / n]
 }
 
-/** Base shapes drawn on the viewer's left (x < 85). Sided ones get mirrored. Tapered limbs, chunky enough to tap. */
-type Base = { id: string; group: Group; shape: Shape; sided?: boolean }
-
-const C = VIEWBOX.w / 2
-
-// Shared limb geometry (viewer-left side).
-const SHOULDER = poly(9, [26, 88], [60, 79], [62, 100], [32, 108])
-const UPPERARM = poly(10, [20, 110], [47, 104], [44, 166], [22, 168])
-const ELBOW = ell(33, 174, 14, 10)
-const FOREARM = poly(10, [20, 182], [44, 182], [40, 242], [24, 242])
-const HAND = ell(32, 260, 14, 18)
-/** Front hip: a strip on the outer edge of the pelvis, where hips and flanks are. */
-const HIP = poly(8, [48, 192], [66, 192], [65, 228], [50, 228])
-/** Back: the buttock fills the inner half, as before. */
-const BUTTOCK = poly(10, [52, 192], [C, 192], [C, 226], [50, 228])
-const PELVIS = poly(10, [68, 192], [C + 17, 192], [C + 19, 226], [66, 226])
-const THIGH = poly(12, [52, 230], [C - 1, 230], [C - 3, 306], [56, 306])
-const KNEE = ell(69, 316, 15, 11)
-const SHIN = poly(10, [57, 328], [81, 328], [78, 384], [60, 384])
-const ANKLE = ell(69, 392, 12, 8)
-const FOOT = poly(6, [46, 401], [82, 401], [82, 420], [40, 420])
-
-const FRONT: Base[] = [
-  { id: 'head', group: 'head', shape: ell(C, 27, 23, 27) },
-  { id: 'neck', group: 'head', shape: poly(5, [C - 11, 54], [C + 11, 54], [C + 15, 76], [C - 15, 76]) },
-  { id: 'shoulder', group: 'arm', shape: SHOULDER, sided: true },
-  { id: 'chest', group: 'torso', shape: poly(10, [C - 27, 78], [C + 27, 78], [C + 25, 138], [C - 25, 138]) },
-  { id: 'abdomen', group: 'torso', shape: poly(10, [C - 25, 140], [C + 25, 140], [C + 27, 190], [C - 27, 190]) },
-  { id: 'upperarm', group: 'arm', shape: UPPERARM, sided: true },
-  { id: 'elbow', group: 'arm', shape: ELBOW, sided: true },
-  { id: 'forearm', group: 'arm', shape: FOREARM, sided: true },
-  { id: 'hand', group: 'arm', shape: HAND, sided: true },
-  { id: 'pelvis', group: 'torso', shape: PELVIS },
-  { id: 'hip', group: 'hip', shape: HIP, sided: true },
-  { id: 'thigh', group: 'leg', shape: THIGH, sided: true },
-  { id: 'knee', group: 'leg', shape: KNEE, sided: true },
-  { id: 'shin', group: 'leg', shape: SHIN, sided: true },
-  { id: 'ankle', group: 'leg', shape: ANKLE, sided: true },
-  { id: 'foot', group: 'leg', shape: FOOT, sided: true },
-]
-
-const BACK: Base[] = [
-  { id: 'head.back', group: 'head', shape: ell(C, 27, 23, 27) },
-  { id: 'neck.back', group: 'head', shape: poly(5, [C - 11, 54], [C + 11, 54], [C + 15, 76], [C - 15, 76]) },
-  { id: 'shoulder.back', group: 'arm', shape: SHOULDER, sided: true },
-  { id: 'upperback', group: 'back', shape: poly(10, [C - 27, 78], [C + 27, 78], [C + 25, 146], [C - 25, 146]) },
-  { id: 'lowerback', group: 'back', shape: poly(10, [C - 25, 148], [C + 25, 148], [C + 27, 190], [C - 27, 190]) },
-  { id: 'upperarm.back', group: 'arm', shape: UPPERARM, sided: true },
-  { id: 'elbow.back', group: 'arm', shape: ELBOW, sided: true },
-  { id: 'forearm.back', group: 'arm', shape: FOREARM, sided: true },
-  { id: 'hand', group: 'arm', shape: HAND, sided: true },
-  { id: 'buttock', group: 'hip', shape: BUTTOCK, sided: true },
-  { id: 'thigh.back', group: 'leg', shape: THIGH, sided: true },
-  { id: 'knee.back', group: 'leg', shape: KNEE, sided: true },
-  { id: 'calf', group: 'leg', shape: SHIN, sided: true },
-  { id: 'heel', group: 'leg', shape: ANKLE, sided: true },
-  { id: 'foot.back', group: 'leg', shape: FOOT, sided: true },
-]
-
-function expand(bases: Base[], view: View): RegionDef[] {
-  // Front view: the figure's right side is on the viewer's left.
-  // Back view: the figure's left side is on the viewer's left.
-  const leftOfViewer: Side = view === 'front' ? 'r' : 'l'
-  const rightOfViewer: Side = view === 'front' ? 'l' : 'r'
-  return bases.flatMap((b) => {
-    if (!b.sided) return [{ id: b.id, view, group: b.group, shape: b.shape }]
-    return [
-      { id: `${b.id}.${leftOfViewer}`, view, group: b.group, side: leftOfViewer, shape: b.shape },
-      { id: `${b.id}.${rightOfViewer}`, view, group: b.group, side: rightOfViewer, shape: mirror(b.shape) },
-    ]
-  })
-}
-
-export const REGIONS: RegionDef[] = [...expand(FRONT, 'front'), ...expand(BACK, 'back')]
-export const REGION_BY_ID: Record<string, RegionDef> = Object.fromEntries(REGIONS.map((r) => [r.id, r]))
-export const ALL_REGION_IDS = REGIONS.map((r) => r.id)
-
-export function regionsFor(view: View): RegionDef[] {
-  return REGIONS.filter((r) => r.view === view)
-}
-
-
+/** The same part on the other side: flip the parity of the code. */
 export function mirrorId(id: string): string | null {
-  if (id.endsWith('.l')) return id.slice(0, -2) + '.r'
-  if (id.endsWith('.r')) return id.slice(0, -2) + '.l'
-  return null
+  const def = REGION_BY_ID[id]
+  if (!def) return null
+  const n = Number(id)
+  return String(n % 2 === 0 ? n + 1 : n - 1)
 }
 
-export const LEG_IDS = REGIONS.filter((r) => r.group === 'leg' || r.group === 'hip').map((r) => r.id)
-export const ARM_IDS = REGIONS.filter((r) => r.group === 'arm').map((r) => r.id)
+const family = (id: string) => id[1]
+export const LEG_IDS = REGIONS.filter((r) => family(r.id) === '5' || family(r.id) === '6').map((r) => r.id)
+export const ARM_IDS = REGIONS.filter((r) => family(r.id) === '3' || family(r.id) === '4').map((r) => r.id)
 
-/** All regions in the same group and on the same side as `id` (whole limb, whole torso, whole head), both views. */
+/** All regions of the same family and side as `id`: the whole arm or leg on both views, the head, or one side of the trunk on that view. */
 export function limbOf(id: string): string[] {
   const def = REGION_BY_ID[id]
   if (!def) return [id]
-  const groups: Group[] = def.group === 'hip' ? ['hip', 'leg'] : def.group === 'leg' ? ['hip', 'leg'] : [def.group]
-  return [...new Set(REGIONS.filter((r) => groups.includes(r.group) && r.side === def.side).map((r) => r.id))].sort()
+  const fams: Record<string, string[]> = { '0': ['0'], '1': ['1'], '2': ['2'], '3': ['3', '4'], '4': ['3', '4'], '5': ['5', '6'], '6': ['5', '6'] }
+  const f = fams[family(id)]
+  return REGIONS.filter((r) => f.includes(family(r.id)) && r.side === def.side && (family(id) === '1' || family(id) === '2' ? r.view === def.view : true))
+    .map((r) => r.id)
+    .sort()
 }
 
 export function isFullBody(regions: string[]): boolean {
@@ -204,18 +209,60 @@ export type RegionSummaryItem = { group: Group | 'full'; side: 'both' | Side | '
 export function summarizeRegions(regions: string[]): RegionSummaryItem[] {
   if (isFullBody(regions)) return [{ group: 'full', side: 'none' }]
   const order: Group[] = ['head', 'arm', 'torso', 'back', 'hip', 'leg']
-  const sides = new Map<Group, Set<Side | 'none'>>()
+  const sides = new Map<Group, Set<Side>>()
   for (const id of regions) {
     const def = REGION_BY_ID[id]
     if (!def) continue
     if (!sides.has(def.group)) sides.set(def.group, new Set())
-    sides.get(def.group)!.add(def.side ?? 'none')
+    sides.get(def.group)!.add(def.side)
   }
   return order
     .filter((g) => sides.has(g))
     .map((g) => {
       const s = sides.get(g)!
-      const side: RegionSummaryItem['side'] = s.has('l') && s.has('r') ? 'both' : s.has('l') ? 'l' : s.has('r') ? 'r' : 'none'
+      const side: RegionSummaryItem['side'] = s.has('l') && s.has('r') ? 'both' : s.has('l') ? 'l' : 'r'
       return { group: g, side }
     })
+}
+
+/**
+ * Region ids before version 5 (named, some unsided) and what they became (§5.3). An unsided
+ * region became both sides; the hands, shared by both views, became a front and a back hand.
+ */
+export const LEGACY_REGIONS: Record<string, string[]> = {
+  head: ['100', '101', '102', '103'],
+  neck: ['104', '105'],
+  chest: ['110', '111'],
+  abdomen: ['112', '113'],
+  pelvis: ['114', '115'],
+  'shoulder.l': ['130'], 'shoulder.r': ['131'],
+  'upperarm.l': ['132'], 'upperarm.r': ['133'],
+  'elbow.l': ['134'], 'elbow.r': ['135'],
+  'forearm.l': ['140'], 'forearm.r': ['141'],
+  'hand.l': ['144', '244'], 'hand.r': ['145', '245'],
+  'hip.l': ['150'], 'hip.r': ['151'],
+  'thigh.l': ['152'], 'thigh.r': ['153'],
+  'knee.l': ['154'], 'knee.r': ['155'],
+  'shin.l': ['160'], 'shin.r': ['161'],
+  'ankle.l': ['162'], 'ankle.r': ['163'],
+  'foot.l': ['164'], 'foot.r': ['165'],
+  'head.back': ['200', '201', '202', '203'],
+  'neck.back': ['204', '205'],
+  upperback: ['220', '221', '222', '223'],
+  lowerback: ['224', '225'],
+  'buttock.l': ['226'], 'buttock.r': ['227'],
+  'shoulder.back.l': ['230'], 'shoulder.back.r': ['231'],
+  'upperarm.back.l': ['232'], 'upperarm.back.r': ['233'],
+  'elbow.back.l': ['234'], 'elbow.back.r': ['235'],
+  'forearm.back.l': ['240'], 'forearm.back.r': ['241'],
+  'thigh.back.l': ['252'], 'thigh.back.r': ['253'],
+  'knee.back.l': ['254'], 'knee.back.r': ['255'],
+  'calf.l': ['260'], 'calf.r': ['261'],
+  'heel.l': ['262'], 'heel.r': ['263'],
+  'foot.back.l': ['264'], 'foot.back.r': ['265'],
+}
+
+/** Map a pre-v5 region list to today's codes. Codes and unknown ids pass through. */
+export function upgradeRegions(regions: string[]): string[] {
+  return [...new Set(regions.flatMap((r) => LEGACY_REGIONS[r] ?? [r]))].sort()
 }

@@ -13,12 +13,12 @@ beforeEach(() => {
 describe('presets', () => {
   it('captures a draft as a preset: areas, symptoms above 0 (pain always first), tags, episode flag', () => {
     const d = emptyDraft({ ongoing: true })
-    d.areas = [{ regions: ['thigh.r', 'thigh.l'], intensity: 6 }, { regions: [], intensity: 3 }]
+    d.areas = [{ regions: ['153', '152'], intensity: 6 }, { regions: [], intensity: 3 }]
     d.readings = { pain: 6, swelling: 3, fatigue: 0 }
     d.tags = ['compression']
     expect(presetFromDraft(d, '  Gambe ')).toEqual({
       name: 'Gambe',
-      areas: [{ regions: ['thigh.l', 'thigh.r'], intensity: 6 }],
+      areas: [{ regions: ['152', '153'], intensity: 6 }],
       symptomIds: ['pain', 'swelling'],
       tags: ['compression'],
       ongoing: true,
@@ -26,7 +26,7 @@ describe('presets', () => {
   })
 
   it('adds in order, deletes and restores', async () => {
-    const a = await addPreset({ name: 'Schiena', areas: [{ regions: ['lowerback'], intensity: 5 }], symptomIds: ['pain'], tags: [], ongoing: false })
+    const a = await addPreset({ name: 'Schiena', areas: [{ regions: ['224'], intensity: 5 }], symptomIds: ['pain'], tags: [], ongoing: false })
     const b = await addPreset({ name: 'Gambe', areas: [], symptomIds: ['pain', 'swelling'], tags: [], ongoing: false })
     expect(a.order).toBe(0)
     expect(b.order).toBe(1)
@@ -62,9 +62,9 @@ describe('preset edge cases', () => {
   })
 
   it('logs areas at 0 when the preset does not track pain', async () => {
-    const p = await addPreset({ name: 'Gonfiore', areas: [{ regions: ['shin.l'], intensity: 3 }], symptomIds: ['swelling'], tags: [], ongoing: false })
+    const p = await addPreset({ name: 'Gonfiore', areas: [{ regions: ['160'], intensity: 3 }], symptomIds: ['swelling'], tags: [], ongoing: false })
     const e = await logPreset(p, { swelling: 4 })
-    expect(e.areas).toEqual([{ regions: ['shin.l'], intensity: 0 }])
+    expect(e.areas).toEqual([{ regions: ['160'], intensity: 0 }])
     expect(e.readings).toEqual({ swelling: 4, pain: 0 })
   })
 })

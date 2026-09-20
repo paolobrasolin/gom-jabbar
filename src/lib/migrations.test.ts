@@ -12,21 +12,24 @@ import { describe, it, expect } from 'vitest'
 import Dexie from 'dexie'
 import { db, resetDb } from './db'
 import { parseImport, applyImport, buildExport, EXPORT_VERSION } from './backup'
+import { upgradeRegions } from './regions'
 import exportV1 from '../test/fixtures/export-v1.json'
 import exportV2 from '../test/fixtures/export-v2.json'
 import exportV3 from '../test/fixtures/export-v3.json'
 import exportV4 from '../test/fixtures/export-v4.json'
+import exportV5 from '../test/fixtures/export-v5.json'
 import dbV1 from '../test/fixtures/db-v1.json'
 import dbV2 from '../test/fixtures/db-v2.json'
 import dbV3 from '../test/fixtures/db-v3.json'
 import dbV4 from '../test/fixtures/db-v4.json'
+import dbV5 from '../test/fixtures/db-v5.json'
 
 type Row = Record<string, unknown>
 type DbFixture = { version: number; stores: Record<string, string>; tables: Record<string, Row[]> }
 type ExportFixture = { exportedAt: string; vocabulary: unknown; entries: Row[]; presets?: Row[] }
 
-const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4 }
-const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4 }
+const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4, 5: exportV5 }
+const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4, 5: dbV5 }
 
 /**
  * The documented, deliberate change from version N to N+1 for an entry.
@@ -42,9 +45,11 @@ const UPGRADES: Record<number, (e: Row) => Row> = {
   2: (e) => (Array.isArray(e.history) ? { ...e, history: (e.history as Row[]).map(({ pain, ...h }) => ({ ...h, readings: { pain } })) } : e),
   // 3 → 4: presets arrive as a new table and export key; entries gain an optional `preset` id. Nothing changes on existing rows.
   3: (e) => e,
+  // 4 → 5: region ids became CHOIR-based codes; an unsided id became both sides, a hand a front and a back hand. Entries and presets alike.
+  4: (e) => (Array.isArray(e.areas) ? { ...e, areas: (e.areas as { regions: string[] }[]).map((a) => ({ ...a, regions: upgradeRegions(a.regions) })) } : e),
 }
 
-/** What an entry from `from` must look like today. */
+/** What a row (an entry, or a preset from version 4 on) from `from` must look like today. */
 function today(e: Row, from: number, to: number): Row {
   let r = e
   for (let v = from; v < to; v++) r = UPGRADES[v](r)
@@ -76,7 +81,7 @@ describe.each(Object.entries(EXPORT_FIXTURES).map(([v, f]) => [Number(v), f] as 
     expect(parsed.version).toBe(EXPORT_VERSION)
     expect(parsed.exportedAt).toBe(fixture.exportedAt)
     expect(parsed.vocabulary).toEqual(fixture.vocabulary)
-    expect(parsed.presets).toEqual(fixture.presets ?? [])
+    expect(parsed.presets).toEqual((fixture.presets ?? []).map((p) => today(p, version, EXPORT_VERSION)))
     expect(parsed.entries.map((e) => e.id)).toEqual(fixture.entries.map((e) => e.id))
     for (const e of fixture.entries) {
       const got = parsed.entries.find((x) => x.id === e.id)
@@ -112,7 +117,7 @@ describe.each(Object.entries(DB_FIXTURES).map(([v, f]) => [Number(v), f] as cons
     await now.open()
     for (const [table, rows] of Object.entries(fixture.tables)) {
       const got = byId(await now.table(table).toArray())
-      const want = byId(table === 'entries' ? rows.map((r) => today(r, version, now.verno)) : rows)
+      const want = byId(table === 'entries' || table === 'presets' ? rows.map((r) => today(r, version, now.verno)) : rows)
       expect(got, table).toEqual(want)
     }
   })

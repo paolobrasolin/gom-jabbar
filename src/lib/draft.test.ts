@@ -10,11 +10,11 @@ describe('draft conversions', () => {
   })
 
   it('draftFromEntry copies areas and tags so edits do not touch the entry', () => {
-    const e = makeEntry({ areas: [{ regions: ['thigh.l'], intensity: 7 }], tags: ['rest'], readings: { pain: 7, swelling: 2 }, note: 'x' })
+    const e = makeEntry({ areas: [{ regions: ['152'], intensity: 7 }], tags: ['rest'], readings: { pain: 7, swelling: 2 }, note: 'x' })
     const d = draftFromEntry(e)
-    d.areas[0].regions.push('thigh.r')
+    d.areas[0].regions.push('153')
     d.tags.push('heat')
-    expect(e.areas[0].regions).toEqual(['thigh.l'])
+    expect(e.areas[0].regions).toEqual(['152'])
     expect(e.tags).toEqual(['rest'])
     expect(d.readings).toEqual({ pain: 7, swelling: 2 })
   })
@@ -22,7 +22,7 @@ describe('draft conversions', () => {
   it('draftToInput resolves "now", trims the note and copies the rest', () => {
     const d = emptyDraft()
     d.note = '  dopo la corsa  '
-    d.areas = [{ regions: ['thigh.l'], intensity: 5 }]
+    d.areas = [{ regions: ['152'], intensity: 5 }]
     const before = Date.now()
     const input = draftToInput(d)
     expect(Date.parse(input.at!)).toBeGreaterThanOrEqual(before)

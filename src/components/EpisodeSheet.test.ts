@@ -15,7 +15,7 @@ const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOSt
 
 /** An episode started 3h ago at 7, updated to 4 an hour ago. */
 async function seedEpisode() {
-  const e = await addEntry({ at: ago(180), ongoing: true, areas: [{ regions: ['thigh.l'], intensity: 7 }] })
+  const e = await addEntry({ at: ago(180), ongoing: true, areas: [{ regions: ['152'], intensity: 7 }] })
   await updateEpisode(e.id, { pain: 4 }, ago(60))
   return e.id
 }

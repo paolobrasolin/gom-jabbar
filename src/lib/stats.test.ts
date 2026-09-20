@@ -44,13 +44,13 @@ describe('stats', () => {
 
   it('computes region heat with full body spreading everywhere', () => {
     const h = regionHeat([
-      e('1', 8, { areas: [{ regions: ['thigh.l'], intensity: 8 }] }),
-      e('2', 4, { areas: [{ regions: ['thigh.l', 'chest'], intensity: 4 }] }),
+      e('1', 8, { areas: [{ regions: ['152'], intensity: 8 }] }),
+      e('2', 4, { areas: [{ regions: ['152', '110'], intensity: 4 }] }),
       e('3', 2, { areas: [{ regions: ['*'], intensity: 2 }] }),
     ])
-    expect(h.get('thigh.l')).toEqual({ mean: 14 / 3, count: 3, weight: 1 })
-    expect(h.get('chest')?.count).toBe(2)
-    expect(h.get('calf.r')).toEqual({ mean: 2, count: 1, weight: 1 / 3 })
+    expect(h.get('152')).toEqual({ mean: 14 / 3, count: 3, weight: 1 })
+    expect(h.get('110')?.count).toBe(2)
+    expect(h.get('261')).toEqual({ mean: 2, count: 1, weight: 1 / 3 })
   })
 
   it('compares tags on days with vs without, with a minimum', () => {

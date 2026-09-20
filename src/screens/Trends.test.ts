@@ -20,7 +20,7 @@ function daysAgo(n: number, hour = 12): Date {
   return d
 }
 const at = (n: number, hour = 12) => daysAgo(n, hour).toISOString()
-const legs = (intensity: number, extra: Partial<EntryInput> = {}): EntryInput => ({ areas: [{ regions: ['thigh.l'], intensity }], ...extra })
+const legs = (intensity: number, extra: Partial<EntryInput> = {}): EntryInput => ({ areas: [{ regions: ['152'], intensity }], ...extra })
 const fmtFull = (d: Date) => new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).format(d)
 
 async function openTrends() {
@@ -74,11 +74,11 @@ describe('Trends heatmap and chart', () => {
   it('colours the regions that appeared, read-only', async () => {
     await addEntry({ at: at(0), ...legs(8) })
     await openTrends()
-    await waitFor(() => expect(document.querySelector('[data-region="thigh.l"]')).toHaveClass('on'))
-    const thigh = document.querySelector('[data-region="thigh.l"]') as SVGPathElement
+    await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
+    const thigh = document.querySelector('[data-region="152"]') as SVGPathElement
     expect(thigh.getAttribute('style')).toContain(`fill: ${intensityColor(8)}`)
     expect(thigh.getAttribute('style')).toContain('fill-opacity: 1.00')
-    expect(document.querySelector('[data-region="thigh.r"]')).not.toHaveClass('on')
+    expect(document.querySelector('[data-region="153"]')).not.toHaveClass('on')
     expect(document.querySelectorAll('path.hit')).toHaveLength(0)
   })
 
@@ -145,7 +145,7 @@ describe('Trends report', () => {
 
 describe('Trends presets', () => {
   it('draws one line per preset with samples in range', async () => {
-    const p = await addPreset({ name: 'Schiena', areas: [{ regions: ['lowerback'], intensity: 5 }], symptomIds: ['pain'], tags: [], ongoing: false })
+    const p = await addPreset({ name: 'Schiena', areas: [{ regions: ['224'], intensity: 5 }], symptomIds: ['pain'], tags: [], ongoing: false })
     await logPreset(p, { pain: 4 })
     await logPreset(p, { pain: 6 })
     render(App)

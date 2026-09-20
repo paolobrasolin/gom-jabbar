@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
+import { figureBox } from '../lib/regions'
 import { addPreset } from '../lib/presets'
 import { addEntry } from '../lib/entries'
 import { buildExport } from '../lib/backup'
@@ -107,8 +108,26 @@ describe('Settings preferences', () => {
     expect(document.documentElement.dataset.theme).toBeUndefined()
   })
 
+  it('switches the figure the body map draws and remembers it', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+    const male = await screen.findByRole('button', { name: 'Maschile' })
+    expect(screen.getByRole('button', { name: 'Femminile' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(male)
+    expect(prefs.figure).toBe('male')
+    expect(JSON.parse(localStorage.getItem('gj.prefs')!).figure).toBe('male')
+    await fireEvent.click(screen.getByRole('button', { name: 'Registra' }))
+    const front = await screen.findByRole('group', { name: 'Davanti' })
+    expect(front.getAttribute('viewBox')).toBe(`-4 -4 ${figureBox('male').w + 8} ${figureBox('male').h + 8}`)
+    // Same regions on either figure: the thigh is still there to tap.
+    expect(screen.getByRole('button', { name: 'Coscia sx' })).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+    await fireEvent.click(await screen.findByRole('button', { name: 'Femminile' }))
+    expect(prefs.figure).toBe('female')
+  })
+
   it('shows the count of entries and the build version', async () => {
-    await addEntry({ areas: [{ regions: ['thigh.l'], intensity: 4 }] })
+    await addEntry({ areas: [{ regions: ['152'], intensity: 4 }] })
     await openSettings()
     expect(await screen.findByText(/1 voci/)).toBeInTheDocument()
     expect(screen.getByText(/^Versione \d+\.\d+\.\d+\+/)).toBeInTheDocument()
@@ -117,7 +136,7 @@ describe('Settings preferences', () => {
 
 describe('Settings backup', () => {
   it('shares the JSON backup and records the date', async () => {
-    await addEntry({ areas: [{ regions: ['thigh.l'], intensity: 4 }], note: 'ciao' })
+    await addEntry({ areas: [{ regions: ['152'], intensity: 4 }], note: 'ciao' })
     const shared = stubShare()
     await openSettings()
     expect(screen.getByText('Nessun backup ancora fatto.')).toBeInTheDocument()
@@ -147,7 +166,7 @@ describe('Settings backup', () => {
   })
 
   it('shares a CSV', async () => {
-    await addEntry({ areas: [{ regions: ['thigh.l'], intensity: 4 }], tags: ['rest'] })
+    await addEntry({ areas: [{ regions: ['152'], intensity: 4 }], tags: ['rest'] })
     const shared = stubShare()
     await openSettings()
     await fireEvent.click(screen.getByRole('button', { name: 'Esporta CSV' }))
@@ -156,7 +175,7 @@ describe('Settings backup', () => {
     expect(shared[0].type).toBe('text/csv')
     const csv = await readFile(shared[0])
     expect(csv.startsWith('id,at,endedAt,ongoing,pain,swelling')).toBe(true)
-    expect(csv).toContain('thigh.l:4,gamba sx:4,rest,Riposo')
+    expect(csv).toContain('152:4,gamba sx:4,rest,Riposo')
     expect(prefs.lastBackupAt).toBeNull()
   })
 
@@ -210,8 +229,8 @@ describe('Settings import', () => {
   })
 
   it('previews the file and merges it into the current data', async () => {
-    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', areas: [{ regions: ['thigh.l'], intensity: 4 }] })
-    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', areas: [{ regions: ['thigh.r'], intensity: 6 }] })
+    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', areas: [{ regions: ['152'], intensity: 4 }] })
+    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', areas: [{ regions: ['153'], intensity: 6 }] })
     const file = await buildExport()
     file.exportedAt = '2026-09-10T08:00:00.000Z'
     await db.entries.delete(other.id)
@@ -229,10 +248,10 @@ describe('Settings import', () => {
   })
 
   it('replaces everything, with undo', async () => {
-    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', areas: [{ regions: ['thigh.r'], intensity: 6 }] })
+    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', areas: [{ regions: ['153'], intensity: 6 }] })
     const file = await buildExport()
     await db.entries.delete(other.id)
-    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', areas: [{ regions: ['thigh.l'], intensity: 4 }] })
+    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', areas: [{ regions: ['152'], intensity: 4 }] })
     await openSettings()
     await pickFile(JSON.stringify(file))
     const sheet = await screen.findByRole('dialog', { name: 'Importa' })

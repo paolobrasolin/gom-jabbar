@@ -1,4 +1,5 @@
 import type { Lang } from './types'
+import type { FigureId } from './figures'
 
 export type Theme = 'system' | 'light' | 'dark'
 export type Tab = 'log' | 'diary' | 'trends' | 'settings'
@@ -7,6 +8,8 @@ type Prefs = {
   lang: Lang
   theme: Theme
   mirror: boolean
+  /** Which of the two CHOIR silhouettes the body map draws (§5.3). */
+  figure: FigureId
   ongoing: boolean
   lastBackupAt: string | null
   backupSnoozedUntil: string | null
@@ -26,6 +29,7 @@ function load(): Prefs {
     lang: detectLang(),
     theme: 'system',
     mirror: true,
+    figure: 'female',
     ongoing: false,
     lastBackupAt: null,
     backupSnoozedUntil: null,

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { regionsFor, shapeArea, pathFor, VIEWBOX, type View, type RegionDef } from '../lib/regions'
+  import { regionsFor, shapeArea, shapeOf, pathFor, figureBox, type View, type RegionDef } from '../lib/regions'
+  import { prefs } from '../lib/prefs.svelte'
   import { intensityColor } from '../lib/color'
   import { isFull, type Area } from '../lib/areas'
   import { intensityColor as ic } from '../lib/color'
@@ -26,6 +27,8 @@
     heat?: Map<string, { mean: number; weight: number }>
   } = $props()
 
+  const fig = $derived(prefs.figure)
+  const box = $derived(figureBox(fig))
   const full = $derived(isFull(areas))
   const fullColor = $derived(full ? intensityColor(areas.find((a) => a.regions.includes('*'))!.intensity) : '')
   const fill = $derived.by(() => {
@@ -59,17 +62,17 @@
     onToggle?.(id)
   }
   /** Hit layer: smallest regions drawn last so they win over big neighbours. */
-  const hits = (view: View): RegionDef[] => [...regionsFor(view)].sort((a, b) => shapeArea(b.shape) - shapeArea(a.shape))
+  const hits = (view: View): RegionDef[] => [...regionsFor(view)].sort((a, b) => shapeArea(shapeOf(fig, b)) - shapeArea(shapeOf(fig, a)))
 </script>
 
 {#snippet shape(r: RegionDef, cls: string, extra: Record<string, unknown>)}
-  <path class={cls} d={pathFor(r.shape)} {...extra} />
+  <path class={cls} d={pathFor(shapeOf(fig, r))} {...extra} />
 {/snippet}
 
 <div class="maps" class:readonly>
   {#each views as view (view)}
     <div class="figure">
-      <svg viewBox="-4 -4 {VIEWBOX.w + 8} {VIEWBOX.h + 8}" role="group" aria-label={labels[view]}>
+      <svg viewBox="-4 -4 {box.w + 8} {box.h + 8}" role="group" aria-label={labels[view]}>
         <g class="paint">
           {#each regionsFor(view) as r (r.id)}
             {@const h = heat?.get(r.id)}
@@ -137,13 +140,14 @@
   }
   .paint { pointer-events: none; }
   svg { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  /* Seams: thin, the CHOIR fingers are only a few units wide. */
   .region {
     fill: var(--surface-2);
     stroke: var(--bg);
-    stroke-width: 2;
+    stroke-width: 1;
     transition: fill 0.12s;
   }
-  .region.hi { stroke: var(--ink); stroke-width: 3; }
+  .region.hi { stroke: var(--ink); stroke-width: 2; }
   .hit {
     fill: transparent;
     stroke: transparent;

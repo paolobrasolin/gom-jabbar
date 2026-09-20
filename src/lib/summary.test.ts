@@ -38,7 +38,7 @@ describe('trail', () => {
 describe('regionText', () => {
   it('summarises regions in the current language', () => {
     prefs.lang = 'it'
-    expect(regionText(['thigh.l', 'thigh.r', 'hip.l'], t)).toBe('fianco sx, gambe')
+    expect(regionText(['152', '153', '150'], t)).toBe('fianco sx, gambe')
     expect(regionText(['*'], t)).toBe('tutto il corpo')
   })
 })

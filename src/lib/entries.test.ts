@@ -16,17 +16,17 @@ describe('entries', () => {
   })
 
   it('adds an entry with defaults', async () => {
-    const e = await addEntry({ readings: { pain: 6 }, areas: [{ regions: ['thigh.r', 'thigh.l', 'thigh.l'], intensity: 6 }] })
-    expect(e.areas).toEqual([{ regions: ['thigh.l', 'thigh.r'], intensity: 6 }])
+    const e = await addEntry({ readings: { pain: 6 }, areas: [{ regions: ['153', '152', '152'], intensity: 6 }] })
+    expect(e.areas).toEqual([{ regions: ['152', '153'], intensity: 6 }])
     expect(e.ongoing).toBe(false)
     expect(e.endedAt).toBeNull()
     expect(await db.entries.count()).toBe(1)
   })
 
   it('normalizes areas and derives pain as the max', () => {
-    expect(makeEntry({ areas: [{ regions: ['thigh.l', '*'], intensity: 3 }] }).areas).toEqual([{ regions: ['*'], intensity: 3 }])
+    expect(makeEntry({ areas: [{ regions: ['152', '*'], intensity: 3 }] }).areas).toEqual([{ regions: ['*'], intensity: 3 }])
     expect(makeEntry({}).readings).toEqual({ pain: 0 })
-    const e = makeEntry({ readings: { pain: 1 }, areas: [{ regions: ['thigh.l'], intensity: 8 }, { regions: ['chest'], intensity: 3 }, { regions: [], intensity: 10 }] })
+    const e = makeEntry({ readings: { pain: 1 }, areas: [{ regions: ['152'], intensity: 8 }, { regions: ['110'], intensity: 3 }, { regions: [], intensity: 10 }] })
     expect(e.readings.pain).toBe(8)
     expect(e.areas).toHaveLength(2)
   })
@@ -43,7 +43,7 @@ describe('entries', () => {
   })
 
   it('records reading updates on an episode, starting the history from where it began', async () => {
-    const e = await addEntry({ ongoing: true, at: '2026-01-01T10:00:00.000Z', readings: { swelling: 3 }, areas: [{ regions: ['thigh.l'], intensity: 7 }] })
+    const e = await addEntry({ ongoing: true, at: '2026-01-01T10:00:00.000Z', readings: { swelling: 3 }, areas: [{ regions: ['152'], intensity: 7 }] })
     const u = await updateEpisode(e.id, { pain: 4, swelling: 6 }, '2026-01-01T12:00:00.000Z')
     expect(u?.readings).toEqual({ pain: 4, swelling: 6 })
     expect(u?.areas[0].intensity).toBe(4)
@@ -62,7 +62,7 @@ describe('entries', () => {
     const back = await reopenEpisode(e.id)
     expect(back?.ongoing).toBe(true)
     expect(back?.endedAt).toBeNull()
-    const two = await addEntry({ ongoing: true, areas: [{ regions: ['thigh.l'], intensity: 7 }, { regions: ['chest'], intensity: 2 }] })
+    const two = await addEntry({ ongoing: true, areas: [{ regions: ['152'], intensity: 7 }, { regions: ['110'], intensity: 2 }] })
     const v = await updateEpisode(two.id, { pain: 9 })
     expect(v?.readings.pain).toBe(9)
     expect(v?.areas.map((a) => a.intensity)).toEqual([7, 2])
@@ -70,7 +70,7 @@ describe('entries', () => {
 
   it('updates, deletes and restores', async () => {
     const e = await addEntry({ readings: { pain: 3 } })
-    const u = await updateEntry(e.id, { note: 'hi', areas: [{ regions: ['*', 'chest'], intensity: 9 }] })
+    const u = await updateEntry(e.id, { note: 'hi', areas: [{ regions: ['*', '110'], intensity: 9 }] })
     expect(u?.note).toBe('hi')
     expect(u?.areas).toEqual([{ regions: ['*'], intensity: 9 }])
     expect(u?.readings.pain).toBe(9)
@@ -87,24 +87,24 @@ describe('entries', () => {
     const name = 'gj-migrate-' + Math.random().toString(36).slice(2)
     const old = new Dexie(name)
     old.version(1).stores({ entries: 'id, at, createdAt, updatedAt', symptoms: 'id, order', tags: 'id, group, order' })
-    await old.table('entries').add({ id: 'a', at: '2026-01-01T00:00:00.000Z', endedAt: null, ongoing: false, readings: { pain: 6 }, regions: ['thigh.l'], tags: [], note: '', createdAt: 'x', updatedAt: 'x' })
+    await old.table('entries').add({ id: 'a', at: '2026-01-01T00:00:00.000Z', endedAt: null, ongoing: false, readings: { pain: 6 }, regions: ['152'], tags: [], note: '', createdAt: 'x', updatedAt: 'x' })
     await old.table('entries').add({ id: 'b', at: '2026-01-02T00:00:00.000Z', endedAt: null, ongoing: false, readings: { pain: 2 }, regions: [], tags: [], note: '', createdAt: 'x', updatedAt: 'x' })
     old.close()
     const fresh = resetDb(name)
     const a = await fresh.entries.get('a')
     const b = await fresh.entries.get('b')
-    expect(a?.areas).toEqual([{ regions: ['thigh.l'], intensity: 6 }])
+    expect(a?.areas).toEqual([{ regions: ['152'], intensity: 6 }])
     expect((a as unknown as { regions?: unknown }).regions).toBeUndefined()
     expect(b?.areas).toEqual([])
   })
 
   it('round-trips through a draft', async () => {
-    const e = await addEntry({ readings: { pain: 5 }, areas: [{ regions: ['knee.l'], intensity: 5 }], tags: ['rest'], note: ' n ' })
+    const e = await addEntry({ readings: { pain: 5 }, areas: [{ regions: ['154'], intensity: 5 }], tags: ['rest'], note: ' n ' })
     const d = draftFromEntry(e)
     expect(d.at).toBe(e.at)
     const input = draftToInput(d)
     expect(input.note).toBe('n')
-    expect(input.areas).toEqual([{ regions: ['knee.l'], intensity: 5 }])
+    expect(input.areas).toEqual([{ regions: ['154'], intensity: 5 }])
     const fresh = draftToInput(emptyDraft({ pain: 4 }))
     expect(fresh.readings).toEqual({ pain: 4 })
     expect(Date.parse(fresh.at!)).toBeGreaterThan(Date.now() - 5000)
