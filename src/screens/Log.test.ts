@@ -95,7 +95,8 @@ describe('Details inline', () => {
   it('saves what is set inline and leaves the form clean', async () => {
     render(App)
     await fireEvent.click(await screen.findByRole('button', { name: 'Riposo' }))
-    await fireEvent.input(screen.getByRole('slider', { name: 'Gonfiore' }), { target: { value: '4' } })
+    // The symptom sliders come from a live query: on a slow runner they land after the tag strip.
+    await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '4' } })
     await fireEvent.input(screen.getByRole('textbox', { name: 'Note' }), { target: { value: 'dopo la corsa' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
