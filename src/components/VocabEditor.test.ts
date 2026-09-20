@@ -14,11 +14,34 @@ const names = () => Array.from(document.querySelectorAll('.item .name')).map((b)
 const itemOf = (name: string) => screen.getByRole('button', { name }).closest('.item') as HTMLElement
 
 describe('Vocabulary editor: symptoms', () => {
-  it('lists the symptoms in order, pain locked, the others switchable', async () => {
+  it('lists the symptoms by category in order, pain locked, the others switchable', async () => {
     render(VocabEditor, { table: 'symptoms' })
-    await waitFor(() => expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Nebbia mentale', 'Dolorabilità al tatto', 'Rigidità']))
+    await waitFor(() => expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Dolorabilità al tatto', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Depressione']))
+    const titles = Array.from(document.querySelectorAll('.group-title')).map((p) => p.textContent)
+    expect(titles).toEqual(['Corpo', 'Mente'])
+    expect(screen.getAllByPlaceholderText('Nuovo…')).toHaveLength(2)
     expect(within(itemOf('Dolore')).queryByRole('checkbox')).not.toBeInTheDocument()
     expect(within(itemOf('Gonfiore')).getByRole('checkbox', { name: 'Gonfiore' })).toBeChecked()
+  })
+
+  it('adds a mind symptom from the field of its group, and moves only within the group', async () => {
+    render(VocabEditor, { table: 'symptoms' })
+    const fields = await screen.findAllByPlaceholderText('Nuovo…')
+    await fireEvent.input(fields[1], { target: { value: 'Irritabilità' } })
+    await fireEvent.keyDown(fields[1], { key: 'Enter' })
+    await waitFor(() => expect(names()).toContain('Irritabilità'))
+    expect(names().slice(-2)).toEqual(['Depressione', 'Irritabilità'])
+    const added = (await db.symptoms.orderBy('order').last())!
+    expect(added).toMatchObject({ category: 'mind', label: { it: 'Irritabilità', en: 'Irritabilità' }, enabled: true, order: 9 })
+    await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
+    await waitFor(() => expect(names().slice(-2)).toEqual(['Irritabilità', 'Depressione']))
+    await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
+    await waitFor(() => expect(names().slice(-3)).toEqual(['Irritabilità', 'Ansia', 'Depressione']))
+    await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
+    await waitFor(() => expect(names().slice(-4)).toEqual(['Irritabilità', 'Nebbia mentale', 'Ansia', 'Depressione']))
+    await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
+    await new Promise((res) => setTimeout(res, 20))
+    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Dolorabilità al tatto', 'Rigidità', 'Irritabilità', 'Nebbia mentale', 'Ansia', 'Depressione'])
   })
 
   it('switches a symptom off and on', async () => {
@@ -69,30 +92,31 @@ describe('Vocabulary editor: symptoms', () => {
     await fireEvent.click(within(itemOf('Dolore')).getByRole('button', { name: '↑' }))
     await fireEvent.click(within(itemOf('Rigidità')).getByRole('button', { name: '↓' }))
     await new Promise((res) => setTimeout(res, 20))
-    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Nebbia mentale', 'Dolorabilità al tatto', 'Rigidità'])
+    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Dolorabilità al tatto', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Depressione'])
   })
 
   it('adds a symptom from the field, by button or Enter, ignoring blanks', async () => {
     render(VocabEditor, { table: 'symptoms' })
-    const field = await screen.findByPlaceholderText('Nuovo…')
-    await fireEvent.click(screen.getByRole('button', { name: '+ Aggiungi' }))
+    const field = (await screen.findAllByPlaceholderText('Nuovo…'))[0]
+    const addButton = () => screen.getAllByRole('button', { name: '+ Aggiungi' })[0]
+    await fireEvent.click(addButton())
     await fireEvent.input(field, { target: { value: '  ' } })
     await fireEvent.keyDown(field, { key: 'Enter' })
     await new Promise((res) => setTimeout(res, 20))
-    expect(await db.symptoms.count()).toBe(7)
+    expect(await db.symptoms.count()).toBe(9)
 
     await fireEvent.input(field, { target: { value: 'Formicolio' } })
-    await fireEvent.click(screen.getByRole('button', { name: '+ Aggiungi' }))
-    await waitFor(() => expect(names()).toHaveLength(8))
-    expect(names()[7]).toBe('Formicolio')
+    await fireEvent.click(addButton())
+    await waitFor(() => expect(names()).toHaveLength(10))
+    expect(names()[6]).toBe('Formicolio')
     await waitFor(() => expect(field).toHaveValue(''))
     const added = (await db.symptoms.orderBy('order').last())!
-    expect(added).toMatchObject({ label: { it: 'Formicolio', en: 'Formicolio' }, enabled: true, order: 7 })
+    expect(added).toMatchObject({ label: { it: 'Formicolio', en: 'Formicolio' }, enabled: true, order: 9 })
     expect(added.id).toMatch(/^formicolio_/)
 
     await fireEvent.input(field, { target: { value: 'Crampi' } })
     await fireEvent.keyDown(field, { key: 'Enter' })
-    await waitFor(() => expect(names()[8]).toBe('Crampi'))
+    await waitFor(() => expect(names()[7]).toBe('Crampi'))
     await waitFor(() => expect(field).toHaveValue(''))
     // A user-made item keeps both translations in sync when renamed.
     await fireEvent.click(screen.getByRole('button', { name: 'Crampi' }))

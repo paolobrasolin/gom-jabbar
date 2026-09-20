@@ -61,6 +61,22 @@ describe('preset edge cases', () => {
     expect(lastByPreset([older, newer])).toEqual({ a: newer })
   })
 
+  it('a mind-only draft becomes a preset without pain, and logging it levels the mind by the mental readings', async () => {
+    const d = emptyDraft()
+    d.areas = [{ regions: ['mind'], intensity: 6 }]
+    d.readings = { pain: 5, fog: 6 }
+    const input = presetFromDraft(d, 'Testa')
+    expect(input.symptomIds).toEqual(['fog'])
+    const p = await addPreset(input)
+    const e = await logPreset(p, { fog: 4 })
+    expect(e.areas).toEqual([{ regions: ['mind'], intensity: 4 }])
+    expect(e.readings).toEqual({ fog: 4, pain: 0 })
+    // Mind beside a body area: pain stays, the mind takes the mental level.
+    const mixed = await addPreset({ name: 'Tutto', areas: [{ regions: ['*'], intensity: 5 }, { regions: ['mind'], intensity: 5 }], symptomIds: ['pain', 'fog'], tags: [], ongoing: false })
+    const m = await logPreset(mixed, { pain: 3, fog: 7 })
+    expect(m.areas).toEqual([{ regions: ['*'], intensity: 3 }, { regions: ['mind'], intensity: 7 }])
+  })
+
   it('logs areas at 0 when the preset does not track pain', async () => {
     const p = await addPreset({ name: 'Gonfiore', areas: [{ regions: ['160'], intensity: 3 }], symptomIds: ['swelling'], tags: [], ongoing: false })
     const e = await logPreset(p, { swelling: 4 })

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   REGIONS, REGION_BY_ID, regionsFor, shapeOf, figureBox, limbOf, shapeCenter, pathFor, shapeArea, mirrorId, toggleRegion, toggleSet, toggleFullBody,
-  summarizeRegions, upgradeRegions, LEGACY_REGIONS, LEG_IDS, ARM_IDS, FULL_BODY,
+  summarizeRegions, upgradeRegions, LEGACY_REGIONS, LEG_IDS, ARM_IDS, FULL_BODY, MIND, MIND_SHAPE, isMind,
 } from './regions'
 
 describe('region codes', () => {
@@ -97,6 +97,20 @@ describe('region codes', () => {
     expect(summarizeRegions(['152', '153', '150'])).toEqual([{ group: 'hip', side: 'l' }, { group: 'leg', side: 'both' }])
     expect(summarizeRegions(['131', '110'])).toEqual([{ group: 'arm', side: 'r' }, { group: 'torso', side: 'l' }])
     expect(summarizeRegions(['nope'])).toEqual([])
+    expect(summarizeRegions([MIND])).toEqual([{ group: 'mind', side: 'none' }])
+    expect(summarizeRegions(['152', MIND])).toEqual([{ group: 'mind', side: 'none' }, { group: 'leg', side: 'l' }])
+  })
+
+  it('the mind is a region of its own, not a CHOIR segment: no side, no mirror, no limb, its own shape', () => {
+    expect(isMind(MIND)).toBe(true)
+    expect(isMind('152')).toBe(false)
+    expect(REGION_BY_ID[MIND]).toBeUndefined()
+    expect(mirrorId(MIND)).toBeNull()
+    expect(limbOf(MIND)).toEqual([MIND])
+    expect(LEG_IDS).not.toContain(MIND)
+    expect(MIND_SHAPE.outline).toMatch(/^M .* Z$/)
+    expect(MIND_SHAPE.seams).toMatch(/^M /)
+    expect(upgradeRegions([MIND])).toEqual([MIND])
   })
 
   it('upgrades every pre-v5 id to codes that exist, unsided ones to both sides, hands to both views', () => {

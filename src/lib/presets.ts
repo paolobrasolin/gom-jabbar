@@ -1,18 +1,20 @@
 import { nanoid } from 'nanoid'
 import { db } from './db'
 import { addEntry } from './entries'
-import { finalize } from './areas'
+import { finalize, mindOnly, isMindArea } from './areas'
+import { mindMax } from './vocabulary'
 import { PAIN, type Entry, type Preset } from './types'
 import type { EntryDraft } from './draft'
 
 export type PresetInput = Omit<Preset, 'id' | 'order'>
 
-/** What a filled form would save, as a reusable shape: pain is always tracked, other symptoms when set above 0. */
+/** What a filled form would save, as a reusable shape: pain is always tracked (unless only the mind is selected), other symptoms when set above 0. */
 export function presetFromDraft(d: EntryDraft, name: string): PresetInput {
+  const areas = finalize(d.areas)
   const others = Object.entries(d.readings)
     .filter(([id, v]) => id !== PAIN && v > 0)
     .map(([id]) => id)
-  return { name: name.trim(), areas: finalize(d.areas), symptomIds: [PAIN, ...others], tags: [...d.tags], ongoing: d.ongoing }
+  return { name: name.trim(), areas, symptomIds: [...(mindOnly(areas) ? [] : [PAIN]), ...others], tags: [...d.tags], ongoing: d.ongoing }
 }
 
 export async function addPreset(input: PresetInput): Promise<Preset> {
@@ -32,14 +34,15 @@ export async function restorePreset(p: Preset): Promise<void> {
   await db.presets.put(p)
 }
 
-/** Log an ordinary moment from a preset: its areas at the pain level given, its tags, its episode flag. */
+/** Log an ordinary moment from a preset: its body areas at the pain level given, the mind at the highest mental one, its tags, its episode flag. */
 export async function logPreset(preset: Preset, readings: Record<string, number>, at?: string): Promise<Entry> {
   const pain = readings[PAIN] ?? 0
+  const mind = mindMax(readings, await db.symptoms.toArray())
   return addEntry({
     at,
     ongoing: preset.ongoing,
     readings,
-    areas: preset.areas.map((a) => ({ ...a, intensity: pain })),
+    areas: preset.areas.map((a) => ({ ...a, intensity: isMindArea(a) ? mind : pain })),
     tags: preset.tags,
     note: '',
     preset: preset.id,

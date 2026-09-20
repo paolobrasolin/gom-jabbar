@@ -68,6 +68,18 @@ describe('entries', () => {
     expect(v?.areas.map((a) => a.intensity)).toEqual([7, 2])
   })
 
+  it('the mind area follows the highest mental reading, a single body area beside it still follows pain', async () => {
+    const head = await addEntry({ ongoing: true, readings: { fog: 6 }, areas: [{ regions: ['mind'], intensity: 6 }] })
+    expect(head.readings).toEqual({ fog: 6, pain: 0 })
+    const u = await updateEpisode(head.id, { fog: 3 })
+    expect(u?.readings).toEqual({ fog: 3, pain: 0 })
+    expect(u?.areas).toEqual([{ regions: ['mind'], intensity: 3 }])
+    const both = await addEntry({ ongoing: true, readings: { fog: 6 }, areas: [{ regions: ['mind'], intensity: 6 }, { regions: ['152'], intensity: 7 }] })
+    expect(both.readings.pain).toBe(7)
+    const w = await updateEpisode(both.id, { pain: 2, fog: 8 })
+    expect(w?.areas).toEqual([{ regions: ['mind'], intensity: 8 }, { regions: ['152'], intensity: 2 }])
+  })
+
   it('updates, deletes and restores', async () => {
     const e = await addEntry({ readings: { pain: 3 } })
     const u = await updateEntry(e.id, { note: 'hi', areas: [{ regions: ['*', '110'], intensity: 9 }] })

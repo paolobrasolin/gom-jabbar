@@ -148,7 +148,7 @@ describe('Settings backup', () => {
     expect(file.app).toBe('gom-jabbar')
     expect(file.entries).toHaveLength(1)
     expect(file.entries[0].note).toBe('ciao')
-    expect(file.vocabulary.symptoms).toHaveLength(7)
+    expect(file.vocabulary.symptoms).toHaveLength(9)
     expect(await screen.findByText('Backup esportato')).toBeInTheDocument()
     expect(prefs.lastBackupAt).not.toBeNull()
     expect(localStorage.getItem('gj.prefs')).toContain('"lastBackupAt":"')
@@ -262,7 +262,7 @@ describe('Settings import', () => {
     expect(await screen.findByText('Importate 1 voci')).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
     await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.id)).toEqual([mine.id]))
-    expect(await db.symptoms.count()).toBe(7)
+    expect(await db.symptoms.count()).toBe(9)
   })
 
   it('does nothing when the picker is cancelled', async () => {

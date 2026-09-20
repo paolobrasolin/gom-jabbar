@@ -4,7 +4,8 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { addSymptom, addTag, rename, setEnabled, move } from '../lib/vocab'
-  import { PAIN, type Symptom, type Tag, type TagGroup } from '../lib/types'
+  import { PAIN, type Symptom, type SymptomCategory, type Tag, type TagGroup } from '../lib/types'
+  import { isMindSymptom } from '../lib/vocabulary'
   import { haptic } from '../lib/toast.svelte'
 
   let { table }: { table: 'symptoms' | 'tags' } = $props()
@@ -12,10 +13,11 @@
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const groups: TagGroup[] = ['intervention', 'context', 'medication']
+  const categories: SymptomCategory[] = ['body', 'mind']
 
   const sections = $derived.by((): { key: string; title: string; items: (Symptom | Tag)[] }[] =>
     table === 'symptoms'
-      ? [{ key: 'symptoms', title: '', items: symptoms.value }]
+      ? categories.map((c) => ({ key: c, title: t(`symptom.group.${c}`), items: symptoms.value.filter((s) => isMindSymptom(s) === (c === 'mind')) }))
       : groups.map((g) => ({ key: g, title: t(`tag.group.${g}`), items: tags.value.filter((x) => x.group === g) })),
   )
 
@@ -34,7 +36,7 @@
   async function add(key: string) {
     const text = (newText[key] ?? '').trim()
     if (!text) return
-    if (table === 'symptoms') await addSymptom(text)
+    if (table === 'symptoms') await addSymptom(text, key as SymptomCategory)
     else await addTag(text, key as TagGroup)
     newText = { ...newText, [key]: '' }
     haptic(15)

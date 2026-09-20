@@ -82,8 +82,8 @@ Rules:
 - A **moment** is an entry with `ongoing: false` and `endedAt: null`. It is a sample, "this is how it is right now" (or at a backfilled time).
 - An **episode** is an entry created with `ongoing: true`. It shows as an active chip until ended. Ending sets `endedAt` and `ongoing: false`. Duration is derived.
 - `readings` always has at least one key. The fast path only sets `pain`.
-- **Areas.** `type Area = { regions: RegionId[]; intensity: number }`. An entry has zero or more areas, each a set of regions sharing one level. `readings.pain` is the max over areas when there are any, otherwise a free value (used for "no pain today" or entries with no location).
-- An area with `regions: ['*']` means full body and is always the only area.
+- **Areas.** `type Area = { regions: RegionId[]; intensity: number }`. An entry has zero or more areas, each a set of regions sharing one level. `readings.pain` is the max over the body areas when there are any, 0 when only the mind is selected (§5.3), otherwise a free value (used for "no pain today" or entries with no location).
+- An area with `regions: ['*']` means full body and is always the only body area. The mind (`mind`) is always alone in its area, whose level is the highest mental reading (§5.4).
 - Intensity is 0..10 integer. 0 is allowed (useful to record "no pain today").
 - **Areas are "where", readings are "what".** "Legs, pain 0, swelling 3" means legs swollen, no pain. There is no per-area reading and no symptom switch on the slider; two areas with different symptoms are two entries.
 - **Headline reading.** An entry's headline is its highest reading; pain wins ties. Every list (diary rows, episode cards, preset chips, report) shows the headline value in the pill, coloured by it, and names the symptom when it is not pain: `3 gonfiore · gambe` (#3).
@@ -91,21 +91,25 @@ Rules:
 ### 5.2 Vocabulary (editable, shipped with defaults)
 
 ```ts
-type Symptom = { id: string; label: LocalizedString; enabled: boolean; order: number };
+type Symptom = { id: string; label: LocalizedString; category: 'body' | 'mind'; enabled: boolean; order: number };
 type Tag     = { id: string; label: LocalizedString; group: 'intervention' | 'context' | 'medication'; enabled: boolean; order: number };
 ```
 
+A symptom belongs to the **body** (pain and its siblings) or to the **mind** (§5.3). The category decides which sliders the log form shows (§6.1) and which group of the vocabulary editor the symptom sits in (§6.4); the tester adds mental ones there. Rows written before version 6 had no category: `fog` reads as mind, everything else as body, in the Dexie upgrade and on import alike (§8). `anxiety` and `depression` arrived with version 6: the Dexie upgrade adds them to an older database when their ids are free (the importer adds nothing, so a file round-trips unchanged).
+
 Default symptoms (it / en):
 
-| id | it | en |
-|---|---|---|
-| pain | Dolore | Pain |
-| swelling | Gonfiore | Swelling |
-| heaviness | Pesantezza | Heaviness |
-| fatigue | Stanchezza | Fatigue |
-| fog | Nebbia mentale | Brain fog |
-| tenderness | Dolorabilità al tatto | Tenderness |
-| stiffness | Rigidità | Stiffness |
+| id | category | it | en |
+|---|---|---|---|
+| pain | body | Dolore | Pain |
+| swelling | body | Gonfiore | Swelling |
+| heaviness | body | Pesantezza | Heaviness |
+| fatigue | body | Stanchezza | Fatigue |
+| fog | mind | Nebbia mentale | Brain fog |
+| tenderness | body | Dolorabilità al tatto | Tenderness |
+| stiffness | body | Rigidità | Stiffness |
+| anxiety | mind | Ansia | Anxiety |
+| depression | mind | Depressione | Depression |
 
 Default tags:
 
@@ -155,7 +159,9 @@ Every region is bilateral. `REGIONS` in `lib/regions.ts` carries, per code, the 
 
 Before version 5 the ids were names (`thigh.l`, `chest`, `hand.l` shared by both views). `LEGACY_REGIONS` maps each of them to today's codes: an unsided id to both sides, a hand to the front and the back hand. Dexie version 5 and the importer convert every area of entries and presets; nothing is dropped (§4.1).
 
-Special: `*` = full body. When selected, both figures fill and individual regions cannot be toggled until it is deselected.
+Special: `*` = full body. When selected, both figures fill and individual regions cannot be toggled until it is deselected. The mind stays toggleable.
+
+**The mind** (#19). A brain figure, seen from above, stands for it: it sits between the two bodies, level with their heads, in the air the columns leave there so the silhouettes stay put, selectable like a region and stored as one: the region id `mind`, added and never renamed. It is not a CHOIR segment: no side, no view, no mirror, no limb, `REGION_BY_ID` does not know it, `MIND` and its shape live in `lib/regions.ts`. It is where the mental symptoms live: selecting it turns the form to them (§6.1). Full body does not cover the mind, so it heats only from its own areas (§6.3). The tester's picture (#16) is "body and mind": physical dimensions from the body, mental ones from the mind. This is per-entry logging of how the head feels right now, not the periodic check-in with a validated scale (#7).
 
 Multi-region is the norm. Helpers:
 
@@ -171,13 +177,14 @@ Regions are grouped into **areas**, each with its own level. The slider always e
 - Area chips appear under the map: "8 · fianchi, gambe". Tap a chip to make it current; its regions get an outline on the map when there is more than one area.
 - **+ Altra zona** starts a new empty area at the current level and makes it current. Subsequent taps go into it. Empty areas are dropped when you switch away or save.
 - Tapping a region that belongs to another area moves it into the current one. Tapping a region in the current area removes it.
-- Full body replaces all areas with a single one.
-- Overall pain shown in the diary and used for trends is the max over areas.
+- Full body replaces all body areas with a single one; the mind area, if any, stays.
+- **The mind is always alone in its area.** Tapping it adds that area and makes it current, or removes it. Its level is not set by the slider but is the highest mental reading (§6.1), so the chip reads "6 · mente", the diary pill and the heatmap follow the mental symptoms, and the mind area is dropped when the readings it stood for are. A body tap while the mind is current goes to the last body area, or starts a new one at the pain level; a body tap never lands in the mind area and the mind never joins a body area.
+- Overall pain shown in the diary and used for trends is the max over the body areas; 0 when only the mind is selected, whatever the pain slider showed before the mind hid it.
 - **Press and hold** a region to toggle its whole limb on that side (whole torso, back or head for unsided regions). Mirror applies.
 
 ### 5.5 Episode updates
 
-Tapping an active episode card opens a sheet with its summary, its level timeline, one slider per symptom the entry tracks (pain always, the others when above 0), the **Rimedi** and **Farmaci** chips (remedies happen in response to pain: this is where "ho preso il farmaco" gets recorded; context tags stay in the edit sheet) and **Aggiorna** / **Termina**, both of which save the chips too, plus a **Modifica zone e note** link to the full edit sheet (§6.2). **Aggiorna** updates every slider's reading at once. The first update stores the starting readings as the first point of `entry.history`, then each update appends `{ at, readings }` with the full readings at that moment, so the history is the complete trail. With a single area, that area follows the pain reading; with several, the initial split is kept. The diary shows the headline symptom's trail as "7 → 4 → 2". Histories written before export version 3 held `{ at, pain }` and were converted, so their first point is the first update, not the start.
+Tapping an active episode card opens a sheet with its summary, its level timeline, one slider per symptom the entry tracks (pain always, unless only the mind is selected; the others when above 0), the **Rimedi** and **Farmaci** chips (remedies happen in response to pain: this is where "ho preso il farmaco" gets recorded; context tags stay in the edit sheet) and **Aggiorna** / **Termina**, both of which save the chips too, plus a **Modifica zone e note** link to the full edit sheet (§6.2). **Aggiorna** updates every slider's reading at once. The first update stores the starting readings as the first point of `entry.history`, then each update appends `{ at, readings }` with the full readings at that moment, so the history is the complete trail. With a single body area, that area follows the pain reading; with several, the initial split is kept; the mind area follows the highest mental reading. The diary shows the headline symptom's trail as "7 → 4 → 2". Histories written before export version 3 held `{ at, pain }` and were converted, so their first point is the first update, not the start.
 
 ### 5.6 Presets
 
@@ -187,9 +194,9 @@ Two kinds of pain: **episodic** (a migraine starts and ends; episodes cover it) 
 type Preset = { id: string; name: string; areas: Area[]; symptomIds: SymptomId[]; tags: TagId[]; ongoing: boolean; order: number };
 ```
 
-- Created from a saved entry: **Crea preset da questa voce** at the bottom of the edit sheet (§6.2, reached from a Today chip or a Diary row) reveals a name field and **Crea preset**. It captures the entry as it stands in the form: the areas, pain plus every other symptom set above 0 (`symptomIds`, pain first), the tags and the episode toggle. The sheet stays open and nothing else is saved. Presets come about after a shape has been logged a few times, so creation lives with the entries, not on the everyday path of the log form (#15).
+- Created from a saved entry: **Crea preset da questa voce** at the bottom of the edit sheet (§6.2, reached from a Today chip or a Diary row) reveals a name field and **Crea preset**. It captures the entry as it stands in the form: the areas, pain plus every other symptom set above 0 (`symptomIds`, pain first, and left out when only the mind is selected), the tags and the episode toggle. The sheet stays open and nothing else is saved. Presets come about after a shape has been logged a few times, so creation lives with the entries, not on the everyday path of the log form (#15).
 - The home screen shows a strip of preset chips: `4 Schiena · 2g` (headline of the last entry logged from it, and how long ago; "mai" before the first). Tap → a sheet named after the preset with one slider per `symptomIds`, starting from the last logged levels, and **Salva**. Two taps.
-- Each save logs an **ordinary moment** carrying `preset`: its areas at the pain level, its tags, an empty note, an episode when `ongoing` is set (the existing card handles the end). The diary stays honest and every existing feature works.
+- Each save logs an **ordinary moment** carrying `preset`: its body areas at the pain level, the mind at the highest mental one, its tags, an empty note, an episode when `ongoing` is set (the existing card handles the end). The diary stays honest and every existing feature works.
 - Trends draws one line per preset (§6.3). Presets are deleted from Settings (undo toast) and travel in the backup (§8).
 - It absorbs the old **Ripeti l'ultima** button, a nameless preset. Rejected alternatives: a `persistent` flag on episodes (one entry with an unbounded history, one diary row for months) and carry-forward in trends only (#5).
 
@@ -204,12 +211,12 @@ This screen is the product. Layout top to bottom:
 1. **Active episode cards** (only if any): "7 · gambe · da 3h", or "3 · gonfiore · gambe · da 3h" when the headline is not pain (§5.1), with a **Termina** button. Tap the card → update sheet (§5.5).
 2. **Preset strip** (only if any presets, §5.6): one chip per preset, `4 Schiena · 2g`. Tap → preset sheet.
 3. While the app is not installed (no `display-mode: standalone`, no `installedAt` pref): an inline **install nudge** in the backup banner style, "Aggiungi alla schermata Home per tenere i dati al sicuro", with **Aggiungi** and a dismiss. It shows on every launch until the app is installed; dismiss hides it for the current session only. Aggiungi replays the browser install prompt when captured, else opens the how-to sheet (§4.1).
-4. **Body map**, front and back side by side, "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
+4. **Body map**, front and back side by side with the mind between them (§5.3), "both sides" toggle, full body / legs / arms chips. Area chips under the map (§5.4).
 5. **Time chip**: "Adesso". Tap → chips "Stamattina", "Ieri sera", "1h fa", "3h fa", plus a datetime picker.
 6. **Tag strip**: one scrolling row of chips after the time chips, no header, so the chip rows (areas, time, tags) sit together and the sliders form one block. First a chevron chip (**Tutti i tag**), then **every enabled tag**, the most used first (count over every entry, ties in vocabulary order; a fresh install shows vocabulary order). What gets used sits under the thumb, the long tail is a swipe away, and nothing needs a cutoff or a "keep the selected ones visible" rule. Tap toggles the tag on the draft; the order never changes under a finger, it follows usage across saves (#4, #15). The chevron replaces the strip with the same tags grouped by type, for browsing by category: the chip stays in its slot (now pointing up) and a thin rail drops from it along the left of everything it folds, group titles and chips indented together to its right. Group titles use the slider label style: they are field labels, not section markers. Tapping the chip folds it back, and so does a new draft (save, Azzera, another entry to edit).
-7. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap.
+7. **Intensity slider**: large, full width, 0..10 with the number shown big and a colour ramp. Snaps to integers. Drag or tap. Hidden while only the mind is selected (item 9). It edits the current body area, or the last one while the mind chip is current.
 8. **Episode toggle**: "In corso" switch next to the slider. Off by default the first time, then remembers the last used value. The slider edits the current area's level (§5.4).
-9. **Other symptom sliders**, compact, one per enabled symptom other than pain, in vocabulary order. The vocabulary editor (§6.5) decides how long the form is: disable what is never tracked.
+9. **Other symptom sliders**, compact, one per enabled symptom other than pain, in vocabulary order, **by what is selected** (§5.2): body areas → the pain slider and the body symptoms; the mind → the mind symptoms, all compact, no pain; both, or nothing → pain, the body symptoms, then the mind symptoms. A hidden slider keeps its value on the draft (the pain level survives a detour through the mind; a mental reading set with nothing selected is saved without a location, like any other reading). The vocabulary editor (§6.4) decides how long the form is: disable what is never tracked.
 10. **Note**: a one-line field that grows with the text.
 11. **Azzera** and **Salva**, bottom anchored in a sticky bar. Salva is the primary, full width beside Azzera. Azzera is enabled while the draft holds anything beyond the pain level (areas, a time, tags, a note, another reading) and empties the form with an undo toast "Modulo azzerato · Annulla"; the episode toggle stays. (Repeat last was absorbed by presets, §5.6.)
 
@@ -232,7 +239,7 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 Range picker: 7, 30, 90, 365 days.
 
-- **Body heatmap**: the same body SVG, regions coloured by how often and how intensely they appeared in range.
+- **Body heatmap**: the same body SVG, regions coloured by how often and how intensely they appeared in range; the mind is one more region, coloured by its own areas.
 - **Intensity over time**: daily max and mean pain as a bar/line chart. Other symptoms selectable.
 - **Per preset** (only when a preset has samples in range): one small line per preset, its first symptom over time, dots coloured by the intensity ramp. Samples only: days without a sample stay empty, no carry-forward (§5.6).
 - **Episodes**: count and mean duration.
@@ -245,7 +252,7 @@ Range picker: 7, 30, 90, 365 days.
 - Language (it / en, follows device by default).
 - Theme (system / light / dark).
 - Figure: which CHOIR silhouette the body map draws, female or male (§5.3). Same regions either way, so switching loses nothing.
-- Vocabulary editors: symptoms, tags (three groups), reorder by drag, enable/disable, rename, add.
+- Vocabulary editors: symptoms (two groups, **Corpo** and **Mente**, each with its own add field; a symptom is born in the group it was added to and moves within it), tags (three groups), reorder, enable/disable, rename, add.
 - **Preset** list with delete (undo toast); creation happens from an entry's edit sheet (§5.6), and the empty state says so.
 - **Backup**: last backup date, Export JSON (share), Export CSV (share), Import JSON (merge or replace, with a preview of counts before applying).
 - Install to home screen hint (shown until installed).
@@ -271,7 +278,7 @@ Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** sha
 ```json
 {
   "app": "gom-jabbar",
-  "version": 5,
+  "version": 6,
   "exportedAt": "2026-09-13T18:00:00Z",
   "vocabulary": { "symptoms": [], "tags": [] },
   "entries": [],
@@ -281,7 +288,7 @@ Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** sha
 
 CSV export is one row per entry, one column per symptom, regions and tags joined with `|`. Meant for spreadsheets, not for reimport.
 
-Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `updatedAt` winning and adds vocabulary items that are missing. A sheet shows the file date and counts (new, updated) before committing. Replace is undoable from the toast: the previous state is snapshotted and restored on undo. Every version ever written is accepted: version 1 files (with `regions`), version 2 (history points with `pain`), version 3 (no `presets`) and version 4 (named region ids, §5.3) are upgraded on import. Merge adds presets that are missing by id; replace loads them.
+Import rules: `replace` wipes and loads; `merge` upserts by `id` with newer `updatedAt` winning and adds vocabulary items that are missing. A sheet shows the file date and counts (new, updated) before committing. Replace is undoable from the toast: the previous state is snapshotted and restored on undo. Every version ever written is accepted: version 1 files (with `regions`), version 2 (history points with `pain`), version 3 (no `presets`), version 4 (named region ids, §5.3) and version 5 (symptoms without a `category`, §5.2) are upgraded on import; a symptom without a category gets the default for its id whatever the file version says. Merge adds presets that are missing by id; replace loads them.
 
 Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable with a switch, reorder with arrows, add at the bottom of each group. Pain cannot be disabled. Renaming a default item changes only the current language; user-made items keep both languages in sync.
 

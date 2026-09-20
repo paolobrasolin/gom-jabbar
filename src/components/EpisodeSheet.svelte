@@ -9,6 +9,7 @@
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import { formatDuration, formatTime } from '../lib/time'
   import { PAIN, type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
+  import { mindOnly } from '../lib/areas'
 
   let {
     entry = $bindable(null),
@@ -18,7 +19,7 @@
   }: { entry: Entry | null; tagDefs?: Tag[]; symptoms?: Symptom[]; onedit?: (e: Entry) => void } = $props()
 
   let open = $state(false)
-  /** One level per symptom the episode tracks: pain always, the others when set above 0. */
+  /** One level per symptom the episode tracks: pain always (unless only the mind is selected), the others when set above 0. */
   let levels = $state<Record<string, number>>({})
   let current = $state.raw<Entry | null>(null)
   /** The entry's tags as edited in the sheet; saved with Aggiorna and Termina. */
@@ -28,8 +29,9 @@
     if (entry) {
       dismissToast()
       current = entry
-      const lv = Object.fromEntries(Object.entries(entry.readings).filter(([id, v]) => id === PAIN || v > 0))
-      if (!(PAIN in lv)) lv[PAIN] = 0
+      const mind = mindOnly(entry.areas)
+      const lv = Object.fromEntries(Object.entries(entry.readings).filter(([id, v]) => (id === PAIN && !mind) || v > 0))
+      if (!(PAIN in lv) && !mind) lv[PAIN] = 0
       levels = lv
       picked = [...entry.tags]
       open = true
@@ -92,8 +94,8 @@
       {/if}
     </div>
     <p class="small muted now">{t('episode.levelNow')}</p>
-    {#each tracked as s (s.id)}
-      <IntensitySlider compact={s.id !== PAIN} label={s.id === PAIN ? s.label : s.label.charAt(0).toUpperCase() + s.label.slice(1)} value={levels[s.id]} onchange={(v) => (levels[s.id] = v)} />
+    {#each tracked as s, i (s.id)}
+      <IntensitySlider compact={i > 0} label={s.id === PAIN ? s.label : s.label.charAt(0).toUpperCase() + s.label.slice(1)} value={levels[s.id]} onchange={(v) => (levels[s.id] = v)} />
     {/each}
     {#each remedies as { g, items } (g)}
       <div>
