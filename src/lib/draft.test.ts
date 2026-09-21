@@ -31,3 +31,18 @@ describe('draft conversions', () => {
     expect(input.areas).not.toBe(d.areas)
   })
 })
+
+describe('strokes in drafts', () => {
+  it('draftFromEntry and draftToInput copy strokes so edits do not touch the entry', () => {
+    const stroke = { region: '152', fig: 'female' as const, view: 'front' as const, points: [[100, 250]] as [number, number][], w: 8 }
+    const e = makeEntry({ areas: [{ regions: ['152'], intensity: 7, strokes: [stroke] }] })
+    const d = draftFromEntry(e)
+    d.areas[0].strokes![0].points.push([1, 2])
+    d.areas[0].strokes!.push({ region: '261', fig: 'female', view: 'back', points: [[1, 2]], w: 8 })
+    expect(e.areas[0].strokes).toEqual([stroke])
+    const input = draftToInput(d)
+    expect(input.areas![0].strokes).toHaveLength(2)
+    expect(input.areas![0].strokes).not.toBe(d.areas[0].strokes)
+    expect(draftFromEntry(makeEntry({ areas: [{ regions: ['110'], intensity: 1 }] })).areas[0]).not.toHaveProperty('strokes')
+  })
+})

@@ -10,6 +10,7 @@
   import { prefs } from '../lib/prefs.svelte'
   import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, tagCounts, presetSeries, MIN_DAYS_PER_SIDE } from '../lib/stats'
   import { formatDuration } from '../lib/time'
+  import { allStrokes } from '../lib/strokes'
 
   const RANGES = [7, 30, 90, 365]
   let days = $state(30)
@@ -25,6 +26,7 @@
   const series = $derived(dailySeries(entries.value, from, days))
   const summary = $derived(summarize(entries.value, days))
   const heat = $derived(regionHeat(entries.value))
+  const strokes = $derived(allStrokes(entries.value))
   const cmp = $derived(tagComparison(entries.value, tags.value))
   const symMeans = $derived(symptomMeans(entries.value, symptoms.value))
   const counts = $derived(tagCounts(entries.value, tags.value))
@@ -51,7 +53,7 @@
 
     <div class="card">
       <p class="small muted label">{t('trends.heatmap')}</p>
-      <div class="map"><BodyMap {heat} readonly labels={{ front: t('log.front'), back: t('log.back') }} /></div>
+      <div class="map"><BodyMap {heat} {strokes} readonly labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
 

@@ -432,6 +432,70 @@
       "note": "",
       "createdAt": "2026-09-19T20:00:00.000Z",
       "updatedAt": "2026-09-19T20:00:00.000Z"
+    },
+    {
+      "id": "v6-strokes",
+      "at": "2026-09-18T18:00:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 6
+      },
+      "areas": [
+        {
+          "regions": [
+            "152",
+            "154",
+            "160",
+            "261"
+          ],
+          "intensity": 6,
+          "strokes": [
+            {
+              "region": "160",
+              "fig": "female",
+              "view": "front",
+              "points": [
+                [
+                  165.5,
+                  468.2
+                ],
+                [
+                  167.2,
+                  480.1
+                ],
+                [
+                  166.1,
+                  492.3
+                ]
+              ],
+              "w": 8
+            },
+            {
+              "region": "261",
+              "fig": "male",
+              "view": "back",
+              "points": [
+                [
+                  171.7,
+                  462.6
+                ]
+              ],
+              "w": 8
+            }
+          ]
+        },
+        {
+          "regions": [
+            "mind"
+          ],
+          "intensity": 3
+        }
+      ],
+      "tags": [],
+      "note": "disegno",
+      "createdAt": "2026-09-18T18:00:30.000Z",
+      "updatedAt": "2026-09-18T18:00:30.000Z"
     }
   ],
   "presets": [
@@ -472,6 +536,42 @@
       "tags": [],
       "ongoing": true,
       "order": 1
+    },
+    {
+      "id": "pr-strokes",
+      "name": "Coscia",
+      "areas": [
+        {
+          "regions": [
+            "160"
+          ],
+          "intensity": 5,
+          "strokes": [
+            {
+              "region": "160",
+              "fig": "female",
+              "view": "front",
+              "points": [
+                [
+                  165.5,
+                  468.2
+                ],
+                [
+                  166.1,
+                  492.3
+                ]
+              ],
+              "w": 8
+            }
+          ]
+        }
+      ],
+      "symptomIds": [
+        "pain"
+      ],
+      "tags": [],
+      "ongoing": false,
+      "order": 2
     }
   ]
 }
