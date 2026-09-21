@@ -26,15 +26,14 @@ function daysAgo(n: number, hour = 12): Date {
 const at = (n: number, hour = 12) => daysAgo(n, hour).toISOString()
 const fmt = (d: Date) => new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }).format(d)
 
-/** Seven days: an entry with a note today, a 2h episode two days ago that eased from 6 to 3, a quiet swelling reading before that. */
+/** Seven days: an entry with a note today, a 2h episode two days ago that eased from 6 to 3 (a head and an update), a quiet swelling reading before that. */
 function fixture(): { from: Date; entries: Entry[] } {
   const from = rangeStart(7)
   const today = makeEntry({ at: at(0), layers: [{ regions: ['152'], readings: { pain: 8 }, tags: ['rest'] }], note: 'nota uno' })
-  const episode = makeEntry({ at: at(2, 9), layers: [{ regions: ['152', '153'], readings: { pain: 3 } }] })
-  episode.endedAt = at(2, 11)
-  episode.history = [{ at: at(2, 9), layers: [{ pain: 6 }] }, { at: at(2, 10), layers: [{ pain: 3 }] }]
+  const episode = makeEntry({ at: at(2, 9), kind: 'episode', endedAt: at(2, 11), layers: [{ regions: ['152', '153'], readings: { pain: 6 } }] })
+  const update = { ...makeEntry({ at: at(2, 10), kind: 'episode', layers: [{ regions: ['152', '153'], readings: { pain: 3 } }] }), episodeId: episode.id }
   const quiet = makeEntry({ at: at(3), readings: { pain: 2, swelling: 5 } })
-  return { from, entries: [today, episode, quiet] }
+  return { from, entries: [today, episode, update, quiet] }
 }
 function open() {
   const onclose = vi.fn()
@@ -57,11 +56,12 @@ describe('Report page', () => {
     const to = new Date(from.getTime() + 7 * 86_400_000 - 1)
     expect(screen.getByText(`Dal ${fmt(from)} al ${fmt(to)} · generato il ${fmt(new Date())}`)).toBeInTheDocument()
     const box = (k: string) => screen.getByText(k).parentElement!
-    expect(box('Voci')).toHaveTextContent('3')
+    // Every reading counts, the episode's update too.
+    expect(box('Voci')).toHaveTextContent('4')
     expect(box('Voci')).toHaveTextContent('in 3 giorni')
-    expect(box('Dolore medio')).toHaveTextContent('4.3')
+    expect(box('Dolore medio')).toHaveTextContent('4.8')
     expect(box('Dolore medio')).toHaveTextContent('max 8')
-    expect(box('Giorni ≥ 5')).toHaveTextContent('1')
+    expect(box('Giorni ≥ 5')).toHaveTextContent('2')
     expect(box('Episodi')).toHaveTextContent('1')
     expect(box('Episodi')).toHaveTextContent('durata media 2h')
   })

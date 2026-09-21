@@ -1,4 +1,4 @@
-import { PAIN, type Entry } from './types'
+import { PAIN, type Entry, type EntryKind } from './types'
 import { newLayer, type Layer } from './layers'
 import type { EntryInput } from './entries'
 
@@ -15,7 +15,9 @@ export const copyLayers = (layers: Layer[]): Layer[] =>
 /** Form state for creating or editing an entry. `at: null` means "now, resolved at save". */
 export type EntryDraft = {
   at: string | null
-  ongoing: boolean
+  kind: EntryKind
+  /** Episode only: its end, null while it is still going. Meaningless on a chronic draft. */
+  endedAt: string | null
   /** Never empty: the form opens with one layer without regions (§6.1). */
   layers: Layer[]
   /** The layer the map, the sliders and the tag strip edit. */
@@ -23,10 +25,11 @@ export type EntryDraft = {
   note: string
 }
 
-export function emptyDraft(opts: { ongoing?: boolean; pain?: number } = {}): EntryDraft {
+export function emptyDraft(opts: { kind?: EntryKind; pain?: number } = {}): EntryDraft {
   return {
     at: null,
-    ongoing: opts.ongoing ?? false,
+    kind: opts.kind ?? 'chronic',
+    endedAt: null,
     layers: [newLayer({ [PAIN]: opts.pain ?? 5 })],
     cur: 0,
     note: '',
@@ -36,7 +39,8 @@ export function emptyDraft(opts: { ongoing?: boolean; pain?: number } = {}): Ent
 export function draftFromEntry(e: Entry): EntryDraft {
   return {
     at: e.at,
-    ongoing: e.ongoing,
+    kind: e.kind,
+    endedAt: e.endedAt ?? null,
     layers: e.layers.length ? copyLayers(e.layers) : [newLayer({ [PAIN]: 0 })],
     cur: 0,
     note: e.note,
@@ -46,7 +50,8 @@ export function draftFromEntry(e: Entry): EntryDraft {
 export function draftToInput(d: EntryDraft): EntryInput {
   return {
     at: d.at ?? new Date().toISOString(),
-    ongoing: d.ongoing,
+    kind: d.kind,
+    endedAt: d.kind === 'episode' ? d.endedAt : null,
     layers: copyLayers(d.layers),
     note: d.note.trim(),
   }

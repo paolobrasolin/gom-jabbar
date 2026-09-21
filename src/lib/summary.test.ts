@@ -26,16 +26,17 @@ describe('headline', () => {
 })
 
 describe('trail', () => {
-  it('follows one symptom through the history, the max over the layers, and skips points without it', () => {
+  it("follows one symptom through an episode's readings, the max over the layers, and skips readings without it", () => {
     const e = makeEntry({ readings: { pain: 2, swelling: 5 } })
-    expect(trail(e, 'pain')).toEqual([])
-    e.history = [
-      { at: '2026-09-15T08:00:00.000Z', layers: [{ pain: 7 }, { pain: 1 }] },
-      { at: '2026-09-15T10:00:00.000Z', layers: [{ pain: 4, swelling: 3 }, {}] },
-      { at: '2026-09-15T12:00:00.000Z', layers: [{ pain: 2 }, { swelling: 5 }] },
+    expect(trail([], 'pain')).toEqual([])
+    const chain: { layers: { readings: Record<string, number> }[] }[] = [
+      { layers: [{ readings: { pain: 7 } }, { readings: { pain: 1 } }] },
+      { layers: [{ readings: { pain: 4, swelling: 3 } }, { readings: {} }] },
+      { layers: [{ readings: { pain: 2 } }, { readings: { swelling: 5 } }] },
     ]
-    expect(trail(e, 'pain')).toEqual([7, 4, 2])
-    expect(trail(e, 'swelling')).toEqual([3, 5])
+    expect(trail(chain, 'pain')).toEqual([7, 4, 2])
+    expect(trail(chain, 'swelling')).toEqual([3, 5])
+    expect(trail([e], 'fog')).toEqual([])
   })
 })
 

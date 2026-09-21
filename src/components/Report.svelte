@@ -5,7 +5,7 @@
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, tagCounts } from '../lib/stats'
-  import { durationMs } from '../lib/entries'
+  import { durationMs, episodesOf, isHead, isUpdate, isActive, latest } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
   import type { Entry, Symptom, Tag } from '../lib/types'
@@ -28,8 +28,15 @@
   const symMeans = $derived(symptomMeans(entries, symptoms))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : (Math.round(v * 10) / 10).toString())
-  /** Compact chronological list: episodes and entries with notes. */
-  const notable = $derived(entries.filter((e) => e.endedAt || e.ongoing || e.note).sort((a, b) => a.at.localeCompare(b.at)))
+  /** Compact chronological list: episodes and entries with notes; an update is read through its episode. */
+  const episodes = $derived(episodesOf(entries))
+  const notable = $derived(entries.filter((e) => !isUpdate(e) && (isHead(e) || e.note)).sort((a, b) => a.at.localeCompare(b.at)))
+  function rowOf(e: Entry) {
+    const ep = isHead(e) ? episodes.get(e.id) : undefined
+    const cur = ep ? latest(ep) : e
+    const hl = entryHeadline(cur)
+    return { cur, hl, levels: ep && ep.updates.length ? trail([ep.head, ...ep.updates], hl.id) : [], dur: durationMs(e) }
+  }
 
   $effect(() => {
     document.body.classList.add('printing')
@@ -123,16 +130,14 @@
         <table class="list">
           <tbody>
             {#each notable as e (e.id)}
-              {@const hl = entryHeadline(e)}
-              {@const levels = trail(e, hl.id)}
-              {@const dur = durationMs(e)}
+              {@const r = rowOf(e)}
               <tr>
                 <td class="when">{fmtDay(e.at)} {formatTime(e.at, locale())}</td>
-                <td class="num"><span class="pill" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span></td>
+                <td class="num"><span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.hl.value}</span></td>
                 <td>
-                  <EntrySummary lead={symptomName(hl.id, symptoms, tl)} layers={e.layers} tagDefs={tags} />
-                  {#if dur !== null}<span class="muted"> · {e.ongoing ? t('diary.ongoing') : formatDuration(dur, units)}</span>{/if}
-                  {#if levels.length}<span class="muted"> · {levels.join(' → ')}</span>{/if}
+                  <EntrySummary lead={symptomName(r.hl.id, symptoms, tl)} layers={r.cur.layers} tagDefs={tags} />
+                  {#if r.dur !== null}<span class="muted"> · {isActive(e) ? t('diary.ongoing') : formatDuration(r.dur, units)}</span>{/if}
+                  {#if r.levels.length}<span class="muted"> · {r.levels.join(' → ')}</span>{/if}
                   {#if e.note}<div class="note">{e.note}</div>{/if}
                 </td>
               </tr>

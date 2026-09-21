@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { entryToLayers, presetToLayers, placeReadings, categoryLookup } from './legacy'
+import { entryToLayers, presetToLayers, placeReadings, categoryLookup, splitEpisode, presetKind } from './legacy'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
 
 const cat = categoryLookup(DEFAULT_SYMPTOMS)
@@ -65,5 +65,95 @@ describe('version 6 rows become layers', () => {
     expect(c('x')).toBe('body')
     expect(cat('fog')).toBe('mind')
     expect(cat('anything')).toBe('body')
+  })
+})
+
+describe('version 7 rows become chains (§8, 7 → 8)', () => {
+  const L = (regions: string[], readings: Record<string, number>, tags: string[] = []) => ({ regions, readings, tags })
+  const base = { note: 'n', createdAt: '2026-09-02T20:00:30.000Z', updatedAt: '2026-09-03T02:00:10.000Z' }
+
+  it('a moment is a chronic snapshot; preset becomes presetId; ongoing, history and preset go', () => {
+    const [c] = splitEpisode({ id: 'a', at: '2026-09-01T07:30:00.000Z', endedAt: null, ongoing: false, layers: [L(['152'], { pain: 3 })], preset: 'p1', extra: 1, ...base })
+    expect(c).toEqual({ id: 'a', kind: 'chronic', at: '2026-09-01T07:30:00.000Z', layers: [L(['152'], { pain: 3 })], presetId: 'p1', extra: 1, ...base })
+    expect(c).not.toHaveProperty('ongoing')
+    expect(c).not.toHaveProperty('endedAt')
+    expect(c).not.toHaveProperty('preset')
+  })
+
+  it('an episode with a history from its start: the head takes the first point, each later point is an update', () => {
+    const strokes = [{ region: '152', fig: 'female' as const, view: 'front' as const, points: [[1, 2]] as [number, number][], w: 8 }]
+    const rows = splitEpisode({
+      id: 'e',
+      at: '2026-09-02T20:00:00.000Z',
+      endedAt: '2026-09-03T02:00:00.000Z',
+      ongoing: false,
+      layers: [{ ...L(['152'], { pain: 2 }, ['rest']), strokes }, L(['mind'], { fog: 1 })],
+      history: [
+        { at: '2026-09-02T20:00:00.000Z', layers: [{ pain: 7 }, { fog: 5 }] },
+        { at: '2026-09-02T22:00:00.000Z', layers: [{ pain: 4 }, { fog: 5 }] },
+        { at: '2026-09-03T00:30:00.000Z', layers: [{ pain: 2 }, { fog: 1 }] },
+      ],
+      ...base,
+    })
+    expect(rows.map((r) => r.id)).toEqual(['e', 'e:1', 'e:2'])
+    expect(rows[0]).toEqual({ id: 'e', kind: 'episode', episodeId: 'e', at: '2026-09-02T20:00:00.000Z', endedAt: '2026-09-03T02:00:00.000Z', layers: [{ ...L(['152'], { pain: 7 }, ['rest']), strokes }, L(['mind'], { fog: 5 })], ...base })
+    expect(rows[1]).toEqual({ id: 'e:1', kind: 'episode', episodeId: 'e', at: '2026-09-02T22:00:00.000Z', layers: [{ ...L(['152'], { pain: 4 }), strokes }, L(['mind'], { fog: 5 })], note: '', createdAt: '2026-09-02T22:00:00.000Z', updatedAt: '2026-09-02T22:00:00.000Z' })
+    expect(rows[2].layers.map((l) => l.readings)).toEqual([{ pain: 2 }, { fog: 1 }])
+    expect(rows[1]).not.toHaveProperty('endedAt')
+  })
+
+  it('readings edited after the last update are one more reading at updatedAt', () => {
+    const rows = splitEpisode({
+      id: 'e',
+      at: '2026-09-02T20:00:00.000Z',
+      endedAt: null,
+      ongoing: true,
+      layers: [L(['152'], { pain: 9 })],
+      history: [
+        { at: '2026-09-02T20:00:00.000Z', layers: [{ pain: 7 }] },
+        { at: '2026-09-02T22:00:00.000Z', layers: [{ pain: 4 }] },
+      ],
+      ...base,
+    })
+    expect(rows.map((r) => [r.id, r.at, r.layers[0].readings.pain])).toEqual([
+      ['e', '2026-09-02T20:00:00.000Z', 7],
+      ['e:1', '2026-09-02T22:00:00.000Z', 4],
+      ['e:2', base.updatedAt, 9],
+    ])
+    expect(rows[0].endedAt).toBeNull()
+  })
+
+  it('a history from before version 3 does not start at the head: the head keeps its readings, every point is an update', () => {
+    const rows = splitEpisode({
+      id: 'e',
+      at: '2026-09-02T20:00:00.000Z',
+      endedAt: '2026-09-03T02:00:00.000Z',
+      ongoing: false,
+      layers: [L(['100'], { pain: 4 }, ['med-x1'])],
+      history: [
+        { at: '2026-09-02T22:00:00.000Z', layers: [{ pain: 7 }] },
+        { at: '2026-09-03T00:30:00.000Z', layers: [{ pain: 4 }] },
+      ],
+      ...base,
+    })
+    expect(rows.map((r) => [r.id, r.at, r.layers[0].readings.pain, r.layers[0].tags])).toEqual([
+      ['e', '2026-09-02T20:00:00.000Z', 4, ['med-x1']],
+      ['e:1', '2026-09-02T22:00:00.000Z', 7, []],
+      ['e:2', '2026-09-03T00:30:00.000Z', 4, []],
+    ])
+  })
+
+  it('an ongoing episode without updates is a head alone; a moment with a history is an episode too', () => {
+    expect(splitEpisode({ id: 'o', at: 'x', endedAt: null, ongoing: true, layers: [L([], { pain: 1 })], ...base })).toEqual([{ id: 'o', kind: 'episode', episodeId: 'o', at: 'x', endedAt: null, layers: [L([], { pain: 1 })], ...base }])
+    const odd = splitEpisode({ id: 'h', at: 'x', endedAt: null, ongoing: false, layers: [L([], { pain: 1 })], history: [{ at: 'y', layers: [{ pain: 3 }] }], ...base })
+    expect(odd.map((r) => r.id)).toEqual(['h', 'h:1'])
+    expect(odd[0].kind).toBe('episode')
+    // Rows from before version 2 files may lack the flags altogether.
+    expect(splitEpisode({ id: 'm', at: 'x', layers: [L([], { pain: 1 })], ...base })[0].kind).toBe('chronic')
+  })
+
+  it('a preset: ongoing becomes kind', () => {
+    expect(presetKind({ id: 'p', ongoing: true, name: 'x' })).toEqual({ id: 'p', kind: 'episode', name: 'x' })
+    expect(presetKind({ id: 'p', name: 'x' })).toEqual({ id: 'p', kind: 'chronic', name: 'x' })
   })
 })

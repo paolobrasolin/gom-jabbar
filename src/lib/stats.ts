@@ -1,6 +1,7 @@
 import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
 import { REGIONS, FULL_BODY } from './regions'
 import { durationMs } from './entries'
+import { presetOf } from './presets'
 import { mergedReadings, mergedTags } from './layers'
 import { dayKey } from './time'
 
@@ -163,13 +164,14 @@ export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; count: num
 
 export type PresetPoint = { at: number; value: number }
 
-/** One line per preset that has samples: the preset's first symptom over time, samples only, no carry-forward. */
+/** One line per preset that has samples: the preset's first symptom over time, samples only, no carry-forward. An update of an episode opened from a preset is a sample of it. */
 export function presetSeries(entries: Entry[], presets: Preset[]): { preset: Preset; points: PresetPoint[] }[] {
+  const heads = new Map(entries.filter((e) => e.presetId && e.episodeId === e.id).map((e) => [e.id, e]))
   return presets
     .map((preset) => {
       const id = preset.symptomIds[0] ?? PAIN
       const points = entries
-        .filter((e) => e.preset === preset.id)
+        .filter((e) => presetOf(e, heads) === preset.id)
         .map((e) => ({ at: Date.parse(e.at), value: readings(e)[id] ?? 0 }))
         .sort((a, b) => a.at - b.at)
       return { preset, points }

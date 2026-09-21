@@ -6,12 +6,15 @@ import { install, initInstall } from '../lib/install.svelte'
 import App from '../App.svelte'
 import { LEG_IDS, REGION_BY_ID, shapeOf, shapeCenter } from '../lib/regions'
 import { addPreset } from '../lib/presets'
-import { addEntry } from '../lib/entries'
+import { addEntry, isHead, isUpdate } from '../lib/entries'
 import { regionLabel } from '../lib/regionLabel'
 import { t } from '../i18n/index.svelte'
 import { mergedReadings, mergedTags, type Stroke } from '../lib/layers'
 
 let db: ReturnType<typeof resetDb>
+/** The episode heads stored, and the latest update of any episode. */
+const heads = async () => (await db.entries.toArray()).filter(isHead)
+const lastUpdate = async () => (await db.entries.toArray()).filter(isUpdate).sort((a, b) => a.at.localeCompare(b.at)).at(-1)
 beforeEach(() => {
   db = resetDb()
   prefs.lang = 'it'
@@ -29,7 +32,7 @@ describe('Log fast path', () => {
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toEqual([{ regions: ['152', '153'], readings: { pain: 7 }, tags: [] }])
-    expect(e.ongoing).toBe(false)
+    expect(e.kind).toBe('chronic')
     expect(await screen.findByText('Salvato')).toBeInTheDocument()
     // No today strip: the toast is the receipt, the diary is the review.
     expect(screen.queryByLabelText('Oggi')).not.toBeInTheDocument()
@@ -63,16 +66,59 @@ describe('Log fast path', () => {
   it('ongoing entry shows as active episode and can be ended', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Tutto il corpo' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     const endBtn = await screen.findByRole('button', { name: 'Termina adesso' })
     expect(screen.getByText('tutto il corpo')).toBeInTheDocument()
     await fireEvent.click(endBtn)
     await waitFor(async () => {
       const [e] = await db.entries.toArray()
-      expect(e.ongoing).toBe(false)
       expect(e.endedAt).not.toBeNull()
     })
+  })
+})
+
+describe('Episodes with an end', () => {
+  it('an episode already over is logged with its end and goes straight to the diary', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    expect(screen.queryByRole('group', { name: 'Fine' })).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Quando' })).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+    const end = screen.getByRole('group', { name: 'Fine' })
+    expect(within(end).getByRole('button', { name: 'In corso' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(within(screen.getByRole('group', { name: 'Inizio' })).getByRole('button', { name: '3h fa' }))
+    await fireEvent.click(within(end).getByRole('button', { name: '1h fa' }))
+    expect(within(end).getByRole('button', { name: '1h fa' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    expect(e).toMatchObject({ kind: 'episode', episodeId: e.id })
+    expect(Date.parse(e.endedAt!) - Date.parse(e.at)).toBeCloseTo(2 * 3600_000, -4)
+    expect(screen.queryByRole('button', { name: 'Episodio in corso' })).not.toBeInTheDocument()
+    // The next draft remembers the episode chip, never the end.
+    expect(screen.getByRole('button', { name: 'Episodio' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: 'In corso' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('Adesso as an end is the moment it was pressed, and the picker sets any end', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+    const end = screen.getByRole('group', { name: 'Fine' })
+    await fireEvent.click(within(end).getByRole('button', { name: 'Adesso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    let [e] = await db.entries.toArray()
+    expect(Date.now() - Date.parse(e.endedAt!)).toBeLessThan(5000)
+    await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: 'Scegli…' }))
+    const pickers = document.querySelectorAll('input[type="datetime-local"]')
+    expect(pickers).toHaveLength(1)
+    await fireEvent.change(pickers[0], { target: { value: '2026-09-01T12:30' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(2))
+    e = (await db.entries.orderBy('createdAt').last())!
+    expect(new Date(e.endedAt!).getHours()).toBe(12)
+    expect(new Date(e.endedAt!).getMinutes()).toBe(30)
   })
 })
 
@@ -158,7 +204,7 @@ describe('Details inline', () => {
 
   it('the episode sheet offers to edit areas and note', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await fireEvent.click(await screen.findByRole('button', { name: 'Episodio in corso' }))
     const sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
@@ -186,23 +232,24 @@ describe('Tag discoverability', () => {
 
   it('records remedies from the episode sheet on Aggiorna and Termina', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await fireEvent.click(await screen.findByRole('button', { name: 'Episodio in corso' }))
     let sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
     await fireEvent.click(await within(sheet).findByRole('button', { name: 'Riposo' }))
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
-    await waitFor(async () => expect(mergedTags((await db.entries.toArray())[0].layers)).toEqual(['rest']))
+    await waitFor(async () => expect(mergedTags((await lastUpdate())!.layers)).toEqual(['rest']))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Episodio in corso' })).toHaveTextContent('Riposo'))
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio in corso' }))
     sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
     expect(await within(sheet).findByRole('button', { name: 'Riposo' })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Calore' }))
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Termina adesso' }))
+    // A remedy chosen at the end is one more reading, then the head gets its end.
     await waitFor(async () => {
-      const [e] = await db.entries.toArray()
-      expect(e.ongoing).toBe(false)
-      expect(mergedTags(e.layers)).toEqual(['rest', 'heat'])
+      const [h] = await heads()
+      expect(h.endedAt).not.toBeNull()
+      expect(mergedTags((await lastUpdate())!.layers)).toEqual(['rest', 'heat'])
     })
   })
 })
@@ -222,7 +269,7 @@ describe('Headline reading', () => {
   it('the episode sheet has a slider per symptom and Aggiorna updates all of them', async () => {
     render(App)
     await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await fireEvent.click(await screen.findByRole('button', { name: 'Episodio in corso' }))
     const sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
@@ -232,9 +279,9 @@ describe('Headline reading', () => {
     await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '2' } })
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
     await waitFor(async () => {
-      const [e] = await db.entries.toArray()
-      expect(e.layers[0].readings).toEqual({ pain: 2, swelling: 6 })
-      expect(e.history?.map((h) => h.layers)).toEqual([[{ pain: 5, swelling: 3 }], [{ pain: 2, swelling: 6 }]])
+      expect((await lastUpdate())?.layers[0].readings).toEqual({ pain: 2, swelling: 6 })
+      // The head is the start and stays so.
+      expect((await heads())[0].layers[0].readings).toEqual({ pain: 5, swelling: 3 })
     })
     // The card now leads with swelling, the highest reading.
     await waitFor(() => expect(screen.getByRole('button', { name: 'Episodio in corso' })).toHaveTextContent(/^6\s*gonfiore/))
@@ -355,7 +402,7 @@ describe('Mind and mind symptoms', () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Mente' }))
     await fireEvent.input(await screen.findByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '6' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'In corso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     const card = await screen.findByRole('button', { name: 'Episodio in corso' })
     expect(card).toHaveTextContent(/^6\s*nebbia mentale · mente/)
@@ -365,8 +412,7 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.input(within(sheet).getByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '2' } })
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
     await waitFor(async () => {
-      const [e] = await db.entries.toArray()
-      expect(e.layers).toEqual([{ regions: ['mind'], readings: { fog: 2 }, tags: [] }])
+      expect((await lastUpdate())?.layers).toEqual([{ regions: ['mind'], readings: { fog: 2 }, tags: [] }])
     })
   })
 })
@@ -405,11 +451,34 @@ describe('Presets', () => {
     await fireEvent.click(within(ps).getByRole('button', { name: 'Salva' }))
     await waitFor(async () => {
       expect(await db.entries.count()).toBe(2)
-      const e = (await db.entries.toArray()).find((x) => x.preset)!
-      expect(e.preset).toBe(p.id)
+      const e = (await db.entries.toArray()).find((x) => x.presetId)!
+      expect(e.presetId).toBe(p.id)
       expect(e.layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: { pain: 6 }, tags: [] }])
     })
     await waitFor(() => expect(within(strip).getByRole('button', { name: /Le gambe/ })).toHaveTextContent(/^6\s*Le gambe · 0m$/))
+  })
+
+  it('logs a preset at a chosen time: the sheet has the time chips', async () => {
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: [] }], symptomIds: ['pain'], kind: 'chronic' })
+    render(App)
+    const strip = await screen.findByLabelText('Preset')
+    await fireEvent.click(within(strip).getByRole('button', { name: /Schiena/ }))
+    const ps = await screen.findByRole('dialog', { name: 'Schiena' })
+    expect(within(ps).getByRole('button', { name: 'Adesso' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(within(ps).getByRole('button', { name: 'Ieri sera' }))
+    await fireEvent.click(within(ps).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    expect(e.presetId).toBe(p.id)
+    const d = new Date(e.at)
+    expect(d.getHours()).toBe(22)
+    expect(d.getDate()).toBe(new Date(Date.now() - 86_400_000).getDate())
+    // The chip says how long ago the last sample was, so a backdated one reads as such.
+    await waitFor(() => expect(within(strip).getByRole('button', { name: /Schiena/ })).toHaveTextContent(/· (\d+h|\d+g( \d+h)?)$/))
+    // The next opening starts from now again.
+    await fireEvent.click(within(strip).getByRole('button', { name: /Schiena/ }))
+    const again = await screen.findByRole('dialog', { name: 'Schiena' })
+    expect(within(again).getByRole('button', { name: 'Adesso' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('a preset made from an entry with other symptoms and tags tracks them', async () => {
@@ -424,11 +493,11 @@ describe('Presets', () => {
     await fireEvent.keyDown(within(edit).getByRole('textbox', { name: 'Nome del preset' }), { key: 'Enter' })
     await waitFor(async () => expect(await db.presets.count()).toBe(1))
     const [p] = await db.presets.toArray()
-    expect(p).toMatchObject({ name: 'Schiena', symptomIds: ['pain', 'swelling'], ongoing: false, layers: [{ regions: ['224'], readings: { pain: 4, swelling: 2 }, tags: ['heat'] }] })
+    expect(p).toMatchObject({ name: 'Schiena', symptomIds: ['pain', 'swelling'], kind: 'chronic', layers: [{ regions: ['224'], readings: { pain: 4, swelling: 2 }, tags: ['heat'] }] })
   })
 
   it('starts the preset sheet from the last logged levels', async () => {
-    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: [] }], symptomIds: ['pain', 'swelling'], ongoing: false })
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: [] }], symptomIds: ['pain', 'swelling'], kind: 'chronic' })
     const { logPreset } = await import('../lib/presets')
     await logPreset(p, { pain: 3, swelling: 7 })
     render(App)

@@ -5,8 +5,8 @@ import { makeEntry } from './entries'
 describe('draft conversions', () => {
   it('a fresh draft is "now", one layer without regions at pain 5', () => {
     const d = emptyDraft()
-    expect(d).toEqual({ at: null, ongoing: false, layers: [{ regions: [], readings: { pain: 5 }, tags: [] }], cur: 0, note: '' })
-    expect(emptyDraft({ ongoing: true, pain: 2 })).toMatchObject({ ongoing: true, layers: [{ readings: { pain: 2 } }] })
+    expect(d).toEqual({ at: null, kind: 'chronic', endedAt: null, layers: [{ regions: [], readings: { pain: 5 }, tags: [] }], cur: 0, note: '' })
+    expect(emptyDraft({ kind: 'episode', pain: 2 })).toMatchObject({ kind: 'episode', endedAt: null, layers: [{ readings: { pain: 2 } }] })
   })
 
   it('draftFromEntry copies layers so edits do not touch the entry, and always has a layer', () => {
@@ -30,6 +30,21 @@ describe('draft conversions', () => {
     expect(input.note).toBe('dopo la corsa')
     expect(input.layers).toEqual(d.layers)
     expect(input.layers).not.toBe(d.layers)
+  })
+
+  it('an episode with an end round-trips: the draft holds both bounds, the input says which kind and when it ended', () => {
+    const e = { ...makeEntry({ at: '2026-09-01T10:00:00.000Z', kind: 'episode' }), endedAt: '2026-09-01T12:00:00.000Z' }
+    const d = draftFromEntry(e)
+    expect(d).toMatchObject({ at: e.at, kind: 'episode', endedAt: e.endedAt })
+    expect(draftToInput(d)).toMatchObject({ at: e.at, kind: 'episode', endedAt: e.endedAt })
+    // An active one has no end yet; a chronic snapshot has neither.
+    expect(draftFromEntry(makeEntry({ kind: 'episode' }))).toMatchObject({ kind: 'episode', endedAt: null })
+    expect(draftToInput(draftFromEntry(makeEntry({ kind: 'episode' })))).toMatchObject({ kind: 'episode', endedAt: null })
+    expect(draftFromEntry(makeEntry({}))).toMatchObject({ kind: 'chronic', endedAt: null })
+    expect(draftToInput(draftFromEntry(makeEntry({})))).toMatchObject({ kind: 'chronic', endedAt: null })
+    // Cronico drops the end: an end on a chronic draft means nothing.
+    d.kind = 'chronic'
+    expect(draftToInput(d)).toMatchObject({ kind: 'chronic', endedAt: null })
   })
 })
 

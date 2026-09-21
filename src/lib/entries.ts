@@ -1,19 +1,22 @@
 import { nanoid } from 'nanoid'
 import { db } from './db'
 import { finalize, newLayer, type Layer, type Stroke } from './layers'
-import type { Entry, Symptom } from './types'
+import type { Entry, EntryKind, Symptom } from './types'
 
 export type LayerInput = { regions?: string[]; readings?: Record<string, number>; tags?: string[]; strokes?: Stroke[] }
 
 /** `readings` and `tags` without `layers` are a shorthand for one layer without regions. */
 export type EntryInput = {
   at?: string
-  ongoing?: boolean
+  /** Chronic unless said otherwise. */
+  kind?: EntryKind
+  /** Episode only: an end makes it over from the start; null or missing leaves it active. */
+  endedAt?: string | null
   layers?: LayerInput[]
   readings?: Record<string, number>
   tags?: string[]
   note?: string
-  preset?: string
+  presetId?: string
 }
 
 const now = () => new Date().toISOString()
@@ -25,14 +28,16 @@ export function makeEntry(input: EntryInput, symptoms?: Symptom[]): Entry {
   const ts = now()
   const raw = input.layers ? input.layers.map(toLayer) : [{ ...newLayer(input.readings ?? {}), tags: [...(input.tags ?? [])] }]
   const layers = finalize(raw.length ? raw : [newLayer()], symptoms)
+  const id = nanoid()
+  const kind = input.kind ?? 'chronic'
   return {
-    id: nanoid(),
+    id,
+    kind,
     at: input.at ?? ts,
-    endedAt: null,
-    ongoing: input.ongoing ?? false,
     layers,
     note: input.note ?? '',
-    ...(input.preset ? { preset: input.preset } : {}),
+    ...(kind === 'episode' ? { episodeId: id, endedAt: input.endedAt ?? null } : {}),
+    ...(input.presetId ? { presetId: input.presetId } : {}),
     createdAt: ts,
     updatedAt: ts,
   }
@@ -51,14 +56,45 @@ export async function updateEntry(id: string, patch: Partial<Omit<Entry, 'id' | 
   return db.entries.get(id)
 }
 
-export async function deleteEntry(id: string): Promise<Entry | undefined> {
-  const entry = await db.entries.get(id)
-  if (entry) await db.entries.delete(id)
-  return entry
+/** The head of an episode: the reading it started with, carrying its end (§5.5). */
+export const isHead = (e: Entry): boolean => e.kind === 'episode' && e.episodeId === e.id
+/** A later reading of an episode. */
+export const isUpdate = (e: Entry): boolean => e.kind === 'episode' && !!e.episodeId && e.episodeId !== e.id
+/** A head whose episode has not ended. */
+export const isActive = (e: Entry): boolean => isHead(e) && !e.endedAt
+
+/** An episode as a whole: the head and its updates in time order. */
+export type Episode = { head: Entry; updates: Entry[] }
+
+/** The most recent reading of an episode: what the card and the sheet show. */
+export const latest = (ep: Episode): Entry => ep.updates[ep.updates.length - 1] ?? ep.head
+
+/** Every episode among `entries`, by head id: updates whose head is not among them are left out. */
+export function episodesOf(entries: Entry[]): Map<string, Episode> {
+  const out = new Map<string, Episode>()
+  for (const e of entries) if (isHead(e)) out.set(e.id, { head: e, updates: [] })
+  for (const e of entries) if (isUpdate(e)) out.get(e.episodeId!)?.updates.push(e)
+  for (const ep of out.values()) ep.updates.sort((a, b) => a.at.localeCompare(b.at))
+  return out
 }
 
-export async function restoreEntry(entry: Entry): Promise<void> {
-  await db.entries.put(entry)
+/** The head and every update of an episode, head first, updates in time order. */
+export async function loadEpisode(headId: string): Promise<Episode | undefined> {
+  const rows = await db.entries.where('episodeId').equals(headId).toArray()
+  return episodesOf(rows).get(headId)
+}
+
+/** Deleting a head takes its whole chain along. Returns every row removed, for undo. */
+export async function deleteEntry(id: string): Promise<Entry[]> {
+  const entry = await db.entries.get(id)
+  if (!entry) return []
+  const rows = isHead(entry) ? await db.entries.where('episodeId').equals(id).toArray() : [entry]
+  await db.entries.bulkDelete(rows.map((r) => r.id))
+  return rows
+}
+
+export async function restoreEntries(rows: Entry[]): Promise<void> {
+  await db.entries.bulkPut(rows)
 }
 
 /** Tags per layer, aligned with the entry's layers; a missing list leaves that layer's tags alone. */
@@ -69,41 +105,48 @@ function withTags(layers: Layer[], tags?: LayerTags): Layer[] {
   return layers.map((l, i) => (tags[i] ? { ...l, tags: [...tags[i]!] } : l))
 }
 
-/** End an episode, optionally recording the tags (remedies, medications) that go with it, per layer. */
-export async function endEpisode(id: string, at: string = now(), tags?: LayerTags): Promise<Entry | undefined> {
+/** End an episode: its head gets the end. */
+export async function endEpisode(id: string, at: string = now()): Promise<Entry | undefined> {
   const e = await db.entries.get(id)
-  if (!e) return undefined
-  return updateEntry(id, { ongoing: false, endedAt: at, ...(tags ? { layers: withTags(e.layers, tags) } : {}) })
+  if (!e || !isHead(e)) return undefined
+  return updateEntry(id, { endedAt: at })
 }
 
 export async function reopenEpisode(id: string): Promise<Entry | undefined> {
-  return updateEntry(id, { ongoing: true, endedAt: null })
+  const e = await db.entries.get(id)
+  if (!e || !isHead(e)) return undefined
+  return updateEntry(id, { endedAt: null })
 }
 
 /**
- * Record new readings on an ongoing episode, one record per layer (§5.5). Unmentioned symptoms and layers
- * keep their levels. The first update also stores where the episode started, so the history is the complete
- * trail. `tags`, when given, replace the layers' own.
+ * Log a new reading on an episode (§5.5): an update from where it stands, one record of readings per layer over the
+ * latest reading's (unmentioned symptoms and layers keep their levels), the tags given replacing that layer's.
  */
-export async function updateEpisode(id: string, readings: (Record<string, number> | undefined)[], at: string = now(), tags?: LayerTags): Promise<Entry | undefined> {
-  const e = await db.entries.get(id)
-  if (!e) return undefined
+export async function logUpdate(headId: string, readings: (Record<string, number> | undefined)[], at: string = now(), tags?: LayerTags): Promise<Entry | undefined> {
+  const ep = await loadEpisode(headId)
+  if (!ep) return undefined
+  const from = latest(ep)
   const layers = withTags(
-    e.layers.map((l, i) => (readings[i] ? { ...l, readings: { ...l.readings, ...readings[i] } } : l)),
+    from.layers.map((l, i) => ({ ...l, readings: { ...l.readings, ...(readings[i] ?? {}) } })),
     tags,
   )
-  const history = e.history?.length ? [...e.history] : [{ at: e.at, layers: e.layers.map((l) => ({ ...l.readings })) }]
-  history.push({ at, layers: layers.map((l) => ({ ...l.readings })) })
-  await db.entries.update(id, { layers, history, updatedAt: now() })
-  return db.entries.get(id)
+  const ts = now()
+  const entry: Entry = { id: nanoid(), kind: 'episode', episodeId: headId, at, layers: finalize(layers, await db.symptoms.toArray()), note: '', createdAt: ts, updatedAt: ts }
+  await db.entries.add(entry)
+  return entry
 }
 
-export function activeEpisodes(): Promise<Entry[]> {
-  return db.entries.filter((e) => e.ongoing).sortBy('at')
+/** Active episodes, oldest first, each with its updates. */
+export async function activeEpisodes(): Promise<Episode[]> {
+  const heads = await db.entries.filter(isActive).sortBy('at')
+  const out: Episode[] = []
+  for (const h of heads) out.push((await loadEpisode(h.id))!)
+  return out
 }
 
+/** How long an episode has lasted (heads only): until its end, or now. */
 export function durationMs(entry: Entry, nowMs = Date.now()): number | null {
-  if (!entry.ongoing && !entry.endedAt) return null
+  if (!isHead(entry)) return null
   const end = entry.endedAt ? Date.parse(entry.endedAt) : nowMs
   return Math.max(0, end - Date.parse(entry.at))
 }
