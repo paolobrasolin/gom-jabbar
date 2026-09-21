@@ -98,7 +98,8 @@ describe('region codes', () => {
     expect(summarizeRegions(['131', '110'])).toEqual([{ group: 'arm', side: 'r' }, { group: 'torso', side: 'l' }])
     expect(summarizeRegions(['nope'])).toEqual([])
     expect(summarizeRegions([MIND])).toEqual([{ group: 'mind', side: 'none' }])
-    expect(summarizeRegions(['152', MIND])).toEqual([{ group: 'mind', side: 'none' }, { group: 'leg', side: 'l' }])
+    expect(summarizeRegions(['152', MIND])).toEqual([{ group: 'leg', side: 'l' }, { group: 'mind', side: 'none' }])
+    expect(summarizeRegions([MIND, FULL_BODY])).toEqual([{ group: 'full', side: 'none' }, { group: 'mind', side: 'none' }])
   })
 
   it('the mind is a region of its own, not a CHOIR segment: no side, no mirror, no limb, its own shape', () => {

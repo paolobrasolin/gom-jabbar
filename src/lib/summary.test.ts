@@ -41,6 +41,7 @@ describe('regionText', () => {
     expect(regionText(['152', '153', '150'], t)).toBe('fianco sx, gambe')
     expect(regionText(['*'], t)).toBe('tutto il corpo')
     expect(regionText(['mind'], t)).toBe('mente')
-    expect(regionText(['mind', '152', '153'], t)).toBe('mente, gambe')
+    expect(regionText(['mind', '152', '153'], t)).toBe('gambe, mente')
+    expect(regionText(['*', 'mind'], t)).toBe('tutto il corpo, mente')
   })
 })

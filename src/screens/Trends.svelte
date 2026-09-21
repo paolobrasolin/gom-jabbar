@@ -25,7 +25,7 @@
 
   const series = $derived(dailySeries(entries.value, from, days))
   const summary = $derived(summarize(entries.value, days))
-  const heat = $derived(regionHeat(entries.value))
+  const heat = $derived(regionHeat(entries.value, symptoms.value))
   const strokes = $derived(allStrokes(entries.value))
   const cmp = $derived(tagComparison(entries.value, tags.value))
   const symMeans = $derived(symptomMeans(entries.value, symptoms.value))

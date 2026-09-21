@@ -71,14 +71,14 @@ describe('Trends summary', () => {
 })
 
 describe('Trends heatmap and chart', () => {
-  it('colours the mind like any other region, from its own area, read-only', async () => {
-    await addEntry({ at: at(0), readings: { fog: 6 }, areas: [{ regions: ['mind'], intensity: 6 }] })
+  it('colours the mind like any other region, from the mental readings rather than its area, read-only', async () => {
+    await addEntry({ at: at(0), readings: { fog: 6 }, areas: [{ regions: ['mind'], intensity: 1 }] })
     await addEntry({ at: at(1), areas: [{ regions: ['*'], intensity: 2 }] })
     await openTrends()
-    await waitFor(() => expect(document.querySelector('[data-region="mind"]')).toHaveClass('on'))
-    const mind = document.querySelector('[data-region="mind"]') as SVGPathElement
-    expect(mind.getAttribute('style')).toContain(`fill: ${intensityColor(6)}`)
-    expect(mind.getAttribute('style')).toContain('fill-opacity: 1.00')
+    const mind = () => document.querySelector('[data-region="mind"]') as SVGPathElement
+    await waitFor(() => expect(mind().getAttribute('style')).toContain(`fill: ${intensityColor(6)}`))
+    expect(mind()).toHaveClass('on')
+    expect(mind().getAttribute('style')).toContain('fill-opacity: 1.00')
     expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
     expect(screen.queryByRole('button', { name: 'Mente' })).not.toBeInTheDocument()
   })
