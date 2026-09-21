@@ -9,7 +9,7 @@
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
   import type { Entry, Symptom, Tag } from '../lib/types'
-  import { headline, symptomName, trail } from '../lib/summary'
+  import { entryHeadline, symptomName, trail } from '../lib/summary'
   import { intensityColor, intensityInk } from '../lib/color'
   import { shareOrDownload, exportFilename } from '../lib/backup'
   import { showToast } from '../lib/toast.svelte'
@@ -21,7 +21,7 @@
   const fmtDay = (iso: string) => new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso))
   const series = $derived(dailySeries(entries, from, days))
   const summary = $derived(summarize(entries, days))
-  const heat = $derived(regionHeat(entries, symptoms))
+  const heat = $derived(regionHeat(entries))
   const strokes = $derived(allStrokes(entries))
   const cmp = $derived(tagComparison(entries, tags))
   const counts = $derived(tagCounts(entries, tags))
@@ -123,14 +123,14 @@
         <table class="list">
           <tbody>
             {#each notable as e (e.id)}
-              {@const hl = headline(e.readings)}
+              {@const hl = entryHeadline(e)}
               {@const levels = trail(e, hl.id)}
               {@const dur = durationMs(e)}
               <tr>
                 <td class="when">{fmtDay(e.at)} {formatTime(e.at, locale())}</td>
                 <td class="num"><span class="pill" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span></td>
                 <td>
-                  <EntrySummary lead={symptomName(hl.id, symptoms, tl)} areas={e.areas} tags={e.tags} tagDefs={tags} />
+                  <EntrySummary lead={symptomName(hl.id, symptoms, tl)} layers={e.layers} tagDefs={tags} />
                   {#if dur !== null}<span class="muted"> · {e.ongoing ? t('diary.ongoing') : formatDuration(dur, units)}</span>{/if}
                   {#if levels.length}<span class="muted"> · {levels.join(' → ')}</span>{/if}
                   {#if e.note}<div class="note">{e.note}</div>{/if}

@@ -29,11 +29,10 @@ const fmt = (d: Date) => new Intl.DateTimeFormat('it-IT', { day: 'numeric', mont
 /** Seven days: an entry with a note today, a 2h episode two days ago that eased from 6 to 3, a quiet swelling reading before that. */
 function fixture(): { from: Date; entries: Entry[] } {
   const from = rangeStart(7)
-  const today = makeEntry({ at: at(0), areas: [{ regions: ['152'], intensity: 8 }], tags: ['rest'], note: 'nota uno' })
-  const episode = makeEntry({ at: at(2, 9), areas: [{ regions: ['152', '153'], intensity: 6 }] })
+  const today = makeEntry({ at: at(0), layers: [{ regions: ['152'], readings: { pain: 8 }, tags: ['rest'] }], note: 'nota uno' })
+  const episode = makeEntry({ at: at(2, 9), layers: [{ regions: ['152', '153'], readings: { pain: 3 } }] })
   episode.endedAt = at(2, 11)
-  episode.readings = { pain: 3 }
-  episode.history = [{ at: at(2, 9), readings: { pain: 6 } }, { at: at(2, 10), readings: { pain: 3 } }]
+  episode.history = [{ at: at(2, 9), layers: [{ pain: 6 }] }, { at: at(2, 10), layers: [{ pain: 3 }] }]
   const quiet = makeEntry({ at: at(3), readings: { pain: 2, swelling: 5 } })
   return { from, entries: [today, episode, quiet] }
 }
@@ -145,7 +144,7 @@ describe('Report strokes', () => {
   it('shades the strokes over the figures', () => {
     const onclose = vi.fn()
     const { from, entries } = fixture()
-    entries[0].areas[0].strokes = [{ region: '152', fig: 'female', view: 'front', points: [[180, 300], [184, 330]], w: 8 }]
+    entries[0].layers[0].strokes = [{ region: '152', fig: 'female', view: 'front', points: [[180, 300], [184, 330]], w: 8 }]
     render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose })
     expect(document.querySelectorAll('.stroke')).toHaveLength(1)
   })

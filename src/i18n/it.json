@@ -138,6 +138,7 @@
   "trends.badDaysHint": "con dolore almeno 5",
   "trends.episodes": "Episodi",
   "trends.episodeMean": "durata media {d}",
+  "trends.heatSymptom": "Sintomo della mappa",
   "trends.heatmap": "Dove",
   "trends.heatmapHint": "Colore: intensità media. Più pieno: più frequente.",
   "trends.overTime": "Nel tempo",

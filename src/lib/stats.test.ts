@@ -7,7 +7,8 @@ import type { Preset } from './types'
 
 const at = (d: string, h = 12) => new Date(2026, 2, Number(d), h).toISOString() // March 2026, local time
 const e = (day: string, pain: number, extra: Parameters<typeof makeEntry>[0] = {}) =>
-  makeEntry({ at: at(day), readings: { pain, ...(extra.readings ?? {}) }, ...extra })
+  makeEntry({ at: at(day), ...(extra.layers ? extra : { readings: { pain, ...(extra.readings ?? {}) }, ...extra }) })
+const L = (regions: string[], readings: Record<string, number>) => ({ regions, readings })
 
 describe('stats', () => {
   it('builds a daily series with gaps', () => {
@@ -42,29 +43,32 @@ describe('stats', () => {
     expect(summarize([], 7).meanPain).toBeNull()
   })
 
-  it('computes region heat with full body spreading everywhere', () => {
+  it('computes region heat for one symptom, an entry counting once per region at the max over its layers', () => {
     const h = regionHeat([
-      e('1', 8, { areas: [{ regions: ['152'], intensity: 8 }] }),
-      e('2', 4, { areas: [{ regions: ['152', '110'], intensity: 4 }] }),
-      e('3', 2, { areas: [{ regions: ['*'], intensity: 2 }] }),
-    ], DEFAULT_SYMPTOMS)
+      e('1', 8, { layers: [L(['152'], { pain: 8 })] }),
+      e('2', 4, { layers: [L(['152', '110'], { pain: 4 })] }),
+      e('3', 2, { layers: [L(['*'], { pain: 2 })] }),
+    ])
     expect(h.get('152')).toEqual({ mean: 14 / 3, count: 3, weight: 1 })
     expect(h.get('110')?.count).toBe(2)
     expect(h.get('261')).toEqual({ mean: 2, count: 1, weight: 1 / 3 })
     // The mind is one more region; full body does not cover it.
     expect(h.get('mind')).toBeUndefined()
-    // It heats from the mental readings of the entries that selected it, not from its area's level (which is pain when it shares one).
+    // Overlapping layers: the max wins, the entry counts once. A layer without the symptom contributes nothing.
     const b = regionHeat(
       [
-        e('4', 0, { readings: { fog: 6, anxiety: 2 }, areas: [{ regions: ['mind'], intensity: 1 }] }),
-        e('5', 3, { readings: { fog: 4, swelling: 9 }, areas: [{ regions: ['152', 'mind'], intensity: 3 }] }),
-        e('6', 7, { readings: { fog: 8 }, areas: [{ regions: ['152'], intensity: 7 }] }),
+        e('4', 0, { layers: [L(['152'], { pain: 3 }), L(['152', '110'], { pain: 7 }), L(['mind'], { fog: 6 })] }),
+        e('5', 0, { layers: [L(['152'], { swelling: 5 })] }),
+        e('6', 0, { layers: [L(['*', 'mind'], { pain: 2, fog: 4 })] }),
       ],
-      DEFAULT_SYMPTOMS,
     )
-    expect(b.get('mind')).toEqual({ mean: 5, count: 2, weight: 1 })
-    expect(b.get('152')).toEqual({ mean: 5, count: 2, weight: 1 })
-    expect(b.size).toBe(2)
+    expect(b.get('152')).toEqual({ mean: 4.5, count: 2, weight: 1 })
+    expect(b.get('110')).toEqual({ mean: 4.5, count: 2, weight: 1 })
+    expect(b.get('mind')).toEqual({ mean: 2, count: 1, weight: 0.5 })
+    const f = regionHeat([e('4', 0, { layers: [L(['mind'], { fog: 6 })] }), e('6', 0, { layers: [L(['*', 'mind'], { pain: 2, fog: 4 })] })], 'fog')
+    expect(f.get('mind')).toEqual({ mean: 5, count: 2, weight: 1 })
+    expect(f.get('152')).toEqual({ mean: 4, count: 1, weight: 0.5 })
+    expect(regionHeat([e('4', 0, { layers: [L(['mind'], { fog: 6 })] })], 'swelling').size).toBe(0)
   })
 
   it('compares tags on days with vs without, with a minimum', () => {
@@ -84,7 +88,7 @@ describe('stats', () => {
   })
 
   it('averages other symptoms where recorded', () => {
-    const m = symptomMeans([e('1', 5, { readings: { swelling: 6 } }), e('2', 5, { readings: { swelling: 2, fog: 0 } }), e('3', 5)], DEFAULT_SYMPTOMS)
+    const m = symptomMeans([e('1', 5, { readings: { swelling: 6 } }), e('2', 5, { layers: [L(['152'], { swelling: 2 }), L(['110'], { swelling: 1, fog: 0 })] }), e('3', 5)], DEFAULT_SYMPTOMS)
     expect(m).toEqual([{ symptom: DEFAULT_SYMPTOMS[1], mean: 4, count: 2 }])
   })
 
@@ -98,9 +102,9 @@ describe('stats', () => {
 describe('presetSeries', () => {
   it('gives one line per preset with samples only, following the preset first symptom', () => {
     const presets: Preset[] = [
-      { id: 'a', name: 'Schiena', areas: [], symptomIds: ['pain'], tags: [], ongoing: false, order: 0 },
-      { id: 'b', name: 'Gambe', areas: [], symptomIds: ['swelling', 'pain'], tags: [], ongoing: false, order: 1 },
-      { id: 'c', name: 'Unused', areas: [], symptomIds: ['pain'], tags: [], ongoing: false, order: 2 },
+      { id: 'a', name: 'Schiena', layers: [], symptomIds: ['pain'], ongoing: false, order: 0 },
+      { id: 'b', name: 'Gambe', layers: [], symptomIds: ['swelling', 'pain'], ongoing: false, order: 1 },
+      { id: 'c', name: 'Unused', layers: [], symptomIds: ['pain'], ongoing: false, order: 2 },
     ]
     const mk = (id: string, at: string, readings: Record<string, number>, preset?: string) => ({ ...makeEntry({ at, readings }), id, ...(preset ? { preset } : {}) })
     const entries = [
@@ -119,8 +123,8 @@ describe('presetSeries', () => {
 describe('presetSeries edge cases', () => {
   it('falls back to pain for a preset without symptoms and to 0 for a missing reading', () => {
     const presets: Preset[] = [
-      { id: 'x', name: 'X', areas: [], symptomIds: [], tags: [], ongoing: false, order: 0 },
-      { id: 'y', name: 'Y', areas: [], symptomIds: ['swelling'], tags: [], ongoing: false, order: 1 },
+      { id: 'x', name: 'X', layers: [], symptomIds: [], ongoing: false, order: 0 },
+      { id: 'y', name: 'Y', layers: [], symptomIds: ['swelling'], ongoing: false, order: 1 },
     ]
     const entries = [
       { ...makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 } }), preset: 'x' },

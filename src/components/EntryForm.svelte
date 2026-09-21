@@ -3,7 +3,7 @@
   import PaintSurface from './PaintSurface.svelte'
   import IntensitySlider from './IntensitySlider.svelte'
   import EntrySummary from './EntrySummary.svelte'
-  import { regionText } from '../lib/summary'
+  import { regionText, layerLevel, headline, symptomName } from '../lib/summary'
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
@@ -12,9 +12,9 @@
   import { live } from '../lib/live.svelte'
   import { frequentTags } from '../lib/vocab'
   import { LEG_IDS, ARM_IDS, limbOf, mirrorId, type View } from '../lib/regions'
-  import { isFull, isMindOnly, bodyAreas, hasMind, tapRegion, tapSet, setMindLevel, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
-  import { addStroke, undoStroke, clearStrokes, pieceCount, mainView, type RawStroke } from '../lib/strokes'
-  import { isMindSymptom, mindMax } from '../lib/vocabulary'
+  import { isFull, showsCategory, readingsFor, tapRegion, tapSet, toggleFull, addLayer, selectLayer, setReading, toggleTag, pieceCount, type LayerState } from '../lib/layers'
+  import { addStroke, undoStroke, clearStrokes, mainView, type RawStroke } from '../lib/strokes'
+  import { isMindSymptom } from '../lib/vocabulary'
   import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
   import type { EntryDraft } from '../lib/draft'
   import { haptic, showToast } from '../lib/toast.svelte'
@@ -27,10 +27,10 @@
   const entries = live(() => null, () => db.entries.toArray(), [])
   const suggestions = $derived(frequentTags(entries.value, tags))
   let allTags = $state(false)
-  // Drawing mode (§5.3): one figure enlarged, a finger shades the current body area.
+  // Drawing mode (§5.3): one figure enlarged, a finger shades the current layer.
   let drawing = $state(false)
   let drawView = $state<View>('front')
-  const curStrokes = $derived(draft.areas[draft.cur]?.strokes?.length ?? 0)
+  const curStrokes = $derived(draft.layers[draft.cur]?.strokes?.length ?? 0)
   /** Gestures of this draft, newest last: how many pieces each added and the count it left, so Annulla tratto can take a whole gesture back. */
   let gestures: { n: number; total: number }[] = []
   // A new draft (save, clear, another entry to edit) folds the full list away and leaves drawing mode.
@@ -45,26 +45,23 @@
   const bodySymptoms = $derived(symptoms.filter((s) => s.enabled && s.id !== PAIN && !isMindSymptom(s)))
   const mindSymptoms = $derived(symptoms.filter((s) => s.enabled && isMindSymptom(s)))
 
-  const curArea = $derived(draft.areas[draft.cur])
-  /** Which sliders show (§6.1) follows what is selected: body areas → pain and the body symptoms, the mind → the mind symptoms, both or nothing → both. */
-  const showBody = $derived(bodyAreas(draft.areas).length > 0 || !hasMind(draft.areas))
-  const showMind = $derived(hasMind(draft.areas) || bodyAreas(draft.areas).length === 0)
-  /** The body area the pain slider edits: the current one, or the last one while an area holding only the mind is current. -1 without body areas. */
-  const curBody = $derived.by(() => {
-    if (curArea && !isMindOnly(curArea)) return draft.cur
-    for (let i = draft.areas.length - 1; i >= 0; i--) if (!isMindOnly(draft.areas[i])) return i
-    return -1
-  })
-  /** Brush = the level the pain slider shows: that body area's, else the entry-level pain (the free value). */
-  const brush = $derived(draft.areas[curBody]?.intensity ?? draft.readings[PAIN] ?? 0)
-  const full = $derived(isFull(draft.areas))
-  const curRegions = $derived(draft.areas[draft.cur]?.regions ?? [])
+  /** The layer the map, the sliders and the tag strip edit (§5.4). */
+  const cur = $derived(draft.layers[draft.cur] ?? draft.layers[0])
+  const st = (): LayerState => ({ layers: draft.layers, cur: draft.cur })
+  /** Which sliders show (§6.1) follows the current layer: body regions, the body ones; the brain, the mind ones; nothing, all. */
+  const showBody = $derived(showsCategory(cur, 'body'))
+  const showMind = $derived(showsCategory(cur, 'mind'))
+  /** The layers as they will be saved: a layer is coloured and numbered by the readings its regions show, not by a hidden slider. */
+  const shown = $derived(draft.layers.map((l) => ({ ...l, readings: readingsFor(l, l.readings, symptoms) })))
+  const pain = $derived(cur.readings[PAIN] ?? 0)
+  const full = $derived(isFull(cur))
+  const curRegions = $derived(cur.regions)
   const legsOn = $derived(!full && LEG_IDS.every((id) => curRegions.includes(id)))
   const armsOn = $derived(!full && ARM_IDS.every((id) => curRegions.includes(id)))
+  const located = $derived(draft.layers.some((l) => l.regions.length > 0))
   const painLabel = $derived.by(() => {
     const base = tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' })
-    const cur = draft.areas[curBody]
-    return draft.areas.length > 1 && cur?.regions.length ? `${base} · ${regionText(cur.regions, t)}` : base
+    return draft.layers.length > 1 && cur.regions.length ? `${base} · ${regionText(cur.regions, t)}` : base
   })
 
   type TimeChoice = { key: string; label: string; iso: string | null }
@@ -87,26 +84,23 @@
     draft.at ? `${formatDay(draft.at, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') })} ${formatTime(draft.at, locale())}` : '',
   )
 
-  function apply(next: { areas: EntryDraft['areas']; cur: number }) {
-    // An area left with only the mind has no pain: its level is the highest mental reading (§5.4).
-    draft.areas = setMindLevel(next.areas, mindMax(draft.readings, symptoms))
+  function apply(next: LayerState) {
+    draft.layers = next.layers
     draft.cur = next.cur
-    // The pain slider keeps its value while hidden behind the mind; the entry gets 0 at save (§5.4).
-    if (bodyAreas(draft.areas).length) draft.readings = { ...draft.readings, [PAIN]: overallPain(draft.areas, brush) }
   }
   function onRegion(id: string) {
-    withPaintToast(() => apply(tapRegion({ areas: draft.areas, cur: draft.cur }, id, prefs.mirror, brush)))
+    withPaintToast(() => apply(tapRegion(st(), id, prefs.mirror)))
     haptic(6)
   }
   function onSet(ids: string[]) {
-    withPaintToast(() => apply(tapSet({ areas: draft.areas, cur: draft.cur }, ids, brush)))
+    withPaintToast(() => apply(tapSet(st(), ids)))
   }
   /** Deselecting takes the paint of the segment along (§5.4): when it does, offer to undo. */
   function withPaintToast(change: () => void) {
-    const before = draft.areas
+    const before = draft.layers
     const had = pieceCount(before)
     change()
-    if (pieceCount(draft.areas) < had) showToast(t('log.strokesErased'), { label: t('log.undo'), run: () => (draft.areas = before) })
+    if (pieceCount(draft.layers) < had) showToast(t('log.strokesErased'), { label: t('log.undo'), run: () => (draft.layers = before) })
   }
   function onLimb(id: string) {
     let ids = limbOf(id)
@@ -115,44 +109,43 @@
     haptic(25)
   }
   function onFull() {
-    apply(toggleFull({ areas: draft.areas, cur: draft.cur }, brush))
+    withPaintToast(() => apply(toggleFull(st())))
   }
   function toggleDrawing() {
     drawing = !drawing
     if (drawing) drawView = mainView(curRegions)
   }
   function onStroke(raw: RawStroke) {
-    const before = pieceCount(draft.areas)
-    apply(addStroke({ areas: draft.areas, cur: draft.cur }, raw, brush))
-    const total = pieceCount(draft.areas)
+    const before = pieceCount(draft.layers)
+    apply(addStroke(st(), raw))
+    const total = pieceCount(draft.layers)
     if (total > before) gestures.push({ n: total - before, total })
     haptic(6)
   }
   /** The last gesture, while its pieces are still the last ones; otherwise one piece. */
   function onUndoStroke() {
     const last = gestures.pop()
-    const n = last && last.total === pieceCount(draft.areas) ? last.n : 1
-    apply(undoStroke({ areas: draft.areas, cur: draft.cur }, n))
+    const n = last && last.total === pieceCount(draft.layers) ? last.n : 1
+    apply(undoStroke(st(), n))
   }
   function onClearDrawing() {
-    const before = draft.areas
-    apply(clearStrokes({ areas: draft.areas, cur: draft.cur }))
-    showToast(t('log.drawingCleared'), { label: t('log.undo'), run: () => (draft.areas = before) })
+    const before = draft.layers
+    apply(clearStrokes(st()))
+    showToast(t('log.drawingCleared'), { label: t('log.undo'), run: () => (draft.layers = before) })
   }
-  function onSlider(v: number) {
-    if (curBody >= 0) apply({ areas: setIntensity({ areas: draft.areas, cur: curBody }, v).areas, cur: draft.cur })
-    else draft.readings = { ...draft.readings, [PAIN]: v }
+  function onReading(id: string, v: number) {
+    apply(setReading(st(), id, v))
   }
   function setMirror(v: boolean) {
     prefs.mirror = v
     savePrefs()
   }
-  function toggleTag(id: string) {
-    draft.tags = draft.tags.includes(id) ? draft.tags.filter((x) => x !== id) : [...draft.tags, id]
+  function onTag(id: string) {
+    apply(toggleTag(st(), id))
   }
-  function setReading(id: string, v: number) {
-    draft.readings = { ...draft.readings, [id]: v }
-    if (hasMind(draft.areas)) draft.areas = setMindLevel(draft.areas, mindMax(draft.readings, symptoms))
+  /** A new layer starts at the current pain level, like the first did (§5.4). */
+  function onAddLayer() {
+    apply(addLayer(st(), { [PAIN]: pain }))
   }
 </script>
 
@@ -168,9 +161,9 @@
   <!-- The map and the drawing surface swap in the same slot: whichever layout comes next (#22) composes the same pieces. -->
   <div class="map">
     {#if drawing}
-      <PaintSurface view={drawView} areas={draft.areas} cur={draft.cur} {brush} label={t(`log.${drawView}`)} {onStroke} />
+      <PaintSurface view={drawView} layers={shown} cur={draft.cur} label={t(`log.${drawView}`)} {onStroke} />
     {:else}
-      <BodyMap areas={draft.areas} cur={draft.cur} onToggle={onRegion} onLongPress={onLimb} labels={{ front: t('log.front'), back: t('log.back'), mind: t('log.mind') }} />
+      <BodyMap layers={shown} cur={draft.cur} onToggle={onRegion} onLongPress={onLimb} labels={{ front: t('log.front'), back: t('log.back'), mind: t('log.mind') }} />
     {/if}
   </div>
 
@@ -185,23 +178,25 @@
     <p class="small muted hint">{t('log.drawHint')}</p>
   {/if}
 
+  <!-- One layer without regions is the plain form; the chips appear once something is located (§6.1). -->
   <div class="chips areas">
-    {#if draft.areas.length === 0}
+    {#if !located}
       <span class="small muted placeholder">{t('log.noArea')}</span>
     {:else}
-      {#each draft.areas as a, i (i)}
+      {#each shown as l, i (i)}
+        {@const level = layerLevel(l)}
         <button
           class="chip small area"
           class:current={i === draft.cur}
           aria-pressed={i === draft.cur}
-          style="--c: {intensityColor(a.intensity)}; --ink-on: {intensityInk(a.intensity)}"
-          onclick={() => apply(selectArea({ areas: draft.areas, cur: draft.cur }, i))}>
-          <span class="dot">{a.intensity}</span>
-          {#if a.regions.length}<EntrySummary areas={[a]} />{:else}<span class="muted">…</span>{/if}
+          style="--c: {intensityColor(level)}; --ink-on: {intensityInk(level)}"
+          onclick={() => apply(selectLayer(st(), i))}>
+          <span class="dot">{level}</span>
+          {#if l.regions.length}<EntrySummary lead={symptomName(headline(l.readings).id, symptoms, tl)} layers={[l]} tagDefs={tags} />{:else}<span class="muted">…</span>{/if}
         </button>
       {/each}
-      {#if !full && draft.areas[draft.cur]?.regions.length}
-        <button class="chip small outline" onclick={() => apply(addArea({ areas: draft.areas, cur: draft.cur }, brush))}>+ {t('log.addArea')}</button>
+      {#if cur.regions.length}
+        <button class="chip small outline" onclick={onAddLayer}>+ {t('log.addArea')}</button>
       {/if}
     {/if}
   </div>
@@ -239,11 +234,12 @@
     </button>
   {/snippet}
 
+  <!-- The tag strip belongs to the current layer (§5.4): a remedy for the legs is not one for the head. -->
   {#if !allTags}
     <div class="chips suggest" aria-label={t('log.suggestions')}>
       {@render expander()}
       {#each suggestions as tag (tag.id)}
-        <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+        <button class="chip small" aria-pressed={cur.tags.includes(tag.id)} onclick={() => onTag(tag.id)}>{tl(tag.label)}</button>
       {/each}
     </div>
   {:else}
@@ -259,7 +255,7 @@
             <p class="group-title">{t(`tag.group.${g}`)}</p>
             <div class="chips">
               {#each items as tag (tag.id)}
-                <button class="chip small" aria-pressed={draft.tags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>{tl(tag.label)}</button>
+                <button class="chip small" aria-pressed={cur.tags.includes(tag.id)} onclick={() => onTag(tag.id)}>{tl(tag.label)}</button>
               {/each}
             </div>
           </div>
@@ -269,14 +265,14 @@
   {/if}
 
   {#if showBody}
-    <IntensitySlider value={brush} label={painLabel} onchange={onSlider} />
+    <IntensitySlider value={pain} label={painLabel} onchange={(v) => onReading(PAIN, v)} />
     {#each bodySymptoms as s (s.id)}
-      <IntensitySlider compact label={tl(s.label)} value={draft.readings[s.id] ?? 0} onchange={(v) => setReading(s.id, v)} />
+      <IntensitySlider compact label={tl(s.label)} value={cur.readings[s.id] ?? 0} onchange={(v) => onReading(s.id, v)} />
     {/each}
   {/if}
   {#if showMind}
     {#each mindSymptoms as s (s.id)}
-      <IntensitySlider compact label={tl(s.label)} value={draft.readings[s.id] ?? 0} onchange={(v) => setReading(s.id, v)} />
+      <IntensitySlider compact label={tl(s.label)} value={cur.readings[s.id] ?? 0} onchange={(v) => onReading(s.id, v)} />
     {/each}
   {/if}
 

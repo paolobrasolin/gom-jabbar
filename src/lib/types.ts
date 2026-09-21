@@ -1,6 +1,6 @@
-import type { Area } from './areas'
+import type { Layer, Stroke } from './layers'
 
-export type { Area }
+export type { Layer, Stroke }
 export type SymptomId = string
 export type TagId = string
 export type RegionId = string
@@ -8,7 +8,8 @@ export type RegionId = string
 export type LocalizedString = { it: string; en: string }
 export type Lang = keyof LocalizedString
 
-export type HistoryPoint = { at: string; readings: Record<SymptomId, number> }
+/** Readings at one moment of an episode, one record per layer, aligned with `entry.layers` (§5.5). */
+export type HistoryPoint = { at: string; layers: Record<SymptomId, number>[] }
 
 export type Entry = {
   id: string
@@ -18,13 +19,10 @@ export type Entry = {
   endedAt: string | null
   /** True while an episode is active. */
   ongoing: boolean
-  /** Symptom scores 0..10. Always has at least one key. `pain` is the max over areas when any exist. */
-  readings: Record<SymptomId, number>
-  /** Painful areas, each with its own intensity. [] = unspecified. An area with regions ['*'] is full body. */
-  areas: Area[]
+  /** What and where, as independent layers (§5.4). Never empty: an entry with no location is one layer without regions. */
+  layers: Layer[]
   /** Readings over time while an episode was ongoing: the starting point first, then one per update. */
   history?: HistoryPoint[]
-  tags: TagId[]
   /** The preset this moment was logged from, if any (§5.6). */
   preset?: string
   note: string
@@ -57,13 +55,12 @@ export type Tag = {
 export type Preset = {
   id: string
   name: string
-  areas: Area[]
-  /** Symptoms the sheet asks for, pain first when present. */
+  /** The layers as captured: regions, tags and paint matter, the readings are set at each save. */
+  layers: Layer[]
+  /** Sliders the preset sheet shows, in order. */
   symptomIds: SymptomId[]
-  tags: TagId[]
-  /** Logging from this preset starts an episode. */
   ongoing: boolean
   order: number
 }
 
-export const PAIN: SymptomId = 'pain'
+export const PAIN = 'pain'

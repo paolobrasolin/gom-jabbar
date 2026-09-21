@@ -6,7 +6,7 @@
   import { updateEntry, deleteEntry, restoreEntry } from '../lib/entries'
   import { addPreset, presetFromDraft } from '../lib/presets'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
-  import type { Entry, Symptom, Tag } from '../lib/types'
+  import type { Entry, Layer, Symptom, Tag } from '../lib/types'
 
   let { entry = $bindable(null), symptoms = [], tags = [] }: { entry: Entry | null; symptoms?: Symptom[]; tags?: Tag[] } = $props()
 
@@ -47,7 +47,7 @@
   async function save() {
     if (!editing) return
     const input = draftToInput(draft)
-    const patch: Partial<Entry> = { ...input, readings: input.readings!, areas: input.areas!, tags: input.tags!, note: input.note!, at: input.at!, ongoing: input.ongoing! }
+    const patch: Partial<Entry> = { at: input.at!, ongoing: input.ongoing!, layers: input.layers as Layer[], note: input.note! }
     if (editing.ongoing && !input.ongoing) patch.endedAt = new Date().toISOString()
     if (!editing.ongoing && input.ongoing) patch.endedAt = null
     await updateEntry(editing.id, patch)

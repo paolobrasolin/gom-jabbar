@@ -7,6 +7,7 @@
   import { deleteEntry } from '../lib/entries'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import { PAIN, type Entry, type Preset, type Symptom, type Tag } from '../lib/types'
+  import { mergedReadings } from '../lib/layers'
 
   let {
     preset = $bindable(null),
@@ -25,7 +26,8 @@
       current = preset
       // Start from the last logged levels: for something that is always there, only the level drifts.
       const lv: Record<string, number> = {}
-      for (const id of preset.symptomIds) lv[id] = last?.preset === preset.id ? (last.readings[id] ?? 0) : id === PAIN ? 5 : 0
+      const before = last?.preset === preset.id ? mergedReadings(last.layers) : null
+      for (const id of preset.symptomIds) lv[id] = before ? (before[id] ?? 0) : id === PAIN ? 5 : 0
       levels = lv
       open = true
     }
@@ -47,8 +49,8 @@
 
 <Sheet bind:open title={current?.name ?? ''}>
   {#if current}
-    {#if current.areas.length || current.tags.length}
-      <div class="card small"><EntrySummary areas={current.areas} tags={current.tags} {tagDefs} /></div>
+    {#if current.layers.some((l) => l.regions.length || l.tags.length)}
+      <div class="card small"><EntrySummary layers={current.layers} {tagDefs} /></div>
     {/if}
     {#each current.symptomIds as id, i (id)}
       <IntensitySlider compact={i > 0} label={label(id)} value={levels[id] ?? 0} onchange={(v) => (levels[id] = v)} />

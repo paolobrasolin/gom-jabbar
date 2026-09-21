@@ -11,6 +11,7 @@
   import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, tagCounts, presetSeries, MIN_DAYS_PER_SIDE } from '../lib/stats'
   import { formatDuration } from '../lib/time'
   import { allStrokes } from '../lib/strokes'
+  import { PAIN } from '../lib/types'
 
   const RANGES = [7, 30, 90, 365]
   let days = $state(30)
@@ -25,10 +26,15 @@
 
   const series = $derived(dailySeries(entries.value, from, days))
   const summary = $derived(summarize(entries.value, days))
-  const heat = $derived(regionHeat(entries.value, symptoms.value))
-  const strokes = $derived(allStrokes(entries.value))
   const cmp = $derived(tagComparison(entries.value, tags.value))
   const symMeans = $derived(symptomMeans(entries.value, symptoms.value))
+  /** The heatmap reads one symptom at a time (§6.3): pain, or any other recorded in range. */
+  let picked = $state(PAIN)
+  const heatChoices = $derived([PAIN, ...symMeans.map((s) => s.symptom.id)])
+  const heatSymptom = $derived(heatChoices.includes(picked) ? picked : PAIN)
+  const heat = $derived(regionHeat(entries.value, heatSymptom))
+  const strokes = $derived(allStrokes(entries.value, heatSymptom))
+  const symptomLabel = (id: string) => tl(symptoms.value.find((s) => s.id === id)?.label ?? { it: id, en: id })
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : (Math.round(v * 10) / 10).toString())
@@ -53,6 +59,13 @@
 
     <div class="card">
       <p class="small muted label">{t('trends.heatmap')}</p>
+      {#if heatChoices.length > 1}
+        <div class="chips heatpick" role="group" aria-label={t('trends.heatSymptom')}>
+          {#each heatChoices as id (id)}
+            <button class="chip small" aria-pressed={heatSymptom === id} onclick={() => (picked = id)}>{symptomLabel(id)}</button>
+          {/each}
+        </div>
+      {/if}
       <div class="map"><BodyMap {heat} {strokes} readonly labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
@@ -117,6 +130,8 @@
     background: var(--bg); border-radius: 12px; padding: 8px 8px 4px;
   }
   .top { margin-top: 10px; }
+  .heatpick { margin-bottom: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .heatpick::-webkit-scrollbar { display: none; }
   .sym { display: flex; flex-direction: column; gap: 8px; }
   .val { font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
 </style>

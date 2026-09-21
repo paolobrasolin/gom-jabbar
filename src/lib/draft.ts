@@ -1,21 +1,25 @@
 import { PAIN, type Entry } from './types'
-import type { Area } from './areas'
-
-/** A deep enough copy: regions and strokes are the only nested parts. */
-const copyAreas = (areas: Area[]): Area[] =>
-  areas.map((a) => ({ ...a, regions: [...a.regions], ...(a.strokes ? { strokes: a.strokes.map((s) => ({ ...s, points: s.points.map(([x, y]) => [x, y] as [number, number]) })) } : {}) }))
+import { newLayer, type Layer } from './layers'
 import type { EntryInput } from './entries'
+
+/** A deep enough copy: regions, tags, readings and strokes are the nested parts. */
+export const copyLayers = (layers: Layer[]): Layer[] =>
+  layers.map((l) => ({
+    ...l,
+    regions: [...l.regions],
+    readings: { ...l.readings },
+    tags: [...l.tags],
+    ...(l.strokes ? { strokes: l.strokes.map((s) => ({ ...s, points: s.points.map(([x, y]) => [x, y] as [number, number]) })) } : {}),
+  }))
 
 /** Form state for creating or editing an entry. `at: null` means "now, resolved at save". */
 export type EntryDraft = {
   at: string | null
   ongoing: boolean
-  /** Pain brush / overall level when there are no areas. Per-area levels live in `areas`. */
-  readings: Record<string, number>
-  areas: Area[]
-  /** Index of the area the slider edits. */
+  /** Never empty: the form opens with one layer without regions (§6.1). */
+  layers: Layer[]
+  /** The layer the map, the sliders and the tag strip edit. */
   cur: number
-  tags: string[]
   note: string
 }
 
@@ -23,10 +27,8 @@ export function emptyDraft(opts: { ongoing?: boolean; pain?: number } = {}): Ent
   return {
     at: null,
     ongoing: opts.ongoing ?? false,
-    readings: { [PAIN]: opts.pain ?? 5 },
-    areas: [],
+    layers: [newLayer({ [PAIN]: opts.pain ?? 5 })],
     cur: 0,
-    tags: [],
     note: '',
   }
 }
@@ -35,10 +37,8 @@ export function draftFromEntry(e: Entry): EntryDraft {
   return {
     at: e.at,
     ongoing: e.ongoing,
-    readings: { [PAIN]: 0, ...e.readings },
-    areas: copyAreas(e.areas),
+    layers: e.layers.length ? copyLayers(e.layers) : [newLayer({ [PAIN]: 0 })],
     cur: 0,
-    tags: [...e.tags],
     note: e.note,
   }
 }
@@ -47,9 +47,7 @@ export function draftToInput(d: EntryDraft): EntryInput {
   return {
     at: d.at ?? new Date().toISOString(),
     ongoing: d.ongoing,
-    readings: { ...d.readings },
-    areas: copyAreas(d.areas),
-    tags: [...d.tags],
+    layers: copyLayers(d.layers),
     note: d.note.trim(),
   }
 }
