@@ -9,14 +9,15 @@
   import { regionsFor, shapeArea, shapeOf, pathFor, REGION_BY_ID, type View, type RegionDef } from '../lib/regions'
   import { prefs } from '../lib/prefs.svelte'
   import { intensityColor } from '../lib/color'
-  import { isFull, type Area } from '../lib/areas'
+  import { isFull, type Layer } from '../lib/layers'
+  import { layerLevel } from '../lib/summary'
   import { regionLabel } from '../lib/regionLabel'
   import { strokePath, BRUSH, type HeatStroke } from '../lib/strokes'
   import { t } from '../i18n/index.svelte'
 
   let {
     view,
-    areas = [],
+    layers = [],
     cur = -1,
     heat,
     strokes = [],
@@ -27,12 +28,12 @@
     onLongPress,
   }: {
     view: View
-    areas?: Area[]
-    /** Index of the area being edited; its regions get an outline when there is more than one area. */
+    layers?: Layer[]
+    /** Index of the layer being edited; its regions get an outline, and the other layers fade, when there is more than one. */
     cur?: number
-    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity. Overrides `areas`. */
+    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity. Overrides `layers`. */
     heat?: Map<string, { mean: number; weight: number }>
-    /** Heatmap mode: strokes to shade over the figure, each with its level. Otherwise the areas' own are drawn. */
+    /** Heatmap mode: strokes to shade over the figure, each with its level. Otherwise the layers' own are drawn. */
     strokes?: HeatStroke[]
     /** The stroke being drawn right now, in figure coordinates, and its colour. */
     live?: [number, number][] | null
@@ -46,21 +47,27 @@
   const uid = $props.id()
   const fig = $derived(prefs.figure)
   const regions = $derived(regionsFor(view))
-  const full = $derived(isFull(areas))
-  const fullColor = $derived(full ? intensityColor(areas.find((a) => a.regions.includes('*'))!.intensity) : '')
+  const current = $derived(cur >= 0 ? layers[cur] : undefined)
+  const covers = (l: Layer, id: string) => isFull(l) || l.regions.includes(id)
+  /** The colour of a region: the current layer's when it holds it, else the last other layer's (§5.4). */
   const fill = $derived.by(() => {
-    const m = new Map<string, string>()
-    areas.forEach((a) => a.regions.forEach((r) => m.set(r, intensityColor(a.intensity))))
+    const m = new Map<string, { color: string; ghost: boolean }>()
+    for (const { id } of regions) {
+      const own = current && covers(current, id) ? current : [...layers].reverse().find((l) => covers(l, id))
+      if (own) m.set(id, { color: intensityColor(layerLevel(own)), ghost: layers.length > 1 && own !== current })
+    }
     return m
   })
-  const outlined = $derived(new Set(areas.length > 1 && cur >= 0 ? (areas[cur]?.regions ?? []) : []))
-  /** Shading: the heatmap's strokes, or the areas' own in their colour. Only strokes drawn on this figure fit its coordinates. */
+  const outlined = $derived(new Set(layers.length > 1 && current ? (isFull(current) ? regions.map((r) => r.id) : current.regions) : []))
+  /** Shading: the heatmap's strokes, or the layers' own in their colour. Only strokes drawn on this figure fit its coordinates. */
   const shading = $derived(
-    (heat ? strokes : areas.flatMap((a) => (a.strokes ?? []).map((s) => ({ ...s, intensity: a.intensity })))).filter((s) => s.view === view && s.fig === fig),
+    (heat ? strokes : layers.flatMap((l) => (l.strokes ?? []).map((s) => ({ ...s, intensity: layerLevel(l), ghost: layers.length > 1 && l !== current })))).filter(
+      (s) => s.view === view && s.fig === fig,
+    ),
   )
   /** Pieces by segment: each is clipped to its own, so a round cap never shows on a neighbour (§5.3). */
   const painted = $derived.by(() => {
-    const m = new Map<string, HeatStroke[]>()
+    const m = new Map<string, (HeatStroke & { ghost?: boolean })[]>()
     for (const s of shading) m.set(s.region, [...(m.get(s.region) ?? []), s])
     // A piece whose segment this build does not know (a hand-edited file) is not drawn rather than breaking the map.
     return [...m].filter(([id]) => REGION_BY_ID[id]).map(([id, pieces]) => ({ id, shape: shapeOf(fig, REGION_BY_ID[id]), pieces }))
@@ -107,9 +114,10 @@
 <g class="paint">
   {#each regions as r (r.id)}
     {@const h = heat?.get(r.id)}
-    {@const color = heat ? (h ? intensityColor(h.mean) : undefined) : full ? fullColor : fill.get(r.id)}
+    {@const own = fill.get(r.id)}
+    {@const color = heat ? (h ? intensityColor(h.mean) : undefined) : own?.color}
     <path
-      class="region{color ? ' on' : ''}{outlined.has(r.id) ? ' hi' : ''}"
+      class="region{color ? ' on' : ''}{outlined.has(r.id) ? ' hi' : ''}{!heat && own?.ghost ? ' ghost' : ''}"
       data-region={r.id}
       d={pathFor(shapeOf(fig, r))}
       style={color ? `fill:${color}${h ? `;fill-opacity:${(0.35 + 0.65 * h.weight).toFixed(2)}` : ''}` : undefined} />
@@ -119,7 +127,7 @@
   {#each painted as g (g.id)}
     <g clip-path="url(#{uid}-{g.id})">
       {#each g.pieces as s, i (i)}
-        <path class="stroke" d={strokePath(s)} stroke={intensityColor(s.intensity)} stroke-width={s.w} />
+        <path class="stroke" class:ghost={!!s.ghost} d={strokePath(s)} stroke={intensityColor(s.intensity)} stroke-width={s.w} />
       {/each}
     </g>
   {/each}
@@ -132,7 +140,7 @@
     {#each hits as r (r.id)}
       {@render hit(r, {
         role: 'button',
-        'aria-pressed': full || fill.has(r.id),
+        'aria-pressed': !!current && covers(current, r.id),
         'aria-label': regionLabel(r.id, t),
         onclick: () => click(r.id),
         onpointerdown: () => down(r.id),
@@ -155,6 +163,9 @@
     transition: fill 0.12s;
   }
   .region.hi { stroke: var(--ink); stroke-width: 2; }
+  /* Another layer's selection and paint: visible, but not what a tap edits. */
+  .region.ghost { fill-opacity: 0.4; }
+  .stroke.ghost { opacity: 0.4; }
   /* Strokes sit on their region's colour: a darker edge keeps them legible on it. */
   .stroke { fill: none; stroke-linecap: round; stroke-linejoin: round; filter: brightness(0.8); }
   /* On the heatmap, overlap builds density. */

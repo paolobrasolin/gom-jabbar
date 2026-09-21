@@ -9,24 +9,22 @@
   import { figureBox, type View } from '../lib/regions'
   import { prefs } from '../lib/prefs.svelte'
   import { intensityColor } from '../lib/color'
-  import { bodyTarget, type Area } from '../lib/areas'
+  import type { Layer } from '../lib/layers'
+  import { layerLevel } from '../lib/summary'
   import { figureCenter, BRUSH, type RawStroke } from '../lib/strokes'
   import { fitScale, lookAt, ZOOM, ZOOM_RANGE } from '../lib/camera'
   import { PaintGesture } from '../lib/gesture.svelte'
 
   let {
     view,
-    areas = [],
+    layers = [],
     cur = 0,
-    brush = 0,
     label = '',
     onStroke,
   }: {
     view: View
-    areas?: Area[]
+    layers?: Layer[]
     cur?: number
-    /** The level a stroke starts a new area at, and the colour of the stroke in progress. */
-    brush?: number
     label?: string
     onStroke?: (gesture: RawStroke) => void
   } = $props()
@@ -45,13 +43,10 @@
   // Opening, a view or figure switch, or a resize looks at the current area; later strokes do not move the camera.
   $effect(() => {
     const [v, f, s, k] = [view, fig, size, ZOOM * fit]
-    gesture.camera = lookAt(s, k, figureCenter(f, untrack(() => areas[cur]?.regions ?? []), v))
+    gesture.camera = lookAt(s, k, untrack(() => figureCenter(f, layers[cur]?.regions ?? [], v)))
   })
-  /** The stroke in progress wears the colour of the area it will land in (§5.4). */
-  const liveColor = $derived.by(() => {
-    const target = bodyTarget({ areas, cur }, brush)
-    return intensityColor(target.areas[target.cur].intensity)
-  })
+  /** The stroke in progress wears the colour of the layer it lands in (§5.4). */
+  const liveColor = $derived(intensityColor(layers[cur] ? layerLevel(layers[cur]) : 0))
 
   const at = (e: PointerEvent): [number, number] => {
     const r = (e.currentTarget as Element).getBoundingClientRect()
@@ -81,7 +76,7 @@
     onpointercancel={pup}
     oncontextmenu={(e) => e.preventDefault()}>
     <g transform="translate({gesture.camera.tx} {gesture.camera.ty}) scale({gesture.camera.k})">
-      <BodyFigure {view} {areas} {cur} live={gesture.stroke} {liveColor} readonly />
+      <BodyFigure {view} {layers} {cur} live={gesture.stroke} {liveColor} readonly />
     </g>
   </svg>
 </div>

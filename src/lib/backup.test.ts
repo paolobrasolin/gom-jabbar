@@ -13,8 +13,8 @@ const t = (k: string) => k
 
 describe('backup', () => {
   it('round-trips export → parse → replace', async () => {
-    await addEntry({ areas: [{ regions: ['152'], intensity: 6 }], tags: ['rest'], note: 'x' })
-    await addEntry({ ongoing: true, areas: [{ regions: ['*'], intensity: 9 }] })
+    await addEntry({ layers: [{ regions: ['152'], readings: { pain: 6 }, tags: ['rest'] }], note: 'x' })
+    await addEntry({ ongoing: true, layers: [{ regions: ['*'], readings: { pain: 9 } }] })
     const file = await buildExport()
     expect(file.entries).toHaveLength(2)
     expect(file.vocabulary.symptoms.length).toBeGreaterThan(3)
@@ -47,16 +47,35 @@ describe('backup', () => {
     expect(await db.entries.count()).toBe(3)
   })
 
-  it('upgrades a version 1 file with regions', async () => {
+  it('upgrades a version 1 file with regions all the way to layers', async () => {
     const text = JSON.stringify({
       app: 'gom-jabbar',
       version: 1,
-      entries: [{ id: 'v1', at: '2026-01-01T00:00:00.000Z', readings: { pain: 5 }, regions: ['154'], tags: [], note: '' }],
+      entries: [{ id: 'v1', at: '2026-01-01T00:00:00.000Z', readings: { pain: 5, fog: 2 }, regions: ['154'], tags: ['rest'], note: '', history: [{ at: 'h', pain: 6 }] }],
     })
     const parsed = parseImport(text)
-    expect(parsed.entries[0].areas).toEqual([{ regions: ['154'], intensity: 5 }])
+    expect(parsed.entries[0].layers).toEqual([{ regions: ['154'], readings: { pain: 5, fog: 2 }, tags: ['rest'] }])
+    expect(parsed.entries[0].history).toEqual([{ at: 'h', layers: [{ pain: 6 }] }])
+    expect(parsed.entries[0]).not.toHaveProperty('readings')
+    expect(parsed.entries[0]).not.toHaveProperty('areas')
+    expect(parsed.entries[0]).not.toHaveProperty('tags')
     expect(parsed.entries[0].updatedAt).toBe('2026-01-01T00:00:00.000Z')
     expect(parsed.vocabulary.tags).toEqual([])
+  })
+
+  it('upgrades a version 6 file: readings by category, tags on the first layer, presets too; a version 7 entry without layers gets one', () => {
+    const file = {
+      app: 'gom-jabbar',
+      version: 6,
+      vocabulary: { symptoms: [{ id: 'x_mind', label: { it: 'X', en: 'X' }, category: 'mind', enabled: true, order: 9 }], tags: [] },
+      entries: [{ id: 'a', at: '2026-01-01T00:00:00.000Z', readings: { pain: 4, x_mind: 3, fog: 1 }, areas: [{ regions: ['*'], intensity: 4 }, { regions: ['mind'], intensity: 3 }], tags: ['t'], note: '' }],
+      presets: [{ id: 'p', name: 'P', areas: [{ regions: ['224'], intensity: 5 }], symptomIds: ['pain'], tags: ['m'], ongoing: false, order: 0 }],
+    }
+    const parsed = parseImport(JSON.stringify(file))
+    expect(parsed.entries[0].layers).toEqual([{ regions: ['*'], readings: { pain: 4 }, tags: ['t'] }, { regions: ['mind'], readings: { x_mind: 3, fog: 1 }, tags: [] }])
+    expect(parsed.presets[0]).toEqual({ id: 'p', name: 'P', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: ['m'] }], symptomIds: ['pain'], ongoing: false, order: 0 })
+    const bare = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 7, entries: [{ id: 'b', at: '2026-01-01T00:00:00.000Z' }] }))
+    expect(bare.entries[0].layers).toEqual([{ regions: [], readings: { pain: 0 }, tags: [] }])
   })
 
   it('gives symptoms without a category the default for their id, and keeps one that is set', () => {
@@ -85,13 +104,13 @@ describe('backup', () => {
   })
 
   it('writes csv with one row per entry and escaped notes', async () => {
-    await addEntry({ areas: [{ regions: ['152', '153'], intensity: 6 }], readings: { swelling: 3 }, tags: ['rest'], note: 'he said "ow", twice' })
+    await addEntry({ layers: [{ regions: ['152', '153'], readings: { pain: 6, swelling: 3 }, tags: ['rest'] }, { regions: ['mind'], readings: { fog: 2 } }], note: 'he said "ow", twice' })
     const file = await buildExport()
     const csv = toCsv(file.entries, file.vocabulary.symptoms, file.vocabulary.tags, 'it', t)
     const lines = csv.trim().split('\r\n')
     expect(lines).toHaveLength(2)
     expect(lines[0].startsWith('id,at,endedAt,ongoing,pain,swelling')).toBe(true)
-    expect(lines[1]).toContain('152+153:6')
+    expect(lines[1]).toContain('152+153:pain=6;swelling=3:rest|mind:fog=2')
     expect(lines[1]).toContain('Riposo')
     expect(lines[1]).toContain('"he said ""ow"", twice"')
   })
@@ -146,12 +165,12 @@ describe('vocab', () => {
 describe('strokes survive backup', () => {
   it('export → import → export keeps every stroke', async () => {
     const strokes = [{ region: '152', fig: 'female' as const, view: 'front' as const, points: [[100.1, 250.2], [104, 260]] as [number, number][], w: 8 }]
-    await addEntry({ areas: [{ regions: ['152'], intensity: 6, strokes }] })
+    await addEntry({ layers: [{ regions: ['152'], readings: { pain: 6 }, strokes }] })
     const text = JSON.stringify(await buildExport())
     resetDb()
     await applyImport(parseImport(text), 'replace')
     const again = await buildExport()
-    expect(again.entries[0].areas[0].strokes).toEqual(strokes)
+    expect(again.entries[0].layers[0].strokes).toEqual(strokes)
     expect(JSON.stringify(again.entries)).toBe(JSON.stringify(JSON.parse(text).entries))
   })
 })

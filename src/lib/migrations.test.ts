@@ -13,35 +13,65 @@ import Dexie from 'dexie'
 import { db, resetDb } from './db'
 import { parseImport, applyImport, buildExport, EXPORT_VERSION } from './backup'
 import { upgradeRegions } from './regions'
-import { MIND_DEFAULTS_V6 } from './vocabulary'
+import { MIND_DEFAULTS_V6, defaultCategory } from './vocabulary'
+import type { SymptomCategory } from './types'
 import exportV1 from '../test/fixtures/export-v1.json'
 import exportV2 from '../test/fixtures/export-v2.json'
 import exportV3 from '../test/fixtures/export-v3.json'
 import exportV4 from '../test/fixtures/export-v4.json'
 import exportV5 from '../test/fixtures/export-v5.json'
 import exportV6 from '../test/fixtures/export-v6.json'
+import exportV7 from '../test/fixtures/export-v7.json'
 import dbV1 from '../test/fixtures/db-v1.json'
 import dbV2 from '../test/fixtures/db-v2.json'
 import dbV3 from '../test/fixtures/db-v3.json'
 import dbV4 from '../test/fixtures/db-v4.json'
 import dbV5 from '../test/fixtures/db-v5.json'
 import dbV6 from '../test/fixtures/db-v6.json'
+import dbV7 from '../test/fixtures/db-v7.json'
 
 type Row = Record<string, unknown>
 type DbFixture = { version: number; stores: Record<string, string>; tables: Record<string, Row[]> }
 type ExportFixture = { exportedAt: string; vocabulary: { symptoms: Row[]; tags: Row[] }; entries: Row[]; presets?: Row[] }
 type Table = 'entries' | 'presets' | 'symptoms' | 'tags'
 
-const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4, 5: exportV5, 6: exportV6 }
-const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4, 5: dbV5, 6: dbV6 }
+const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4, 5: exportV5, 6: exportV6, 7: exportV7 }
+const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4, 5: dbV5, 6: dbV6, 7: dbV7 }
 
 const regionCodes = (e: Row): Row => (Array.isArray(e.areas) ? { ...e, areas: (e.areas as { regions: string[] }[]).map((a) => ({ ...a, regions: upgradeRegions(a.regions) })) } : e)
+
+/** What a rule may need to know about the rest of the file: the category of a symptom id (§5.2). */
+type Ctx = { categoryOf: (id: string) => SymptomCategory }
+const ctxOf = (symptoms: Row[]): Ctx => ({ categoryOf: (id) => (symptoms.find((s) => s.id === id)?.category as SymptomCategory | undefined) ?? defaultCategory(id) })
+
+type AreaRow = { regions: string[]; intensity: number; strokes?: unknown }
+type Readings = Record<string, number>
+const hasBody = (a: { regions: string[] }) => a.regions.some((r) => r !== 'mind')
+/** 6 → 7 placement: mind readings on the first area holding the brain, body ones on the first with a body, else the first. */
+function place(readings: Readings, areas: { regions: string[] }[], ctx: Ctx): Readings[] {
+  const out: Readings[] = areas.map(() => ({}))
+  const bodyI = Math.max(0, areas.findIndex(hasBody))
+  const mindI = Math.max(0, areas.findIndex((a) => a.regions.includes('mind')))
+  for (const [id, v] of Object.entries(readings)) out[ctx.categoryOf(id) === 'mind' ? mindI : bodyI][id] = v
+  return out
+}
+function layersOf(areas: AreaRow[], readings: Readings, tags: string[], ctx: Ctx): Row[] {
+  if (!areas.length) return [{ regions: [], readings: { ...readings }, tags: [...tags] }]
+  const { pain, ...rest } = readings
+  const placed = place(areas.some(hasBody) || pain === undefined ? rest : readings, areas, ctx)
+  return areas.map((a, i) => ({
+    regions: a.regions,
+    readings: { ...(hasBody(a) ? { pain: a.intensity } : {}), ...placed[i] },
+    tags: i === 0 ? [...tags] : [],
+    ...(a.strokes ? { strokes: a.strokes } : {}),
+  }))
+}
 
 /**
  * The documented, deliberate change from version N to N+1, per table.
  * Anything not written here must come through untouched.
  */
-const UPGRADES: Record<number, Partial<Record<Table, (r: Row) => Row>>> = {
+const UPGRADES: Record<number, Partial<Record<Table, (r: Row, ctx: Ctx) => Row>>> = {
   // 1 → 2: `regions` (flat list) became `areas` (region sets with their own level).
   1: {
     entries: ({ regions, ...e }) => ({
@@ -57,6 +87,19 @@ const UPGRADES: Record<number, Partial<Record<Table, (r: Row) => Row>>> = {
   4: { entries: regionCodes, presets: regionCodes },
   // 5 → 6: symptoms gain a category: fog is a mind symptom, everything else body (§5.2). The mind region is new data, nothing is converted.
   5: { symptoms: (s) => ({ ...s, category: s.id === 'fog' ? 'mind' : 'body' }) },
+  // 6 → 7: `readings`, `areas` and `tags` became `layers` (§5.4, §8): one layer per area, its level as the pain there
+  // (an area holding only the mind had no pain: its level was the highest mental reading, derived, not kept); the
+  // entry's other readings placed by symptom category, its tags on the first layer; history points placed the same
+  // way. Without areas, one layer without regions takes everything. Presets likewise, without readings to place.
+  6: {
+    entries: ({ readings, areas, tags, history, ...e }, ctx) => {
+      const a = (areas as AreaRow[]) ?? []
+      const layers = layersOf(a, (readings as Readings) ?? {}, (tags as string[]) ?? [], ctx)
+      const points = Array.isArray(history) ? (history as { at: string; readings: Readings }[]).map((h) => ({ at: h.at, layers: place(h.readings, layers as { regions: string[] }[], ctx) })) : undefined
+      return { ...e, layers, ...(points ? { history: points } : {}) }
+    },
+    presets: ({ areas, tags, ...p }, ctx) => ({ ...p, layers: layersOf((areas as AreaRow[]) ?? [], {}, (tags as string[]) ?? [], ctx) }),
+  },
 }
 
 /** Rows a database upgrade adds, per version and table: the mind defaults that arrived with version 6, when their ids were free. */
@@ -65,15 +108,15 @@ const ADDED: Record<number, Partial<Record<Table, (rows: Row[]) => Row[]>>> = {
 }
 
 /** What a row of `table` from version `from` must look like today. */
-function today(e: Row, from: number, to: number, table: Table): Row {
+function today(e: Row, from: number, to: number, table: Table, ctx: Ctx): Row {
   let r = e
-  for (let v = from; v < to; v++) r = (UPGRADES[v][table] ?? ((x: Row) => x))(r)
+  for (let v = from; v < to; v++) r = (UPGRADES[v][table] ?? ((x: Row) => x))(r, ctx)
   return r
 }
 
 /** Fields the import normaliser is allowed to fill in when a file left them out. */
 function withDefaults(e: Row): Row {
-  return { endedAt: null, ongoing: false, createdAt: e.at, updatedAt: e.at, tags: [], note: '', ...e }
+  return { endedAt: null, ongoing: false, createdAt: e.at, updatedAt: e.at, note: '', ...e }
 }
 
 const byId = (rows: Row[]) => [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)))
@@ -91,19 +134,20 @@ describe('every version has a fixture', () => {
 })
 
 describe.each(Object.entries(EXPORT_FIXTURES).map(([v, f]) => [Number(v), f] as const))('export file v%i', (version, fixture) => {
+  const ctx = ctxOf(fixture.vocabulary.symptoms)
   it('imports with every field intact', () => {
     const parsed = parseImport(JSON.stringify(fixture))
     expect(parsed.version).toBe(EXPORT_VERSION)
     expect(parsed.exportedAt).toBe(fixture.exportedAt)
     expect(parsed.vocabulary).toEqual({
-      symptoms: fixture.vocabulary.symptoms.map((s) => today(s, version, EXPORT_VERSION, 'symptoms')),
-      tags: fixture.vocabulary.tags.map((x) => today(x, version, EXPORT_VERSION, 'tags')),
+      symptoms: fixture.vocabulary.symptoms.map((s) => today(s, version, EXPORT_VERSION, 'symptoms', ctx)),
+      tags: fixture.vocabulary.tags.map((x) => today(x, version, EXPORT_VERSION, 'tags', ctx)),
     })
-    expect(parsed.presets).toEqual((fixture.presets ?? []).map((p) => today(p, version, EXPORT_VERSION, 'presets')))
+    expect(parsed.presets).toEqual((fixture.presets ?? []).map((p) => today(p, version, EXPORT_VERSION, 'presets', ctx)))
     expect(parsed.entries.map((e) => e.id)).toEqual(fixture.entries.map((e) => e.id))
     for (const e of fixture.entries) {
       const got = parsed.entries.find((x) => x.id === e.id)
-      expect(got, String(e.id)).toEqual(withDefaults(today(e, version, EXPORT_VERSION, 'entries')))
+      expect(got, String(e.id)).toEqual(withDefaults(today(e, version, EXPORT_VERSION, 'entries', ctx)))
     }
   })
 
@@ -133,11 +177,12 @@ describe.each(Object.entries(DB_FIXTURES).map(([v, f]) => [Number(v), f] as cons
 
     const now = resetDb(name)
     await now.open()
+    const ctx = ctxOf(fixture.tables.symptoms ?? [])
     for (const [table, rows] of Object.entries(fixture.tables)) {
       const got = byId(await now.table(table).toArray())
       const added: Row[] = []
       for (let v = version + 1; v <= now.verno; v++) added.push(...(ADDED[v]?.[table as Table]?.([...rows, ...added]) ?? []))
-      const want = byId([...rows.map((r) => today(r, version, now.verno, table as Table)), ...added])
+      const want = byId([...rows.map((r) => today(r, version, now.verno, table as Table, ctx)), ...added])
       expect(got, table).toEqual(want)
     }
   })

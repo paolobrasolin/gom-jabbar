@@ -16,7 +16,7 @@
   import { formatDuration } from '../lib/time'
   import { PAIN, type Entry, type Preset } from '../lib/types'
   import { lastByPreset } from '../lib/presets'
-  import { headline, symptomName } from '../lib/summary'
+  import { entryHeadline, symptomName } from '../lib/summary'
   import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
 
@@ -61,9 +61,9 @@
   })
   const nudge = $derived(backupDue(prefs.lastBackupAt, oldest.value, prefs.backupSnoozedUntil, tick))
   let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
-  /** Anything worth clearing: areas, a time, a tag, a note, a reading other than pain. The pain level alone is not. */
+  /** Anything worth clearing: a region, a tag or a reading other than pain on any layer, a time, a note. The pain level alone is not. */
   const dirty = $derived(
-    draft.areas.length > 0 || draft.at !== null || draft.tags.length > 0 || draft.note.trim() !== '' || Object.entries(draft.readings).some(([id, v]) => id !== PAIN && v > 0),
+    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.entries(l.readings).some(([id, v]) => id !== PAIN && v > 0)) || draft.at !== null || draft.note.trim() !== '',
   )
   let saving = $state(false)
   let editing = $state.raw<Entry | null>(null)
@@ -72,7 +72,7 @@
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 
   function reset() {
-    draft = emptyDraft({ ongoing: draft.ongoing, pain: draft.readings[PAIN] ?? 5 })
+    draft = emptyDraft({ ongoing: draft.ongoing, pain: draft.layers[draft.cur]?.readings[PAIN] ?? 5 })
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
   }
 
@@ -113,12 +113,12 @@
   {#if active.value.length}
     <div class="episodes">
       {#each active.value as e (e.id)}
-        {@const hl = headline(e.readings)}
+        {@const hl = entryHeadline(e)}
         <div class="card episode row">
           <button class="row grow open" onclick={() => (episode = e)} aria-label={t('episode.active')}>
             <span class="pill" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
             <span class="grow small text">
-              <span class="line"><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} areas={e.areas} tags={e.tags} tagDefs={tags.value} /></span>
+              <span class="line"><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={e.layers} tagDefs={tags.value} /></span>
               <span class="muted">{t('episode.since', { d: formatDuration(durationMs(e, tick) ?? 0, units) })}</span>
             </span>
           </button>
@@ -132,7 +132,7 @@
     <div class="chips presets" aria-label={t('preset.strip')}>
       {#each presets.value as p (p.id)}
         {@const last = lastBy.value[p.id]}
-        {@const hl = last ? headline(last.readings) : null}
+        {@const hl = last ? entryHeadline(last) : null}
         <button class="chip small tchip" onclick={() => (presetOpen = p)}>
           {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>{/if}
           {p.name} · {last ? formatDuration(Math.max(0, tick - Date.parse(last.at)), units) : t('preset.never')}

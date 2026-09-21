@@ -1,12 +1,12 @@
 import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
-import { REGIONS, FULL_BODY, MIND } from './regions'
+import { REGIONS, FULL_BODY } from './regions'
 import { durationMs } from './entries'
-import { hasMind } from './areas'
-import { mindMax } from './vocabulary'
+import { mergedReadings, mergedTags } from './layers'
 import { dayKey } from './time'
 
 const ALL_IDS = [...new Set(REGIONS.map((r) => r.id))]
-const pain = (e: Entry) => e.readings[PAIN] ?? 0
+const readings = (e: Entry) => mergedReadings(e.layers)
+const pain = (e: Entry) => readings(e)[PAIN] ?? 0
 
 export function rangeStart(days: number, now = new Date()): Date {
   const d = new Date(now)
@@ -86,23 +86,26 @@ export function summarize(entries: Entry[], days: number, now = Date.now()): Sum
 export type Heat = { mean: number; count: number; weight: number }
 
 /**
- * Per-region mean intensity and how often it appeared, weight = count / max count. Full body counts for every
- * body region. The mind counts once per entry that selected it, at the highest mental reading of that entry (§6.3).
+ * Per-region mean level of one symptom and how often it appeared, weight = count / max count (§6.3). An entry
+ * counts once per region, at the max over its layers that carry the symptom; layers without it contribute
+ * nothing. Full body counts for every body region; the mind is one more region.
  */
-export function regionHeat(entries: Entry[], symptoms: Symptom[]): Map<string, Heat> {
+export function regionHeat(entries: Entry[], symptom = PAIN): Map<string, Heat> {
   const acc = new Map<string, { sum: number; count: number }>()
-  const add = (id: string, v: number) => {
-    const c = acc.get(id) ?? { sum: 0, count: 0 }
-    c.sum += v
-    c.count++
-    acc.set(id, c)
-  }
   for (const e of entries) {
-    for (const a of e.areas) {
-      const ids = a.regions.includes(FULL_BODY) ? ALL_IDS : a.regions.filter((r) => r !== MIND)
-      for (const id of ids) add(id, a.intensity)
+    const best = new Map<string, number>()
+    for (const l of e.layers) {
+      const v = l.readings[symptom]
+      if (typeof v !== 'number') continue
+      const ids = l.regions.includes(FULL_BODY) ? [...ALL_IDS, ...l.regions.filter((r) => r !== FULL_BODY)] : l.regions
+      for (const id of ids) best.set(id, Math.max(best.get(id) ?? 0, v))
     }
-    if (hasMind(e.areas)) add(MIND, mindMax(e.readings, symptoms))
+    for (const [id, v] of best) {
+      const c = acc.get(id) ?? { sum: 0, count: 0 }
+      c.sum += v
+      c.count++
+      acc.set(id, c)
+    }
   }
   const maxCount = Math.max(1, ...[...acc.values()].map((c) => c.count))
   return new Map([...acc].map(([id, c]) => [id, { mean: c.sum / c.count, count: c.count, weight: c.count / maxCount }]))
@@ -119,7 +122,7 @@ export function tagComparison(entries: Entry[], tags: Tag[], minDays = MIN_DAYS_
     const k = dayKey(e.at)
     const d = days.get(k) ?? { max: 0, tags: new Set<string>() }
     d.max = Math.max(d.max, pain(e))
-    e.tags.forEach((t) => d.tags.add(t))
+    mergedTags(e.layers).forEach((t) => d.tags.add(t))
     days.set(k, d)
   }
   const all = [...days.values()]
@@ -141,7 +144,7 @@ export function symptomMeans(entries: Entry[], symptoms: Symptom[]): SymptomMean
   return symptoms
     .filter((s) => s.id !== PAIN)
     .map((symptom) => {
-      const vals = entries.map((e) => e.readings[symptom.id]).filter((v): v is number => typeof v === 'number' && v > 0)
+      const vals = entries.map((e) => readings(e)[symptom.id]).filter((v): v is number => typeof v === 'number' && v > 0)
       return { symptom, mean: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0, count: vals.length }
     })
     .filter((x) => x.count > 0)
@@ -151,7 +154,7 @@ export function symptomMeans(entries: Entry[], symptoms: Symptom[]): SymptomMean
 /** Tag usage counts in the range. */
 export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; count: number }[] {
   const c = new Map<string, number>()
-  for (const e of entries) for (const t of e.tags) c.set(t, (c.get(t) ?? 0) + 1)
+  for (const e of entries) for (const t of mergedTags(e.layers)) c.set(t, (c.get(t) ?? 0) + 1)
   return tags
     .map((tag) => ({ tag, count: c.get(tag.id) ?? 0 }))
     .filter((x) => x.count > 0)
@@ -167,7 +170,7 @@ export function presetSeries(entries: Entry[], presets: Preset[]): { preset: Pre
       const id = preset.symptomIds[0] ?? PAIN
       const points = entries
         .filter((e) => e.preset === preset.id)
-        .map((e) => ({ at: Date.parse(e.at), value: e.readings[id] ?? 0 }))
+        .map((e) => ({ at: Date.parse(e.at), value: readings(e)[id] ?? 0 }))
         .sort((a, b) => a.at - b.at)
       return { preset, points }
     })

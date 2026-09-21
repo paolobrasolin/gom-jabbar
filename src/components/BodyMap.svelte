@@ -3,13 +3,14 @@
   import { figureBox, MIND, MIND_SHAPE, type View } from '../lib/regions'
   import { prefs } from '../lib/prefs.svelte'
   import { intensityColor } from '../lib/color'
-  import type { Area } from '../lib/areas'
+  import type { Layer } from '../lib/layers'
+  import { layerLevel } from '../lib/summary'
   import { regionLabel } from '../lib/regionLabel'
   import type { HeatStroke } from '../lib/strokes'
   import { t } from '../i18n/index.svelte'
 
   let {
-    areas = [],
+    layers = [],
     cur = -1,
     onToggle,
     onLongPress,
@@ -18,26 +19,28 @@
     heat,
     strokes = [],
   }: {
-    areas?: Area[]
-    /** Index of the area being edited; its regions get an outline when there is more than one area. */
+    layers?: Layer[]
+    /** Index of the layer being edited; its regions get an outline and the other layers fade when there is more than one. */
     cur?: number
     onToggle?: (id: string) => void
     onLongPress?: (id: string) => void
     readonly?: boolean
     labels?: { front: string; back: string; mind?: string }
-    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity. Overrides `areas`. */
+    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity. Overrides `layers`. */
     heat?: Map<string, { mean: number; weight: number }>
-    /** Heatmap mode: strokes to shade over the figures, each with its level. Edit mode draws the areas' own. */
+    /** Heatmap mode: strokes to shade over the figures, each with its level. Edit mode draws the layers' own. */
     strokes?: HeatStroke[]
   } = $props()
 
   const box = $derived(figureBox(prefs.figure))
   const views: View[] = ['front', 'back']
-  /** The mind is one region among the others (§5.3): coloured by its area, or by the heat like any other. */
-  const mindArea = $derived(areas.find((a) => a.regions.includes(MIND)))
+  /** The mind is one region among the others (§5.3): coloured by the current layer, faded when only another holds it, or by the heat. */
+  const mindCur = $derived(cur >= 0 && !!layers[cur]?.regions.includes(MIND))
+  const mindLayer = $derived(mindCur ? layers[cur] : layers.find((l) => l.regions.includes(MIND)))
   const mindHeat = $derived(heat?.get(MIND))
-  const mindColor = $derived(heat ? (mindHeat ? intensityColor(mindHeat.mean) : undefined) : mindArea ? intensityColor(mindArea.intensity) : undefined)
-  const mindOutlined = $derived(areas.length > 1 && cur >= 0 && !!areas[cur]?.regions.includes(MIND))
+  const mindColor = $derived(heat ? (mindHeat ? intensityColor(mindHeat.mean) : undefined) : mindLayer ? intensityColor(layerLevel(mindLayer)) : undefined)
+  const mindOutlined = $derived(layers.length > 1 && mindCur)
+  const mindGhost = $derived(!heat && layers.length > 1 && !!mindLayer && !mindCur)
 </script>
 
 {#snippet mind()}
@@ -45,7 +48,7 @@
     <svg viewBox="-4 -4 {MIND_SHAPE.w + 8} {MIND_SHAPE.h + 8}" role="group" aria-label={labels.mind}>
       <g class="paint">
         <path
-          class="region{mindColor ? ' on' : ''}{mindOutlined ? ' hi' : ''}"
+          class="region{mindColor ? ' on' : ''}{mindOutlined ? ' hi' : ''}{mindGhost ? ' ghost' : ''}"
           data-region={MIND}
           d={MIND_SHAPE.outline}
           style={mindColor ? `fill:${mindColor}${mindHeat ? `;fill-opacity:${(0.35 + 0.65 * mindHeat.weight).toFixed(2)}` : ''}` : undefined} />
@@ -58,7 +61,7 @@
             d={MIND_SHAPE.outline}
             role="button"
             tabindex="0"
-            aria-pressed={!!mindArea}
+            aria-pressed={mindCur}
             aria-label={regionLabel(MIND, t)}
             onclick={() => onToggle?.(MIND)}
             onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onToggle?.(MIND))} />
@@ -73,7 +76,7 @@
   {#each views as view (view)}
     <div class="figure">
       <svg viewBox="-4 -4 {box.w + 8} {box.h + 8}" role="group" aria-label={labels[view]}>
-        <BodyFigure {view} {areas} {cur} {heat} {strokes} {readonly} {onToggle} {onLongPress} />
+        <BodyFigure {view} {layers} {cur} {heat} {strokes} {readonly} {onToggle} {onLongPress} />
       </svg>
       {#if labels[view]}<span class="label">{labels[view]}</span>{/if}
     </div>
@@ -128,6 +131,8 @@
     transition: fill 0.12s;
   }
   .region.hi { stroke: var(--ink); stroke-width: 2; }
+  /* Another layer's selection: visible, but not what a tap edits. */
+  .region.ghost { fill-opacity: 0.4; }
   .hit {
     fill: transparent;
     stroke: transparent;

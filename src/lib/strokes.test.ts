@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { regionAt, partition, simplify, addStroke, undoStroke, clearStrokes, pieceCount, allStrokes, strokePath, clientToFigure, figureCenter, mainView, BRUSH, type RawStroke } from './strokes'
-import { finalize, tapRegion, tapSet, toggleFull, type Stroke } from './areas'
+import { regionAt, partition, simplify, addStroke, undoStroke, clearStrokes, allStrokes, strokePath, clientToFigure, figureCenter, mainView, BRUSH, type RawStroke } from './strokes'
+import { finalize, tapRegion, tapSet, toggleFull, newLayer, pieceCount, type Stroke } from './layers'
 import { REGION_BY_ID, shapeOf, shapeCenter, figureBox, type FigureId } from './regions'
 
 const F: FigureId = 'female'
@@ -11,7 +11,8 @@ const dot = (id: string, fig: FigureId = F): RawStroke => ({ fig, view: viewOf(i
 const line = (a: string, b: string): RawStroke => ({ fig: F, view: viewOf(a), points: [centre(a), centre(b)], w: BRUSH })
 /** The piece a dot becomes. */
 const piece = (id: string, fig: FigureId = F): Stroke => ({ region: id, ...dot(id, fig) })
-const empty = { areas: [], cur: 0 }
+const empty = { layers: [newLayer({ pain: 6 })], cur: 0 }
+const L = (regions: string[], pain: number, strokes?: Stroke[]) => ({ regions, readings: { pain }, tags: [], ...(strokes ? { strokes } : {}) })
 const regionsOf = (pieces: Stroke[]) => pieces.map((p) => p.region)
 const first = (p: Stroke) => p.points[0]
 const last = (p: Stroke) => p.points[p.points.length - 1]
@@ -95,112 +96,101 @@ describe('simplify', () => {
 })
 
 describe('addStroke', () => {
-  it('creates the first area with the brush level, its pieces and their regions', () => {
-    const s = addStroke(empty, line('152', '160'), 6)
-    expect(s.areas).toHaveLength(1)
-    expect(s.areas[0].regions).toEqual(['152', '154', '160'])
-    expect(s.areas[0].intensity).toBe(6)
-    expect(regionsOf(s.areas[0].strokes!)).toEqual(['152', '154', '160'])
+  it('paints the current layer: its pieces and their regions join it', () => {
+    const s = addStroke(empty, line('152', '160'))
+    expect(s.layers).toHaveLength(1)
+    expect(s.layers[0].regions).toEqual(['152', '154', '160'])
+    expect(s.layers[0].readings).toEqual({ pain: 6 })
+    expect(regionsOf(s.layers[0].strokes!)).toEqual(['152', '154', '160'])
     expect(s.cur).toBe(0)
-    expect(addStroke(empty, { fig: F, view: 'front', points: [], w: BRUSH }, 6)).toEqual(empty)
+    expect(addStroke(empty, { fig: F, view: 'front', points: [], w: BRUSH })).toEqual(empty)
+    expect(addStroke({ layers: [], cur: 0 }, dot('152'))).toEqual({ layers: [], cur: 0 })
   })
 
-  it('pulls painted regions out of other areas with their paint; an area emptied of regions goes', () => {
-    let s = addStroke(empty, dot('152'), 8)
-    s = { areas: [...s.areas, { regions: ['110'], intensity: 3 }], cur: 1 }
-    s = addStroke(s, dot('152'), 3)
-    expect(s.areas).toEqual([{ regions: ['110', '152'], intensity: 3, strokes: [piece('152'), piece('152')] }])
-    expect(s.cur).toBe(0)
-  })
-
-  it('leaves full body alone but keeps the paint', () => {
-    const full = addStroke({ areas: [{ regions: ['*'], intensity: 4 }], cur: 0 }, dot('110'), 4)
-    expect(full.areas).toEqual([{ regions: ['*'], intensity: 4, strokes: [piece('110')] }])
-  })
-
-  it('lands in the current area even when it holds only the mind, the area taking the brush level', () => {
-    const mindCur = { areas: [{ regions: ['110'], intensity: 4 }, { regions: ['mind'], intensity: 7 }], cur: 1 }
-    const s = addStroke(mindCur, dot('152'), 9)
-    expect(s.areas).toEqual([{ regions: ['110'], intensity: 4 }, { regions: ['152', 'mind'], intensity: 9, strokes: [piece('152')] }])
+  it('never touches another layer: the same region can be painted in two', () => {
+    let s = addStroke(empty, dot('152'))
+    s = { layers: [...s.layers, L(['110'], 3)], cur: 1 }
+    s = addStroke(s, dot('152'))
+    expect(s.layers).toEqual([L(['152'], 6, [piece('152')]), L(['110', '152'], 3, [piece('152')])])
     expect(s.cur).toBe(1)
-    const mindOnly = addStroke({ areas: [{ regions: ['mind'], intensity: 7 }], cur: 0 }, dot('152'), 9)
-    expect(mindOnly.areas).toEqual([{ regions: ['152', 'mind'], intensity: 9, strokes: [piece('152')] }])
-    expect(mindOnly.cur).toBe(0)
+  })
+
+  it('leaves full body alone but keeps the paint, mind included', () => {
+    const full = addStroke({ layers: [L(['*', 'mind'], 4)], cur: 0 }, dot('110'))
+    expect(full.layers).toEqual([L(['*', 'mind'], 4, [piece('110')])])
   })
 })
 
 describe('paint follows its region', () => {
-  it('a tap on a painted region in the current area removes it with its paint', () => {
-    let s = addStroke(empty, line('152', '160'), 6)
-    s = tapRegion(s, '154', false, 6)
-    expect(s.areas[0].regions).toEqual(['152', '160'])
-    expect(regionsOf(s.areas[0].strokes!)).toEqual(['152', '160'])
+  it('a tap on a painted region in the current layer removes it with its paint', () => {
+    let s = addStroke(empty, line('152', '160'))
+    s = tapRegion(s, '154', false)
+    expect(s.layers[0].regions).toEqual(['152', '160'])
+    expect(regionsOf(s.layers[0].strokes!)).toEqual(['152', '160'])
     // Mirror takes the other side too, paint included.
-    s = addStroke(s, dot('153'), 6)
-    s = tapRegion(s, '152', true, 6)
-    expect(s.areas[0].regions).toEqual(['160'])
-    expect(regionsOf(s.areas[0].strokes!)).toEqual(['160'])
+    s = addStroke(s, dot('153'))
+    s = tapRegion(s, '152', true)
+    expect(s.layers[0].regions).toEqual(['160'])
+    expect(regionsOf(s.layers[0].strokes!)).toEqual(['160'])
   })
 
-  it('a tap or a set that moves a region to another area moves its paint along', () => {
-    let s = addStroke(empty, line('152', '160'), 6)
-    s = { areas: [...s.areas, { regions: [], intensity: 2 }], cur: 1 }
-    s = tapRegion(s, '154', false, 2)
-    expect(regionsOf(s.areas[0].strokes!)).toEqual(['152', '160'])
-    expect(s.areas[1]).toEqual({ regions: ['154'], intensity: 2, strokes: [expect.objectContaining({ region: '154' })] })
-    s = tapSet({ ...s, cur: 0 }, ['154', '155'], 6)
-    expect(regionsOf(s.areas[0].strokes!)).toEqual(['152', '160', '154'])
-    expect(s.areas).toHaveLength(1)
-    // A set fully in the current area comes off with its paint.
-    s = tapSet(s, ['152', '154'], 6)
-    expect(regionsOf(s.areas[0].strokes!)).toEqual(['160'])
+  it('a tap in another layer adds the region there without taking the paint from the first; a set comes off with its paint', () => {
+    let s = addStroke(empty, line('152', '160'))
+    s = { layers: [...s.layers, L([], 2)], cur: 1 }
+    s = tapRegion(s, '154', false)
+    expect(regionsOf(s.layers[0].strokes!)).toEqual(['152', '154', '160'])
+    expect(s.layers[1]).toEqual(L(['154'], 2))
+    s = tapSet({ ...s, cur: 0 }, ['152', '154'])
+    expect(regionsOf(s.layers[0].strokes!)).toEqual(['160'])
+    expect(s.layers[0].regions).toEqual(['160'])
   })
 
-  it('full body keeps the body areas\' paint; an area without paint gets no strokes key', () => {
-    const s = addStroke(empty, dot('152'), 6)
-    expect(toggleFull(s, 6).areas).toEqual([{ regions: ['*'], intensity: 6, strokes: [piece('152')] }])
-    expect(tapRegion(empty, '110', false, 5).areas[0]).not.toHaveProperty('strokes')
+  it("full body keeps the layer's paint; a layer without paint gets no strokes key", () => {
+    const s = addStroke(empty, dot('152'))
+    expect(toggleFull(s).layers).toEqual([L(['*'], 6, [piece('152')])])
+    expect(tapRegion(empty, '110', false).layers[0]).not.toHaveProperty('strokes')
   })
 })
 
 describe('undoStroke / clearStrokes / pieceCount', () => {
-  it('take pieces off the current area and keep its regions', () => {
-    let s = addStroke(empty, line('152', '160'), 6)
-    s = addStroke(s, dot('110'), 6)
-    expect(pieceCount(s.areas)).toBe(4)
+  it('take pieces off the current layer and keep its regions', () => {
+    let s = addStroke(empty, line('152', '160'))
+    s = addStroke(s, dot('110'))
+    expect(pieceCount(s.layers)).toBe(4)
     s = undoStroke(s)
-    expect(s.areas[0].regions).toEqual(['110', '152', '154', '160'])
-    expect(regionsOf(s.areas[0].strokes!)).toEqual(['152', '154', '160'])
+    expect(s.layers[0].regions).toEqual(['110', '152', '154', '160'])
+    expect(regionsOf(s.layers[0].strokes!)).toEqual(['152', '154', '160'])
     s = undoStroke(s, 3)
-    expect(s.areas[0]).toEqual({ regions: ['110', '152', '154', '160'], intensity: 6, strokes: [] })
+    expect(s.layers[0]).toEqual(L(['110', '152', '154', '160'], 6, []))
     expect(undoStroke(s)).toEqual(s)
-    expect(clearStrokes(addStroke(s, dot('110'), 6)).areas[0].strokes).toEqual([])
+    expect(clearStrokes(addStroke(s, dot('110'))).layers[0].strokes).toEqual([])
     expect(undoStroke(empty)).toEqual(empty)
     expect(clearStrokes(empty)).toEqual(empty)
-    expect(pieceCount([{ regions: ['110'], intensity: 1 }])).toBe(0)
+    expect(pieceCount([L(['110'], 1)])).toBe(0)
   })
 })
 
 describe('finalize keeps strokes', () => {
   it('rounds coordinates to a tenth and drops an empty list', () => {
-    const areas = finalize([
-      { regions: ['152'], intensity: 6, strokes: [{ region: '152', fig: F, view: 'front', points: [[100.123, 250.678]], w: 8.04 }] },
-      { regions: ['110'], intensity: 2, strokes: [] },
+    const layers = finalize([
+      L(['152'], 6, [{ region: '152', fig: F, view: 'front', points: [[100.123, 250.678]], w: 8.04 }]),
+      L(['110'], 2, []),
     ])
-    expect(areas).toEqual([{ regions: ['152'], intensity: 6, strokes: [{ region: '152', fig: F, view: 'front', points: [[100.1, 250.7]], w: 8 }] }, { regions: ['110'], intensity: 2 }])
+    expect(layers).toEqual([L(['152'], 6, [{ region: '152', fig: F, view: 'front', points: [[100.1, 250.7]], w: 8 }]), L(['110'], 2)])
   })
 })
 
 describe('allStrokes and strokePath', () => {
-  it('collects every stroke with its level and draws dots for single points', () => {
+  it('collects every stroke at the level of one symptom, skipping layers without it, and draws dots for single points', () => {
     const a = piece('152')
     const [b] = partition(line('261', '263'))
     const entries = [
-      { areas: [{ regions: ['152'], intensity: 6, strokes: [a] }, { regions: ['110'], intensity: 2 }] },
-      { areas: [{ regions: ['261'], intensity: 9, strokes: [b] }] },
-      { areas: [] },
+      { layers: [L(['152'], 6, [a]), L(['110'], 2)] },
+      { layers: [{ regions: ['261'], readings: { pain: 9, swelling: 4 }, tags: [], strokes: [b] }] },
+      { layers: [] },
     ]
     expect(allStrokes(entries)).toEqual([{ ...a, intensity: 6 }, { ...b, intensity: 9 }])
+    expect(allStrokes(entries, 'swelling')).toEqual([{ ...b, intensity: 4 }])
     expect(strokePath(a)).toBe(`M ${a.points[0][0]} ${a.points[0][1]} l 0.01 0`)
     expect(strokePath(b)).toBe(`M ${b.points[0][0]} ${b.points[0][1]} L ${b.points[1][0]} ${b.points[1][1]}`)
     expect(strokePath({ points: [] })).toBe('')

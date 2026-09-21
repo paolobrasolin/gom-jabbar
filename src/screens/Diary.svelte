@@ -9,7 +9,7 @@
   import { intensityColor, intensityInk } from '../lib/color'
   import { dayKey, formatDay, formatTime, formatDuration } from '../lib/time'
   import type { Entry } from '../lib/types'
-  import { headline, symptomName, trail } from '../lib/summary'
+  import { entryHeadline, symptomName, trail } from '../lib/summary'
 
   let days = $state(30)
   const cutoff = $derived(new Date(Date.now() - days * 86_400_000).toISOString())
@@ -48,14 +48,14 @@
         <h2 class="day">{g.label}</h2>
         <div class="list">
           {#each g.items as e (e.id)}
-            {@const hl = headline(e.readings)}
+            {@const hl = entryHeadline(e)}
             {@const levels = trail(e, hl.id)}
             {@const dur = durationMs(e)}
             <button class="entry card row" onclick={() => (editing = e)}>
               <span class="time muted small">{formatTime(e.at, locale())}</span>
               <span class="pill" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
               <span class="grow body">
-                <span class="line"><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} areas={e.areas} tags={e.tags} tagDefs={tags.value} /></span>
+                <span class="line"><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={e.layers} tagDefs={tags.value} /></span>
                 {#if dur !== null}
                   <span class="small muted">{e.ongoing ? t('diary.ongoing') : formatDuration(dur, units)}{#if levels.length}{` · ${levels.join(' → ')}`}{/if}</span>
                 {/if}

@@ -1,6 +1,7 @@
 import { db } from './db'
 import { PAIN, type Entry, type Symptom, type SymptomCategory, type Tag, type TagGroup, type Lang } from './types'
 import { isMindSymptom } from './vocabulary'
+import { mergedTags } from './layers'
 
 type Table = 'symptoms' | 'tags'
 
@@ -70,6 +71,6 @@ export function frequentTags(entries: Entry[], tags: Tag[]): Tag[] {
   const enabled = tags.filter((t) => t.enabled)
   const ids = new Set(enabled.map((t) => t.id))
   const count = new Map<string, number>()
-  for (const e of entries) for (const id of e.tags) if (ids.has(id)) count.set(id, (count.get(id) ?? 0) + 1)
+  for (const e of entries) for (const id of mergedTags(e.layers)) if (ids.has(id)) count.set(id, (count.get(id) ?? 0) + 1)
   return [...enabled].sort((a, b) => (count.get(b.id) ?? 0) - (count.get(a.id) ?? 0))
 }

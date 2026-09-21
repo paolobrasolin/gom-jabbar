@@ -52,7 +52,7 @@ async function pickFile(text: string) {
 
 describe('Settings presets', () => {
   it('lists presets and deletes with undo', async () => {
-    await addPreset({ name: 'Schiena', areas: [], symptomIds: ['pain'], tags: [], ongoing: false })
+    await addPreset({ name: 'Schiena', layers: [], symptomIds: ['pain'], ongoing: false })
     await openSettings()
     const row = (await screen.findByText('Schiena')).closest('.preset')!
     await fireEvent.click(row.querySelector('button')!)
@@ -127,7 +127,7 @@ describe('Settings preferences', () => {
   })
 
   it('shows the count of entries and the build version', async () => {
-    await addEntry({ areas: [{ regions: ['152'], intensity: 4 }] })
+    await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }] })
     await openSettings()
     expect(await screen.findByText(/1 voci/)).toBeInTheDocument()
     expect(screen.getByText(/^Versione \d+\.\d+\.\d+\+/)).toBeInTheDocument()
@@ -136,7 +136,7 @@ describe('Settings preferences', () => {
 
 describe('Settings backup', () => {
   it('shares the JSON backup and records the date', async () => {
-    await addEntry({ areas: [{ regions: ['152'], intensity: 4 }], note: 'ciao' })
+    await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }], note: 'ciao' })
     const shared = stubShare()
     await openSettings()
     expect(screen.getByText('Nessun backup ancora fatto.')).toBeInTheDocument()
@@ -166,7 +166,7 @@ describe('Settings backup', () => {
   })
 
   it('shares a CSV', async () => {
-    await addEntry({ areas: [{ regions: ['152'], intensity: 4 }], tags: ['rest'] })
+    await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 }, tags: ['rest'] }] })
     const shared = stubShare()
     await openSettings()
     await fireEvent.click(screen.getByRole('button', { name: 'Esporta CSV' }))
@@ -175,7 +175,7 @@ describe('Settings backup', () => {
     expect(shared[0].type).toBe('text/csv')
     const csv = await readFile(shared[0])
     expect(csv.startsWith('id,at,endedAt,ongoing,pain,swelling')).toBe(true)
-    expect(csv).toContain('152:4,gamba sx:4,rest,Riposo')
+    expect(csv).toContain('152:pain=4:rest,gamba sx:pain=4,rest,Riposo')
     expect(prefs.lastBackupAt).toBeNull()
   })
 
@@ -229,8 +229,8 @@ describe('Settings import', () => {
   })
 
   it('previews the file and merges it into the current data', async () => {
-    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', areas: [{ regions: ['152'], intensity: 4 }] })
-    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', areas: [{ regions: ['153'], intensity: 6 }] })
+    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 4 } }] })
+    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }] })
     const file = await buildExport()
     file.exportedAt = '2026-09-10T08:00:00.000Z'
     await db.entries.delete(other.id)
@@ -241,17 +241,17 @@ describe('Settings import', () => {
     expect(sheet).toHaveTextContent('Unendo: 1 nuove, 0 aggiornate.')
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Unisci ai dati attuali' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(2))
-    expect((await db.entries.get(mine.id))?.areas[0].intensity).toBe(4)
+    expect((await db.entries.get(mine.id))?.layers[0].readings.pain).toBe(4)
     expect(await screen.findByText('Importate 1 voci')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Annulla' })).not.toBeInTheDocument()
   })
 
   it('replaces everything, with undo', async () => {
-    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', areas: [{ regions: ['153'], intensity: 6 }] })
+    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }] })
     const file = await buildExport()
     await db.entries.delete(other.id)
-    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', areas: [{ regions: ['152'], intensity: 4 }] })
+    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 4 } }] })
     await openSettings()
     await pickFile(JSON.stringify(file))
     const sheet = await screen.findByRole('dialog', { name: 'Importa' })

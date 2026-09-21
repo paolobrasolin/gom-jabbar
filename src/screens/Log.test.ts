@@ -9,7 +9,7 @@ import { addPreset } from '../lib/presets'
 import { addEntry } from '../lib/entries'
 import { regionLabel } from '../lib/regionLabel'
 import { t } from '../i18n/index.svelte'
-import type { Stroke } from '../lib/areas'
+import { mergedReadings, mergedTags, type Stroke } from '../lib/layers'
 
 let db: ReturnType<typeof resetDb>
 beforeEach(() => {
@@ -28,8 +28,7 @@ describe('Log fast path', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.areas).toEqual([{ regions: ['152', '153'], intensity: 7 }])
-    expect(e.readings.pain).toBe(7)
+    expect(e.layers).toEqual([{ regions: ['152', '153'], readings: { pain: 7 }, tags: [] }])
     expect(e.ongoing).toBe(false)
     expect(await screen.findByText('Salvato')).toBeInTheDocument()
     // No today strip: the toast is the receipt, the diary is the review.
@@ -37,7 +36,7 @@ describe('Log fast path', () => {
     expect(screen.queryByText('niente ancora')).not.toBeInTheDocument()
   })
 
-  it('supports two areas with different levels', async () => {
+  it('supports two layers with different levels, the second starting at the level of the first', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
@@ -47,10 +46,10 @@ describe('Log fast path', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.areas).toHaveLength(2)
-    expect(e.areas[0].intensity).toBe(8)
-    expect(e.areas[1]).toEqual({ regions: ['130', '131'], intensity: 3 })
-    expect(e.readings.pain).toBe(8)
+    expect(e.layers).toHaveLength(2)
+    expect(e.layers[0].readings.pain).toBe(8)
+    expect(e.layers[1]).toEqual({ regions: ['130', '131'], readings: { pain: 3 }, tags: [] })
+    expect(mergedReadings(e.layers).pain).toBe(8)
   })
 
   it('undo removes the saved entry', async () => {
@@ -105,8 +104,7 @@ describe('Details inline', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.tags).toEqual(['rest'])
-    expect(e.readings.swelling).toBe(4)
+    expect(e.layers).toEqual([{ regions: [], readings: { pain: 5, swelling: 4 }, tags: ['rest'] }])
     expect(e.note).toBe('dopo la corsa')
     expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveValue('0')
     expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('')
@@ -129,7 +127,7 @@ describe('Details inline', () => {
     await fireEvent.click(chip)
     expect(chip).toHaveAttribute('aria-pressed', 'false')
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
-    await waitFor(async () => expect((await db.entries.toArray())[0]?.tags).toEqual([]))
+    await waitFor(async () => expect(mergedTags((await db.entries.toArray())[0].layers)).toEqual([]))
   })
 
   it('Azzera empties the form and the toast undoes it', async () => {
@@ -180,7 +178,7 @@ describe('Tag discoverability', () => {
     await fireEvent.click(within(strip).getByRole('button', { name: 'Calore' }))
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
-    await waitFor(async () => expect((await db.entries.toArray())[0]?.tags).toEqual(['heat']))
+    await waitFor(async () => expect(mergedTags((await db.entries.toArray())[0].layers)).toEqual(['heat']))
     // Once used, a tag is the most frequent: first after the toggle, and the form is clean again.
     await waitFor(() => expect(names()[1]).toBe('Calore'))
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'false')
@@ -194,7 +192,7 @@ describe('Tag discoverability', () => {
     let sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
     await fireEvent.click(await within(sheet).findByRole('button', { name: 'Riposo' }))
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
-    await waitFor(async () => expect((await db.entries.toArray())[0].tags).toEqual(['rest']))
+    await waitFor(async () => expect(mergedTags((await db.entries.toArray())[0].layers)).toEqual(['rest']))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Episodio in corso' })).toHaveTextContent('Riposo'))
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio in corso' }))
     sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
@@ -204,7 +202,7 @@ describe('Tag discoverability', () => {
     await waitFor(async () => {
       const [e] = await db.entries.toArray()
       expect(e.ongoing).toBe(false)
-      expect(e.tags).toEqual(['rest', 'heat'])
+      expect(mergedTags(e.layers)).toEqual(['rest', 'heat'])
     })
   })
 })
@@ -235,8 +233,8 @@ describe('Headline reading', () => {
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
     await waitFor(async () => {
       const [e] = await db.entries.toArray()
-      expect(e.readings).toEqual({ pain: 2, swelling: 6 })
-      expect(e.history?.map((h) => h.readings)).toEqual([{ pain: 5, swelling: 3 }, { pain: 2, swelling: 6 }])
+      expect(e.layers[0].readings).toEqual({ pain: 2, swelling: 6 })
+      expect(e.history?.map((h) => h.layers)).toEqual([[{ pain: 5, swelling: 3 }], [{ pain: 2, swelling: 6 }]])
     })
     // The card now leads with swelling, the highest reading.
     await waitFor(() => expect(screen.getByRole('button', { name: 'Episodio in corso' })).toHaveTextContent(/^6\s*gonfiore/))
@@ -244,7 +242,7 @@ describe('Headline reading', () => {
 })
 
 describe('Mind and mind symptoms', () => {
-  it('opens with both kinds of sliders; the mind shows the mind ones only and saves a mind area at the fog level, no pain', async () => {
+  it('opens with both kinds of sliders; the mind shows the mind ones only and saves a mind layer with the mental readings, no pain', async () => {
     render(App)
     expect(await screen.findByRole('slider', { name: 'Nebbia mentale' })).toBeInTheDocument()
     expect(screen.getByRole('slider', { name: 'Dolore' })).toBeInTheDocument()
@@ -255,12 +253,11 @@ describe('Mind and mind symptoms', () => {
     expect(screen.queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
     expect(screen.queryByRole('slider', { name: 'Gonfiore' })).not.toBeInTheDocument()
     await fireEvent.input(screen.getByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '6' } })
-    expect(screen.getByRole('button', { name: /6\s*mente/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /6\s*nebbia mentale · mente/ })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.areas).toEqual([{ regions: ['mind'], intensity: 6 }])
-    expect(e.readings).toEqual({ pain: 0, fog: 6 })
+    expect(e.layers).toEqual([{ regions: ['mind'], readings: { fog: 6 }, tags: [] }])
     // The form is back to both kinds, the pain level untouched by the detour.
     expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveValue('5')
     await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
@@ -268,7 +265,7 @@ describe('Mind and mind symptoms', () => {
     expect(row).toHaveAccessibleName(/6\s*nebbia mentale · mente/)
   })
 
-  it('a body region alone shows the body sliders only; the mind joins its area, one pill for both, pain still editing the body', async () => {
+  it('a body region alone shows the body sliders only; the mind joins its layer, one pill for both, pain still editing the body', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     await screen.findByRole('slider', { name: 'Gonfiore' })
@@ -291,39 +288,70 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.areas).toEqual([{ regions: ['*', 'mind'], intensity: 7 }])
-    expect(e.readings).toEqual({ pain: 7, fog: 4 })
+    expect(e.layers).toEqual([{ regions: ['*', 'mind'], readings: { pain: 7, fog: 4 }, tags: [] }])
     await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
     const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
     expect(row).toHaveAccessibleName(/7\s*tutto il corpo, mente/)
   })
 
-  it('the mind first, then a leg: the leg joins the mind at the pain level and the pain slider comes back', async () => {
+  it('the mind first, then a leg: the leg joins the mind, the chip reads the layer headline and the pain slider comes back', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Mente' }))
     await fireEvent.input(await screen.findByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '6' } })
-    expect(screen.getByRole('button', { name: /6\s*mente/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /6\s*nebbia mentale · mente/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
-    expect(screen.getByRole('button', { name: /5\s*gambe, mente/ })).toHaveAttribute('aria-pressed', 'true')
+    // Fog 6 beats the pain at 5: the chip is the layer's headline, named like the diary pill.
+    expect(screen.getByRole('button', { name: /6\s*nebbia mentale · gambe, mente/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getAllByRole('button', { name: /mente/ })).toHaveLength(1)
     expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveValue('5')
     expect(screen.getByRole('slider', { name: 'Nebbia mentale' })).toHaveValue('6')
-    // A mental reading no longer moves the chip: its level is the body's.
-    await fireEvent.input(screen.getByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '9' } })
-    expect(screen.getByRole('button', { name: /5\s*gambe, mente/ })).toBeInTheDocument()
-    // The mind leaves: the legs stay at their level, the mental sliders fold away keeping their value.
+    await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
+    expect(screen.getByRole('button', { name: /8\s*gambe, mente/ })).toBeInTheDocument()
+    // The mind leaves: the legs stay at their level, the mental sliders fold away and their reading does not reach the entry.
     await fireEvent.click(screen.getByRole('button', { name: 'Mente' }))
-    expect(screen.getByRole('button', { name: /5\s*gambe$/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /8\s*gambe$/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('slider', { name: 'Nebbia mentale' })).not.toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.areas).toEqual([{ regions: ['152', '153'], intensity: 5 }])
-    expect(e.readings).toEqual({ pain: 5, fog: 9 })
+    expect(e.layers).toEqual([{ regions: ['152', '153'], readings: { pain: 8 }, tags: [] }])
   })
 
-  it('a mind-only episode is updated from its sheet without a pain slider, the mind following the mental level', async () => {
+  it('a second layer over the same legs keeps its own readings and tags, and the map fades the other layer', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
+    await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '7' } })
+    await fireEvent.click(await screen.findByRole('button', { name: 'Compressione' }))
+    await fireEvent.click(screen.getByRole('button', { name: '+ Altra zona' }))
+    // The new layer: nothing selected yet, its own sliders and tags.
+    expect(screen.getByRole('button', { name: 'Compressione' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Coscia dx' })).toHaveAttribute('aria-pressed', 'false')
+    expect(document.querySelector('.region[data-region="152"]')).toHaveClass('ghost')
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    expect(document.querySelector('.region[data-region="152"]')).not.toHaveClass('ghost')
+    await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '0' } })
+    await fireEvent.input(screen.getByRole('slider', { name: 'Gonfiore' }), { target: { value: '6' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Calore' }))
+    expect(screen.getByRole('button', { name: /6\s*gonfiore · gambe · Calore/ })).toHaveAttribute('aria-pressed', 'true')
+    // Back on the first layer: the legs are still all there, with their tag.
+    await fireEvent.click(screen.getByRole('button', { name: /7\s*fianchi, gambe · Compressione/ }))
+    expect(screen.getByRole('button', { name: 'Coscia dx' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Compressione' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('slider', { name: /^Dolore/ })).toHaveValue('7')
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    expect(e.layers).toEqual([
+      { regions: [...LEG_IDS].sort(), readings: { pain: 7 }, tags: ['compression'] },
+      { regions: ['152', '153'], readings: { pain: 0, swelling: 6 }, tags: ['heat'] },
+    ])
+    await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+    const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
+    expect(row).toHaveAccessibleName(/7\s*fianchi, gambe 7 · gambe 6 · Compressione · Calore/)
+  })
+
+  it('a mind-only episode is updated from its sheet without a pain slider', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Mente' }))
     await fireEvent.input(await screen.findByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '6' } })
@@ -338,8 +366,7 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
     await waitFor(async () => {
       const [e] = await db.entries.toArray()
-      expect(e.readings).toEqual({ pain: 0, fog: 2 })
-      expect(e.areas).toEqual([{ regions: ['mind'], intensity: 2 }])
+      expect(e.layers).toEqual([{ regions: ['mind'], readings: { fog: 2 }, tags: [] }])
     })
   })
 })
@@ -370,7 +397,7 @@ describe('Presets', () => {
     expect(chip).toHaveTextContent('mai')
     expect(await db.presets.count()).toBe(1)
     const [p] = await db.presets.toArray()
-    expect(p.areas).toEqual([{ regions: [...LEG_IDS].sort(), intensity: 5 }])
+    expect(p.layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: { pain: 5 }, tags: [] }])
     expect(p.symptomIds).toEqual(['pain'])
     await fireEvent.click(chip)
     const ps = await screen.findByRole('dialog', { name: 'Le gambe' })
@@ -380,15 +407,14 @@ describe('Presets', () => {
       expect(await db.entries.count()).toBe(2)
       const e = (await db.entries.toArray()).find((x) => x.preset)!
       expect(e.preset).toBe(p.id)
-      expect(e.readings.pain).toBe(6)
-      expect(e.areas).toEqual([{ regions: [...LEG_IDS].sort(), intensity: 6 }])
+      expect(e.layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: { pain: 6 }, tags: [] }])
     })
     await waitFor(() => expect(within(strip).getByRole('button', { name: /Le gambe/ })).toHaveTextContent(/^6\s*Le gambe · 0m$/))
   })
 
   it('a preset made from an entry with other symptoms and tags tracks them', async () => {
     const { addEntry } = await import('../lib/entries')
-    await addEntry({ areas: [{ regions: ['224'], intensity: 4 }], readings: { pain: 4, swelling: 2 }, tags: ['heat'], note: 'x' })
+    await addEntry({ layers: [{ regions: ['224'], readings: { pain: 4, swelling: 2 }, tags: ['heat'] }], note: 'x' })
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
@@ -398,11 +424,11 @@ describe('Presets', () => {
     await fireEvent.keyDown(within(edit).getByRole('textbox', { name: 'Nome del preset' }), { key: 'Enter' })
     await waitFor(async () => expect(await db.presets.count()).toBe(1))
     const [p] = await db.presets.toArray()
-    expect(p).toMatchObject({ name: 'Schiena', symptomIds: ['pain', 'swelling'], tags: ['heat'], ongoing: false, areas: [{ regions: ['224'], intensity: 4 }] })
+    expect(p).toMatchObject({ name: 'Schiena', symptomIds: ['pain', 'swelling'], ongoing: false, layers: [{ regions: ['224'], readings: { pain: 4, swelling: 2 }, tags: ['heat'] }] })
   })
 
   it('starts the preset sheet from the last logged levels', async () => {
-    const p = await addPreset({ name: 'Schiena', areas: [{ regions: ['224'], intensity: 5 }], symptomIds: ['pain', 'swelling'], tags: [], ongoing: false })
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: [] }], symptomIds: ['pain', 'swelling'], ongoing: false })
     const { logPreset } = await import('../lib/presets')
     await logPreset(p, { pain: 3, swelling: 7 })
     render(App)
@@ -534,9 +560,9 @@ describe('Drawing', () => {
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     const r1 = (n: number) => Math.round(n * 10) / 10
-    expect(e.areas).toHaveLength(1)
-    expect(e.areas[0].regions).toEqual(['152', '154', '160', '261'])
-    const pieces = e.areas[0].strokes!
+    expect(e.layers).toHaveLength(1)
+    expect(e.layers[0].regions).toEqual(['152', '154', '160', '261'])
+    const pieces = e.layers[0].strokes!
     expect(pieces.map((p) => p.region)).toEqual(['152', '154', '160'])
     expect(pieces[0]).toMatchObject({ fig: 'female', view: 'front', w: 8 })
     expect(pieces[0].points[0]).toEqual(centre('152').map(r1))
@@ -556,7 +582,7 @@ describe('Drawing', () => {
     expect(document.querySelectorAll('.stroke')).toHaveLength(0)
   })
 
-  it('two fingers pan and pinch without painting; the zoom opens on the current area', async () => {
+  it('two fingers pan and pinch without painting; the zoom opens on the current layer', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Spalla sx' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
@@ -603,8 +629,8 @@ describe('Drawing', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.areas[0].regions).toEqual(['*'])
-    expect(e.areas[0].strokes).toHaveLength(4)
+    expect(e.layers[0].regions).toEqual(['*'])
+    expect(e.layers[0].strokes).toHaveLength(4)
   })
 
   it('deselecting a painted segment takes its paint along, with undo; the rest of the drawing stays', async () => {
@@ -632,7 +658,7 @@ describe('Drawing', () => {
     const stroke: Stroke = { region: '152', fig: 'male', view: 'front', points: [[100, 300]], w: 8 }
     // A piece tagged with a segment this build does not know is skipped, not fatal.
     const alien: Stroke = { region: '999', fig: 'female', view: 'front', points: [[100, 300]], w: 8 }
-    await addEntry({ areas: [{ regions: ['152'], intensity: 6, strokes: [stroke, alien] }] })
+    await addEntry({ layers: [{ regions: ['152'], readings: { pain: 6 }, strokes: [stroke, alien] }] })
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
     await fireEvent.click(await screen.findByText('gamba sx'))

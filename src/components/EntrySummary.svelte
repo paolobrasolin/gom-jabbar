@@ -1,19 +1,19 @@
 <script lang="ts">
   import { t, tl } from '../i18n/index.svelte'
-  import { regionText as rt } from '../lib/summary'
-  import type { Area } from '../lib/areas'
+  import { regionText as rt, layerLevel } from '../lib/summary'
+  import { mergedTags, type Layer } from '../lib/layers'
   import type { Tag } from '../lib/types'
 
-  /** `lead` goes first, e.g. the headline symptom name when it is not pain. */
-  let { lead = '', areas, tags = [], tagDefs = [] }: { lead?: string; areas: Area[]; tags?: string[]; tagDefs?: Tag[] } = $props()
+  /** `lead` goes first, e.g. the headline symptom name when it is not pain. Several layers each show their level; the tags are the union. */
+  let { lead = '', layers, tagDefs = [] }: { lead?: string; layers: Layer[]; tagDefs?: Tag[] } = $props()
 
   const regionText = (regions: string[]) => rt(regions, t)
   const parts = $derived([
     ...(lead ? [lead] : []),
-    ...areas.filter((a) => a.regions.length).map((a) => (areas.length > 1 ? `${regionText(a.regions)} ${a.intensity}` : regionText(a.regions))),
+    ...layers.filter((l) => l.regions.length).map((l) => (layers.length > 1 ? `${regionText(l.regions)} ${layerLevel(l)}` : regionText(l.regions))),
   ])
   const tagText = $derived(
-    tags
+    mergedTags(layers)
       .map((id) => tagDefs.find((d) => d.id === id))
       .filter((d): d is Tag => !!d)
       .map((d) => tl(d.label))

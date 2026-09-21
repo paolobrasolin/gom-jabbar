@@ -4,6 +4,9 @@ import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { addEntry, updateEpisode, endEpisode } from '../lib/entries'
 import App from '../App.svelte'
+import { mergedReadings, mergedTags } from '../lib/layers'
+
+const L = (regions: string[], pain: number, tags: string[] = []) => ({ regions, readings: { pain }, tags })
 
 let db: ReturnType<typeof resetDb>
 beforeEach(() => {
@@ -30,9 +33,9 @@ describe('Diary list', () => {
   })
 
   it('groups entries by day, newest first, with the headline in a pill', async () => {
-    await addEntry({ at: ago(120), areas: [{ regions: ['152', '153'], intensity: 3 }] })
-    await addEntry({ at: ago(10), areas: [{ regions: ['152'], intensity: 7 }] })
-    await addEntry({ at: ago(DAY + 60), areas: [{ regions: ['130'], intensity: 5 }] })
+    await addEntry({ at: ago(120), layers: [L(['152', '153'], 3)] })
+    await addEntry({ at: ago(10), layers: [L(['152'], 7)] })
+    await addEntry({ at: ago(DAY + 60), layers: [L(['130'], 5)] })
     await openDiary()
     await waitFor(() => expect(dayHeadings()).toEqual(['Oggi', 'Ieri']))
     const r = rows()
@@ -45,8 +48,8 @@ describe('Diary list', () => {
   })
 
   it('shows the symptom name, tags, duration, level trail and note of an episode', async () => {
-    const e = await addEntry({ at: ago(180), ongoing: true, areas: [{ regions: ['152'], intensity: 7 }], tags: ['rest'], note: 'dopo la corsa' })
-    await updateEpisode(e.id, { pain: 4 }, ago(120))
+    const e = await addEntry({ at: ago(180), ongoing: true, layers: [L(['152'], 7, ['rest'])], note: 'dopo la corsa' })
+    await updateEpisode(e.id, [{ pain: 4 }], ago(120))
     await endEpisode(e.id, ago(60))
     await addEntry({ at: ago(30), ongoing: true, readings: { pain: 2, swelling: 6 } })
     await openDiary()
@@ -62,9 +65,9 @@ describe('Diary list', () => {
   })
 
   it('shows 30 days and loads 60 more at a time while older entries exist', async () => {
-    await addEntry({ at: ago(10), areas: [{ regions: ['152'], intensity: 2 }] })
-    await addEntry({ at: ago(40 * DAY), areas: [{ regions: ['152'], intensity: 9 }] })
-    await addEntry({ at: ago(100 * DAY), areas: [{ regions: ['152'], intensity: 8 }] })
+    await addEntry({ at: ago(10), layers: [L(['152'], 2)] })
+    await addEntry({ at: ago(40 * DAY), layers: [L(['152'], 9)] })
+    await addEntry({ at: ago(100 * DAY), layers: [L(['152'], 8)] })
     await openDiary()
     await waitFor(() => expect(rows()).toHaveLength(1))
     const more = screen.getByRole('button', { name: 'Mostra altre' })
@@ -79,7 +82,7 @@ describe('Diary list', () => {
 
 describe('Edit sheet', () => {
   it('opens prefilled from a row and saves the changes', async () => {
-    const e = await addEntry({ at: ago(60), areas: [{ regions: ['152'], intensity: 7 }], tags: ['rest'], note: 'dopo la corsa' })
+    const e = await addEntry({ at: ago(60), layers: [L(['152'], 7, ['rest'])], note: 'dopo la corsa' })
     await openDiary()
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
@@ -94,10 +97,9 @@ describe('Edit sheet', () => {
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
     await waitFor(async () => {
       const cur = await db.entries.get(e.id)
-      expect(cur?.readings.pain).toBe(3)
-      expect(cur?.areas).toEqual([{ regions: ['152'], intensity: 3 }])
+      expect(cur?.layers).toEqual([L(['152'], 3, ['rest', 'heat'])])
       expect(cur?.note).toBe('meglio')
-      expect(cur?.tags).toEqual(['rest', 'heat'])
+      expect(mergedTags(cur!.layers)).toEqual(['rest', 'heat'])
     })
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(await screen.findByText('Salvato')).toBeInTheDocument()
@@ -106,7 +108,7 @@ describe('Edit sheet', () => {
   })
 
   it('deletes with undo', async () => {
-    await addEntry({ at: ago(60), areas: [{ regions: ['152'], intensity: 7 }] })
+    await addEntry({ at: ago(60), layers: [L(['152'], 7)] })
     await openDiary()
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
@@ -120,7 +122,7 @@ describe('Edit sheet', () => {
   })
 
   it('ends an episode when "In corso" is switched off, and reopens one when switched on', async () => {
-    const e = await addEntry({ at: ago(60), ongoing: true, areas: [{ regions: ['152'], intensity: 7 }] })
+    const e = await addEntry({ at: ago(60), ongoing: true, layers: [L(['152'], 7)] })
     await openDiary()
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
     let sheet = await screen.findByRole('dialog', { name: 'Modifica' })
@@ -148,13 +150,13 @@ describe('Edit sheet', () => {
   })
 
   it('closes on Escape without touching the entry', async () => {
-    const e = await addEntry({ at: ago(60), areas: [{ regions: ['152'], intensity: 7 }] })
+    const e = await addEntry({ at: ago(60), layers: [L(['152'], 7)] })
     await openDiary()
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
     await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '1' } })
     await fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect((await db.entries.get(e.id))?.readings.pain).toBe(7)
+    expect(mergedReadings((await db.entries.get(e.id))!.layers).pain).toBe(7)
   })
 })

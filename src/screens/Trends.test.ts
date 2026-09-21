@@ -20,7 +20,7 @@ function daysAgo(n: number, hour = 12): Date {
   return d
 }
 const at = (n: number, hour = 12) => daysAgo(n, hour).toISOString()
-const legs = (intensity: number, extra: Partial<EntryInput> = {}): EntryInput => ({ areas: [{ regions: ['152'], intensity }], ...extra })
+const legs = (pain: number, { tags, ...extra }: Partial<EntryInput> = {}): EntryInput => ({ layers: [{ regions: ['152'], readings: { pain }, tags: tags ?? [] }], ...extra })
 const fmtFull = (d: Date) => new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).format(d)
 
 async function openTrends() {
@@ -71,15 +71,20 @@ describe('Trends summary', () => {
 })
 
 describe('Trends heatmap and chart', () => {
-  it('colours the mind like any other region, from the mental readings rather than its area, read-only', async () => {
-    await addEntry({ at: at(0), readings: { fog: 6 }, areas: [{ regions: ['mind'], intensity: 1 }] })
-    await addEntry({ at: at(1), areas: [{ regions: ['*'], intensity: 2 }] })
+  it('reads one symptom at a time: pain by default, the mind lighting up under a mental symptom, read-only', async () => {
+    await addEntry({ at: at(0), layers: [{ regions: ['mind'], readings: { fog: 6 } }] })
+    await addEntry({ at: at(1), layers: [{ regions: ['*'], readings: { pain: 2 } }] })
     await openTrends()
     const mind = () => document.querySelector('[data-region="mind"]') as SVGPathElement
+    await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
+    expect(mind()).not.toHaveClass('on')
+    const picker = await screen.findByRole('group', { name: 'Sintomo della mappa' })
+    expect(within(picker).getByRole('button', { name: 'Dolore' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(within(picker).getByRole('button', { name: 'Nebbia mentale' }))
     await waitFor(() => expect(mind().getAttribute('style')).toContain(`fill: ${intensityColor(6)}`))
     expect(mind()).toHaveClass('on')
     expect(mind().getAttribute('style')).toContain('fill-opacity: 1.00')
-    expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
+    expect(document.querySelector('[data-region="152"]')).not.toHaveClass('on')
     expect(screen.queryByRole('button', { name: 'Mente' })).not.toBeInTheDocument()
   })
 
@@ -158,7 +163,7 @@ describe('Trends report', () => {
 
 describe('Trends presets', () => {
   it('draws one line per preset with samples in range', async () => {
-    const p = await addPreset({ name: 'Schiena', areas: [{ regions: ['224'], intensity: 5 }], symptomIds: ['pain'], tags: [], ongoing: false })
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: [] }], symptomIds: ['pain'], ongoing: false })
     await logPreset(p, { pain: 4 })
     await logPreset(p, { pain: 6 })
     render(App)
@@ -171,8 +176,8 @@ describe('Trends presets', () => {
 
 describe('Trends strokes', () => {
   it('shades every stroke in the range drawn on the current figure over the heatmap', async () => {
-    await addEntry({ at: at(0), areas: [{ regions: ['152'], intensity: 8, strokes: [{ region: '152', fig: 'female', view: 'front', points: [[180, 300], [184, 330]], w: 8 }] }] })
-    await addEntry({ at: at(1), areas: [{ regions: ['261'], intensity: 3, strokes: [{ region: '261', fig: 'female', view: 'back', points: [[80, 450]], w: 8 }, { region: '261', fig: 'male', view: 'back', points: [[82, 452]], w: 8 }] }] })
+    await addEntry({ at: at(0), layers: [{ regions: ['152'], readings: { pain: 8 }, strokes: [{ region: '152', fig: 'female', view: 'front', points: [[180, 300], [184, 330]], w: 8 }] }] })
+    await addEntry({ at: at(1), layers: [{ regions: ['261'], readings: { pain: 3 }, strokes: [{ region: '261', fig: 'female', view: 'back', points: [[80, 450]], w: 8 }, { region: '261', fig: 'male', view: 'back', points: [[82, 452]], w: 8 }] }] })
     await addEntry({ at: at(2), ...legs(2) })
     await openTrends()
     await waitFor(() => expect(document.querySelectorAll('.stroke')).toHaveLength(2))

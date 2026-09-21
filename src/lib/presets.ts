@@ -1,20 +1,21 @@
 import { nanoid } from 'nanoid'
 import { db } from './db'
 import { addEntry } from './entries'
-import { finalize, mindOnly, isMindOnly } from './areas'
-import { mindMax } from './vocabulary'
+import { finalize, hasBody, readingsFor, showsCategory } from './layers'
 import { PAIN, type Entry, type Preset } from './types'
 import type { EntryDraft } from './draft'
 
 export type PresetInput = Omit<Preset, 'id' | 'order'>
 
-/** What a filled form would save, as a reusable shape: pain is always tracked (unless only the mind is selected), other symptoms when set above 0. */
+/**
+ * What a filled form would save, as a reusable shape: the layers as they stand, and the sliders to ask for:
+ * pain first when some layer shows it, then every other symptom set above 0 on any layer.
+ */
 export function presetFromDraft(d: EntryDraft, name: string): PresetInput {
-  const areas = finalize(d.areas)
-  const others = Object.entries(d.readings)
-    .filter(([id, v]) => id !== PAIN && v > 0)
-    .map(([id]) => id)
-  return { name: name.trim(), areas, symptomIds: [...(mindOnly(areas) ? [] : [PAIN]), ...others], tags: [...d.tags], ongoing: d.ongoing }
+  const layers = finalize(d.layers)
+  const pain = layers.some((l) => showsCategory(l, 'body'))
+  const others = [...new Set(layers.flatMap((l) => Object.entries(l.readings).filter(([id, v]) => id !== PAIN && v > 0).map(([id]) => id)))]
+  return { name: name.trim(), layers, symptomIds: [...(pain ? [PAIN] : []), ...others], ongoing: d.ongoing }
 }
 
 export async function addPreset(input: PresetInput): Promise<Preset> {
@@ -34,19 +35,13 @@ export async function restorePreset(p: Preset): Promise<void> {
   await db.presets.put(p)
 }
 
-/** Log an ordinary moment from a preset: its areas at the pain level given (one holding only the mind at the highest mental one), its tags, its episode flag. */
+/** Log an ordinary moment from a preset: its layers, each taking the readings it shows from the sheet's, its episode flag, an empty note. */
 export async function logPreset(preset: Preset, readings: Record<string, number>, at?: string): Promise<Entry> {
-  const pain = readings[PAIN] ?? 0
-  const mind = mindMax(readings, await db.symptoms.toArray())
-  return addEntry({
-    at,
-    ongoing: preset.ongoing,
-    readings,
-    areas: preset.areas.map((a) => ({ ...a, intensity: isMindOnly(a) ? mind : pain })),
-    tags: preset.tags,
-    note: '',
-    preset: preset.id,
-  })
+  const symptoms = await db.symptoms.toArray()
+  const layers = preset.layers.map((l) => ({ ...l, readings: readingsFor(l, readings, symptoms) }))
+  // A body layer always records its pain, 0 when the preset does not ask for it.
+  for (const l of layers) if (hasBody(l) && l.readings[PAIN] === undefined) l.readings[PAIN] = 0
+  return addEntry({ at, ongoing: preset.ongoing, layers, note: '', preset: preset.id })
 }
 
 /** The most recent entry logged from a preset, for the "last value · how long ago" chip. */

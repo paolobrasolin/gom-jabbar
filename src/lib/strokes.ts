@@ -1,12 +1,13 @@
 import { REGION_BY_ID, regionsFor, shapeOf, shapeArea, shapeCenter, shapeContains, figureBox, isFullBody, type FigureId, type Shape, type View } from './regions'
-import { prune, bodyTarget, pullRegions, type Area, type AreaState, type Stroke } from './areas'
+import { type Layer, type LayerState, type Stroke } from './layers'
+import { PAIN } from './types'
 
 export type { Stroke }
 
 /** Brush width in figure units: about a fingertip on the zoomed figure, a fat dot on the small one. */
 export const BRUSH = 8
 
-/** A stroke with the level of the area it belongs to, for shading a heatmap. */
+/** A stroke with the level of the layer it belongs to, for shading a heatmap. */
 export type HeatStroke = Stroke & { intensity: number }
 
 const sortU = (xs: string[]) => [...new Set(xs)].sort()
@@ -121,46 +122,41 @@ export function simplify(points: [number, number][], tol = 0.8): [number, number
 }
 
 /**
- * Paint a gesture onto the current area (§5.4): its pieces join the area and so do their segments,
- * pulled from other areas together with their paint, exactly as taps would. Mirror never applies.
+ * Paint a gesture onto the current layer (§5.4): its pieces join the layer and so do their segments, exactly
+ * as taps would; under full body only the pieces do. Other layers are never touched. Mirror never applies.
  */
-export function addStroke(state: AreaState, raw: RawStroke, brush: number): AreaState {
+export function addStroke(state: LayerState, raw: RawStroke): LayerState {
+  const l = state.layers[state.cur]
   const pieces = partition(raw)
-  if (!pieces.length) return state
-  const ids = sortU(pieces.map((p) => p.region))
-  const { areas, cur } = bodyTarget(state, brush)
-  const pulled = isFullBody(areas[cur].regions) ? areas : pullRegions(areas, cur, ids)
-  const next = pulled.map((a, i) => (i === cur ? { ...a, strokes: [...(a.strokes ?? []), ...pieces] } : a))
-  return prune({ areas: next, cur })
+  if (!l || !pieces.length) return state
+  const regions = isFullBody(l.regions) ? l.regions : sortU([...l.regions, ...pieces.map((p) => p.region)])
+  return withLayer(state, { ...l, regions, strokes: [...(l.strokes ?? []), ...pieces] })
 }
 
-const withStrokes = (state: AreaState, strokes: Stroke[]): AreaState => ({
-  ...state,
-  areas: state.areas.map((a, j) => (j === state.cur ? { ...a, strokes } : a)),
-})
+const withLayer = (state: LayerState, layer: Layer): LayerState => ({ ...state, layers: state.layers.map((x, j) => (j === state.cur ? layer : x)) })
 
-/** Take back the current area's last `n` pieces (a gesture's worth). The regions stay: they may have been tapped too. */
-export function undoStroke(state: AreaState, n = 1): AreaState {
-  const a = state.areas[state.cur]
-  if (!a?.strokes?.length) return state
-  return withStrokes(state, a.strokes.slice(0, -Math.max(1, n)))
+/** Take back the current layer's last `n` pieces (a gesture's worth). The regions stay: they may have been tapped too. */
+export function undoStroke(state: LayerState, n = 1): LayerState {
+  const l = state.layers[state.cur]
+  if (!l?.strokes?.length) return state
+  return withLayer(state, { ...l, strokes: l.strokes.slice(0, -Math.max(1, n)) })
 }
 
-/** Remove every stroke of the current area. */
-export function clearStrokes(state: AreaState): AreaState {
-  const a = state.areas[state.cur]
-  if (!a?.strokes?.length) return state
-  return withStrokes(state, [])
+/** Remove every stroke of the current layer. */
+export function clearStrokes(state: LayerState): LayerState {
+  const l = state.layers[state.cur]
+  if (!l?.strokes?.length) return state
+  return withLayer(state, { ...l, strokes: [] })
 }
 
-/** How many pieces of paint an entry's areas hold: a gesture adds some, a tap may take some away. */
-export function pieceCount(areas: Area[]): number {
-  return areas.reduce((t, a) => t + (a.strokes?.length ?? 0), 0)
-}
-
-/** Every stroke of every area, with its level, for one figure of shading. */
-export function allStrokes(entries: { areas: Area[] }[]): HeatStroke[] {
-  return entries.flatMap((e) => e.areas.flatMap((a) => (a.strokes ?? []).map((s) => ({ ...s, intensity: a.intensity }))))
+/** Every stroke of every layer that carries `symptom`, at that level, for one figure of shading (§6.3). */
+export function allStrokes(entries: { layers: Layer[] }[], symptom = PAIN): HeatStroke[] {
+  return entries.flatMap((e) =>
+    e.layers.flatMap((l) => {
+      const v = l.readings[symptom]
+      return typeof v === 'number' ? (l.strokes ?? []).map((s) => ({ ...s, intensity: v })) : []
+    }),
+  )
 }
 
 /** SVG path of a stroke, or of the gesture in progress. A single point becomes a dot, thanks to round caps. */

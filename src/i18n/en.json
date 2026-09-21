@@ -138,6 +138,7 @@
   "trends.badDaysHint": "with pain at least 5",
   "trends.episodes": "Episodes",
   "trends.episodeMean": "mean length {d}",
+  "trends.heatSymptom": "Map symptom",
   "trends.heatmap": "Where",
   "trends.heatmapHint": "Colour: mean intensity. Fuller: more frequent.",
   "trends.overTime": "Over time",
