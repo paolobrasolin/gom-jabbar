@@ -6,6 +6,7 @@
   import { prefs } from '../lib/prefs.svelte'
   import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, tagCounts } from '../lib/stats'
   import { durationMs } from '../lib/entries'
+  import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
   import type { Entry, Symptom, Tag } from '../lib/types'
   import { headline, symptomName, trail } from '../lib/summary'
@@ -21,6 +22,7 @@
   const series = $derived(dailySeries(entries, from, days))
   const summary = $derived(summarize(entries, days))
   const heat = $derived(regionHeat(entries))
+  const strokes = $derived(allStrokes(entries))
   const cmp = $derived(tagComparison(entries, tags))
   const counts = $derived(tagCounts(entries, tags))
   const symMeans = $derived(symptomMeans(entries, symptoms))
@@ -83,7 +85,7 @@
     <section class="two">
       <div>
         <h2>{t('trends.heatmap')}</h2>
-        <div class="map"><BodyMap {heat} readonly labels={{ front: t('log.front'), back: t('log.back') }} /></div>
+        <div class="map"><BodyMap {heat} {strokes} readonly labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       </div>
       <div>
         <h2>{t('trends.overTime')}</h2>

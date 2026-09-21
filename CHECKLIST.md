@@ -19,6 +19,7 @@ Manual, on a real phone, before telling anyone to update:
 - [ ] Airplane mode, relaunch: still opens and shows the diary.
 - [ ] Log: tap two regions, drag the slider, Save. Undo from the toast. Repeat with "Entrambi i lati" off.
 - [ ] Press and hold a thigh: whole leg selects. Long press does not open a context menu or select text.
+- [ ] Disegna: one figure fills the map, pinch and drag move it, a finger shades a spot and the area chip names the segment, a tap is a dot, Annulla tratto takes the dot back. Dietro shows the back. Disegna again: the shading shows on the small map. Salva; open the entry from Diario: the shading is there.
 - [ ] "+ Altra zona" with a second level: chips show both, diary line shows "gambe 8 · spalle 3".
 - [ ] Tap the mind: the pain slider goes, Nebbia mentale stays; set it, Salva; diary row "6 nebbia mentale · mente". Tap the mind and a thigh: two chips, the thigh one current, pain slider back.
 - [ ] "In corso", save, tap the episode card: update the level, then end it. Undo the end.

@@ -1,5 +1,9 @@
 import { PAIN, type Entry } from './types'
 import type { Area } from './areas'
+
+/** A deep enough copy: regions and strokes are the only nested parts. */
+const copyAreas = (areas: Area[]): Area[] =>
+  areas.map((a) => ({ ...a, regions: [...a.regions], ...(a.strokes ? { strokes: a.strokes.map((s) => ({ ...s, points: s.points.map(([x, y]) => [x, y] as [number, number]) })) } : {}) }))
 import type { EntryInput } from './entries'
 
 /** Form state for creating or editing an entry. `at: null` means "now, resolved at save". */
@@ -32,7 +36,7 @@ export function draftFromEntry(e: Entry): EntryDraft {
     at: e.at,
     ongoing: e.ongoing,
     readings: { [PAIN]: 0, ...e.readings },
-    areas: e.areas.map((a) => ({ ...a, regions: [...a.regions] })),
+    areas: copyAreas(e.areas),
     cur: 0,
     tags: [...e.tags],
     note: e.note,
@@ -44,7 +48,7 @@ export function draftToInput(d: EntryDraft): EntryInput {
     at: d.at ?? new Date().toISOString(),
     ongoing: d.ongoing,
     readings: { ...d.readings },
-    areas: d.areas.map((a) => ({ ...a, regions: [...a.regions] })),
+    areas: copyAreas(d.areas),
     tags: [...d.tags],
     note: d.note.trim(),
   }

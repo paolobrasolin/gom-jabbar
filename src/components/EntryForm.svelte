@@ -1,5 +1,6 @@
 <script lang="ts">
   import BodyMap from './BodyMap.svelte'
+  import PaintSurface from './PaintSurface.svelte'
   import IntensitySlider from './IntensitySlider.svelte'
   import EntrySummary from './EntrySummary.svelte'
   import { regionText } from '../lib/summary'
@@ -10,12 +11,13 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { frequentTags } from '../lib/vocab'
-  import { LEG_IDS, ARM_IDS, MIND, limbOf, mirrorId } from '../lib/regions'
+  import { LEG_IDS, ARM_IDS, MIND, limbOf, mirrorId, type View } from '../lib/regions'
   import { isFull, isMindArea, bodyAreas, hasMind, tapRegion, tapSet, toggleMind, setMindLevel, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
+  import { addStroke, undoStroke, clearStrokes, pieceCount, mainView, type RawStroke } from '../lib/strokes'
   import { isMindSymptom, mindMax } from '../lib/vocabulary'
   import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
   import type { EntryDraft } from '../lib/draft'
-  import { haptic } from '../lib/toast.svelte'
+  import { haptic, showToast } from '../lib/toast.svelte'
 
   let { draft = $bindable(), symptoms = [], tags = [] }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[] } = $props()
 
@@ -25,10 +27,18 @@
   const entries = live(() => null, () => db.entries.toArray(), [])
   const suggestions = $derived(frequentTags(entries.value, tags))
   let allTags = $state(false)
-  // A new draft (save, clear, another entry to edit) folds the full list away again.
+  // Drawing mode (§5.3): one figure enlarged, a finger shades the current body area.
+  let drawing = $state(false)
+  let drawView = $state<View>('front')
+  const curStrokes = $derived(draft.areas[draft.cur]?.strokes?.length ?? 0)
+  /** Gestures of this draft, newest last: how many pieces each added and the count it left, so Annulla tratto can take a whole gesture back. */
+  let gestures: { n: number; total: number }[] = []
+  // A new draft (save, clear, another entry to edit) folds the full list away and leaves drawing mode.
   $effect(() => {
     void draft
     allTags = false
+    drawing = false
+    gestures = []
   })
   const groups: TagGroup[] = ['intervention', 'context', 'medication']
   const tagsByGroup = $derived(groups.map((g) => ({ g, items: tags.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
@@ -85,11 +95,19 @@
   }
   function onRegion(id: string) {
     const state = { areas: draft.areas, cur: draft.cur }
-    apply(id === MIND ? toggleMind(state, mindMax(draft.readings, symptoms)) : tapRegion(state, id, prefs.mirror, brush))
+    if (id === MIND) apply(toggleMind(state, mindMax(draft.readings, symptoms)))
+    else withPaintToast(() => apply(tapRegion(state, id, prefs.mirror, brush)))
     haptic(6)
   }
   function onSet(ids: string[]) {
-    apply(tapSet({ areas: draft.areas, cur: draft.cur }, ids, brush))
+    withPaintToast(() => apply(tapSet({ areas: draft.areas, cur: draft.cur }, ids, brush)))
+  }
+  /** Deselecting takes the paint of the segment along (§5.4): when it does, offer to undo. */
+  function withPaintToast(change: () => void) {
+    const before = draft.areas
+    const had = pieceCount(before)
+    change()
+    if (pieceCount(draft.areas) < had) showToast(t('log.strokesErased'), { label: t('log.undo'), run: () => (draft.areas = before) })
   }
   function onLimb(id: string) {
     let ids = limbOf(id)
@@ -99,6 +117,28 @@
   }
   function onFull() {
     apply(toggleFull({ areas: draft.areas, cur: draft.cur }, brush))
+  }
+  function toggleDrawing() {
+    drawing = !drawing
+    if (drawing) drawView = mainView(curRegions)
+  }
+  function onStroke(raw: RawStroke) {
+    const before = pieceCount(draft.areas)
+    apply(addStroke({ areas: draft.areas, cur: draft.cur }, raw, brush))
+    const total = pieceCount(draft.areas)
+    if (total > before) gestures.push({ n: total - before, total })
+    haptic(6)
+  }
+  /** The last gesture, while its pieces are still the last ones; otherwise one piece. */
+  function onUndoStroke() {
+    const last = gestures.pop()
+    const n = last && last.total === pieceCount(draft.areas) ? last.n : 1
+    apply(undoStroke({ areas: draft.areas, cur: draft.cur }, n))
+  }
+  function onClearDrawing() {
+    const before = draft.areas
+    apply(clearStrokes({ areas: draft.areas, cur: draft.cur }))
+    showToast(t('log.drawingCleared'), { label: t('log.undo'), run: () => (draft.areas = before) })
   }
   function onSlider(v: number) {
     if (curBody >= 0) apply({ areas: setIntensity({ areas: draft.areas, cur: curBody }, v).areas, cur: draft.cur })
@@ -123,11 +163,28 @@
     <button class="chip small" aria-pressed={full} onclick={onFull}>{t('log.fullBody')}</button>
     <button class="chip small" aria-pressed={legsOn} disabled={full} onclick={() => onSet(LEG_IDS)}>{t('log.legs')}</button>
     <button class="chip small" aria-pressed={armsOn} disabled={full} onclick={() => onSet(ARM_IDS)}>{t('log.arms')}</button>
+    <button class="chip small" aria-pressed={drawing} onclick={toggleDrawing}>{t('log.draw')}</button>
   </div>
 
+  <!-- The map and the drawing surface swap in the same slot: whichever layout comes next (#22) composes the same pieces. -->
   <div class="map">
-    <BodyMap areas={draft.areas} cur={draft.cur} onToggle={onRegion} onLongPress={onLimb} labels={{ front: t('log.front'), back: t('log.back'), mind: t('log.mind') }} />
+    {#if drawing}
+      <PaintSurface view={drawView} areas={draft.areas} cur={draft.cur} {brush} label={t(`log.${drawView}`)} {onStroke} />
+    {:else}
+      <BodyMap areas={draft.areas} cur={draft.cur} onToggle={onRegion} onLongPress={onLimb} labels={{ front: t('log.front'), back: t('log.back'), mind: t('log.mind') }} />
+    {/if}
   </div>
+
+  {#if drawing}
+    <div class="chips drawbar">
+      <button class="chip small" aria-pressed={drawView === 'front'} onclick={() => (drawView = 'front')}>{t('log.front')}</button>
+      <button class="chip small" aria-pressed={drawView === 'back'} onclick={() => (drawView = 'back')}>{t('log.back')}</button>
+      <span class="grow"></span>
+      <button class="chip small outline" disabled={!curStrokes} onclick={onUndoStroke}>{t('log.undoStroke')}</button>
+      <button class="chip small outline" disabled={!curStrokes} onclick={onClearDrawing}>{t('log.clearDrawing')}</button>
+    </div>
+    <p class="small muted hint">{t('log.drawHint')}</p>
+  {/if}
 
   <div class="chips areas">
     {#if draft.areas.length === 0}
@@ -232,6 +289,10 @@
   .form > * { min-width: 0; }
   .areas { min-height: 40px; align-items: center; }
   .placeholder { padding-left: 4px; }
+  .drawbar { align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
+  .drawbar::-webkit-scrollbar { display: none; }
+  .grow { flex: 1; }
+  .hint { margin-top: -4px; line-height: 1.25; }
   .ongoing { border-color: var(--border); }
   .ongoing[aria-pressed='true'] { border-color: transparent; }
   .tools, .time, .areas, .suggest { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }

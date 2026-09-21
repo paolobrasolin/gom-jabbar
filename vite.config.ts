@@ -63,10 +63,10 @@ export default defineConfig({
       // Ratchet: raise these when coverage grows, never lower them. `npm test` fails below.
       thresholds: {
         'src/lib/**': { lines: 99, statements: 98, functions: 96, branches: 93 },
-        lines: 96,
-        statements: 96,
+        lines: 96.5,
+        statements: 96.3,
         functions: 95,
-        branches: 85,
+        branches: 86,
       },
     },
   },
