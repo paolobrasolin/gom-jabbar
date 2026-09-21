@@ -33,9 +33,16 @@ describe('Diary list', () => {
   })
 
   it('groups entries by day, newest first, with the headline in a pill', async () => {
-    await addEntry({ at: ago(120), layers: [L(['152', '153'], 3)] })
-    await addEntry({ at: ago(10), layers: [L(['152'], 7)] })
-    await addEntry({ at: ago(DAY + 60), layers: [L(['130'], 5)] })
+    // Fixed hours, so the test does not straddle midnight while it runs.
+    const at = (daysAgo: number, hour: number) => {
+      const d = new Date()
+      d.setDate(d.getDate() - daysAgo)
+      d.setHours(hour, 0, 0, 0)
+      return d.toISOString()
+    }
+    await addEntry({ at: at(0, 9), layers: [L(['152', '153'], 3)] })
+    await addEntry({ at: at(0, 10), layers: [L(['152'], 7)] })
+    await addEntry({ at: at(1, 9), layers: [L(['130'], 5)] })
     await openDiary()
     await waitFor(() => expect(dayHeadings()).toEqual(['Oggi', 'Ieri']))
     const r = rows()
