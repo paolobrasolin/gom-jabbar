@@ -7,7 +7,7 @@ export function defaultCategory(id: string): SymptomCategory {
 
 export const isMindSymptom = (s: Symptom): boolean => (s.category ?? defaultCategory(s.id)) === 'mind'
 
-/** The level of the mind area: the highest mental reading, 0 when none is set. */
+/** The highest mental reading, 0 when none is set: the level of an area holding only the mind (§5.4) and the mind's heat (§6.3). */
 export function mindMax(readings: Record<string, number>, symptoms: Symptom[]): number {
   return Math.max(0, ...symptoms.filter(isMindSymptom).map((s) => readings[s.id] ?? 0))
 }

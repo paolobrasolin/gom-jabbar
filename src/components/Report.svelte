@@ -21,7 +21,7 @@
   const fmtDay = (iso: string) => new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso))
   const series = $derived(dailySeries(entries, from, days))
   const summary = $derived(summarize(entries, days))
-  const heat = $derived(regionHeat(entries))
+  const heat = $derived(regionHeat(entries, symptoms))
   const strokes = $derived(allStrokes(entries))
   const cmp = $derived(tagComparison(entries, tags))
   const counts = $derived(tagCounts(entries, tags))

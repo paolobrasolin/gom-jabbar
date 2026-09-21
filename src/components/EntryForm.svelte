@@ -11,8 +11,8 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { frequentTags } from '../lib/vocab'
-  import { LEG_IDS, ARM_IDS, MIND, limbOf, mirrorId, type View } from '../lib/regions'
-  import { isFull, isMindArea, bodyAreas, hasMind, tapRegion, tapSet, toggleMind, setMindLevel, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
+  import { LEG_IDS, ARM_IDS, limbOf, mirrorId, type View } from '../lib/regions'
+  import { isFull, isMindOnly, bodyAreas, hasMind, tapRegion, tapSet, setMindLevel, toggleFull, addArea, selectArea, setIntensity, overallPain } from '../lib/areas'
   import { addStroke, undoStroke, clearStrokes, pieceCount, mainView, type RawStroke } from '../lib/strokes'
   import { isMindSymptom, mindMax } from '../lib/vocabulary'
   import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
@@ -49,10 +49,10 @@
   /** Which sliders show (§6.1) follows what is selected: body areas → pain and the body symptoms, the mind → the mind symptoms, both or nothing → both. */
   const showBody = $derived(bodyAreas(draft.areas).length > 0 || !hasMind(draft.areas))
   const showMind = $derived(hasMind(draft.areas) || bodyAreas(draft.areas).length === 0)
-  /** The body area the pain slider edits: the current one, or the last one while the mind chip is current. -1 without body areas. */
+  /** The body area the pain slider edits: the current one, or the last one while an area holding only the mind is current. -1 without body areas. */
   const curBody = $derived.by(() => {
-    if (curArea && !isMindArea(curArea)) return draft.cur
-    for (let i = draft.areas.length - 1; i >= 0; i--) if (!isMindArea(draft.areas[i])) return i
+    if (curArea && !isMindOnly(curArea)) return draft.cur
+    for (let i = draft.areas.length - 1; i >= 0; i--) if (!isMindOnly(draft.areas[i])) return i
     return -1
   })
   /** Brush = the level the pain slider shows: that body area's, else the entry-level pain (the free value). */
@@ -88,15 +88,14 @@
   )
 
   function apply(next: { areas: EntryDraft['areas']; cur: number }) {
-    draft.areas = next.areas
+    // An area left with only the mind has no pain: its level is the highest mental reading (§5.4).
+    draft.areas = setMindLevel(next.areas, mindMax(draft.readings, symptoms))
     draft.cur = next.cur
     // The pain slider keeps its value while hidden behind the mind; the entry gets 0 at save (§5.4).
     if (bodyAreas(draft.areas).length) draft.readings = { ...draft.readings, [PAIN]: overallPain(draft.areas, brush) }
   }
   function onRegion(id: string) {
-    const state = { areas: draft.areas, cur: draft.cur }
-    if (id === MIND) apply(toggleMind(state, mindMax(draft.readings, symptoms)))
-    else withPaintToast(() => apply(tapRegion(state, id, prefs.mirror, brush)))
+    withPaintToast(() => apply(tapRegion({ areas: draft.areas, cur: draft.cur }, id, prefs.mirror, brush)))
     haptic(6)
   }
   function onSet(ids: string[]) {

@@ -1,6 +1,8 @@
 import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
-import { REGIONS, FULL_BODY } from './regions'
+import { REGIONS, FULL_BODY, MIND } from './regions'
 import { durationMs } from './entries'
+import { hasMind } from './areas'
+import { mindMax } from './vocabulary'
 import { dayKey } from './time'
 
 const ALL_IDS = [...new Set(REGIONS.map((r) => r.id))]
@@ -83,19 +85,24 @@ export function summarize(entries: Entry[], days: number, now = Date.now()): Sum
 
 export type Heat = { mean: number; count: number; weight: number }
 
-/** Per-region mean intensity and how often it appeared, weight = count / max count. Full body counts for every region. */
-export function regionHeat(entries: Entry[]): Map<string, Heat> {
+/**
+ * Per-region mean intensity and how often it appeared, weight = count / max count. Full body counts for every
+ * body region. The mind counts once per entry that selected it, at the highest mental reading of that entry (§6.3).
+ */
+export function regionHeat(entries: Entry[], symptoms: Symptom[]): Map<string, Heat> {
   const acc = new Map<string, { sum: number; count: number }>()
+  const add = (id: string, v: number) => {
+    const c = acc.get(id) ?? { sum: 0, count: 0 }
+    c.sum += v
+    c.count++
+    acc.set(id, c)
+  }
   for (const e of entries) {
     for (const a of e.areas) {
-      const ids = a.regions.includes(FULL_BODY) ? ALL_IDS : a.regions
-      for (const id of ids) {
-        const c = acc.get(id) ?? { sum: 0, count: 0 }
-        c.sum += a.intensity
-        c.count++
-        acc.set(id, c)
-      }
+      const ids = a.regions.includes(FULL_BODY) ? ALL_IDS : a.regions.filter((r) => r !== MIND)
+      for (const id of ids) add(id, a.intensity)
     }
+    if (hasMind(e.areas)) add(MIND, mindMax(e.readings, symptoms))
   }
   const maxCount = Math.max(1, ...[...acc.values()].map((c) => c.count))
   return new Map([...acc].map(([id, c]) => [id, { mean: c.sum / c.count, count: c.count, weight: c.count / maxCount }]))

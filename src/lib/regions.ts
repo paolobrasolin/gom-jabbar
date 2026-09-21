@@ -4,7 +4,7 @@ export type { FigureId }
 export const FULL_BODY = '*'
 /**
  * The mind (§5.3): a figure beside the body, selectable like a region and stored as one, where the
- * mind symptoms live. Not a CHOIR segment, no side, no view; always alone in its area (§5.4).
+ * mind symptoms live. Not a CHOIR segment, no side, no view; it shares an area with the body (§5.4).
  */
 export const MIND = 'mind'
 export const isMind = (id: string): boolean => id === MIND
@@ -231,9 +231,10 @@ export function toggleFullBody(selected: string[]): string[] {
 
 export type RegionSummaryItem = { group: Group | 'full' | 'mind'; side: 'both' | Side | 'none' }
 
-/** Collapse region ids into coarse groups with side info, for display. The mind comes first, full body stands alone. */
+/** Collapse region ids into coarse groups with side info, for display. Full body stands for every body region; the mind comes last. */
 export function summarizeRegions(regions: string[]): RegionSummaryItem[] {
-  if (isFullBody(regions)) return [{ group: 'full', side: 'none' }]
+  const mind: RegionSummaryItem[] = regions.includes(MIND) ? [{ group: 'mind', side: 'none' }] : []
+  if (isFullBody(regions)) return [{ group: 'full', side: 'none' }, ...mind]
   const order: Group[] = ['head', 'arm', 'torso', 'back', 'hip', 'leg']
   const sides = new Map<Group, Set<Side>>()
   for (const id of regions) {
@@ -242,9 +243,7 @@ export function summarizeRegions(regions: string[]): RegionSummaryItem[] {
     if (!sides.has(def.group)) sides.set(def.group, new Set())
     sides.get(def.group)!.add(def.side)
   }
-  const mind: RegionSummaryItem[] = regions.includes(MIND) ? [{ group: 'mind', side: 'none' }] : []
   return [
-    ...mind,
     ...order
       .filter((g) => sides.has(g))
       .map((g) => {
@@ -252,6 +251,7 @@ export function summarizeRegions(regions: string[]): RegionSummaryItem[] {
         const side: RegionSummaryItem['side'] = s.has('l') && s.has('r') ? 'both' : s.has('l') ? 'l' : 'r'
         return { group: g, side }
       }),
+    ...mind,
   ]
 }
 

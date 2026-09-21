@@ -3,7 +3,7 @@
   import { figureBox, MIND, MIND_SHAPE, type View } from '../lib/regions'
   import { prefs } from '../lib/prefs.svelte'
   import { intensityColor } from '../lib/color'
-  import { isMindArea, type Area } from '../lib/areas'
+  import type { Area } from '../lib/areas'
   import { regionLabel } from '../lib/regionLabel'
   import type { HeatStroke } from '../lib/strokes'
   import { t } from '../i18n/index.svelte'
@@ -33,8 +33,8 @@
 
   const box = $derived(figureBox(prefs.figure))
   const views: View[] = ['front', 'back']
-  /** The mind is one region of its own (§5.3): coloured by its area, or by the heat like any other. */
-  const mindArea = $derived(areas.find(isMindArea))
+  /** The mind is one region among the others (§5.3): coloured by its area, or by the heat like any other. */
+  const mindArea = $derived(areas.find((a) => a.regions.includes(MIND)))
   const mindHeat = $derived(heat?.get(MIND))
   const mindColor = $derived(heat ? (mindHeat ? intensityColor(mindHeat.mean) : undefined) : mindArea ? intensityColor(mindArea.intensity) : undefined)
   const mindOutlined = $derived(areas.length > 1 && cur >= 0 && !!areas[cur]?.regions.includes(MIND))

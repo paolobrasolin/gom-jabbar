@@ -47,15 +47,24 @@ describe('stats', () => {
       e('1', 8, { areas: [{ regions: ['152'], intensity: 8 }] }),
       e('2', 4, { areas: [{ regions: ['152', '110'], intensity: 4 }] }),
       e('3', 2, { areas: [{ regions: ['*'], intensity: 2 }] }),
-    ])
+    ], DEFAULT_SYMPTOMS)
     expect(h.get('152')).toEqual({ mean: 14 / 3, count: 3, weight: 1 })
     expect(h.get('110')?.count).toBe(2)
     expect(h.get('261')).toEqual({ mean: 2, count: 1, weight: 1 / 3 })
     // The mind is one more region; full body does not cover it.
     expect(h.get('mind')).toBeUndefined()
-    const b = regionHeat([e('4', 0, { readings: { fog: 6 }, areas: [{ regions: ['mind'], intensity: 6 }] })])
-    expect(b.get('mind')).toEqual({ mean: 6, count: 1, weight: 1 })
-    expect(b.get('152')).toBeUndefined()
+    // It heats from the mental readings of the entries that selected it, not from its area's level (which is pain when it shares one).
+    const b = regionHeat(
+      [
+        e('4', 0, { readings: { fog: 6, anxiety: 2 }, areas: [{ regions: ['mind'], intensity: 1 }] }),
+        e('5', 3, { readings: { fog: 4, swelling: 9 }, areas: [{ regions: ['152', 'mind'], intensity: 3 }] }),
+        e('6', 7, { readings: { fog: 8 }, areas: [{ regions: ['152'], intensity: 7 }] }),
+      ],
+      DEFAULT_SYMPTOMS,
+    )
+    expect(b.get('mind')).toEqual({ mean: 5, count: 2, weight: 1 })
+    expect(b.get('152')).toEqual({ mean: 5, count: 2, weight: 1 })
+    expect(b.size).toBe(2)
   })
 
   it('compares tags on days with vs without, with a minimum', () => {

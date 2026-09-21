@@ -121,8 +121,8 @@ export function simplify(points: [number, number][], tol = 0.8): [number, number
 }
 
 /**
- * Paint a gesture onto the current body area (never the mind's, §5.4): its pieces join the area and so do
- * their segments, pulled from other areas together with their paint, exactly as taps would. Mirror never applies.
+ * Paint a gesture onto the current area (§5.4): its pieces join the area and so do their segments,
+ * pulled from other areas together with their paint, exactly as taps would. Mirror never applies.
  */
 export function addStroke(state: AreaState, raw: RawStroke, brush: number): AreaState {
   const pieces = partition(raw)

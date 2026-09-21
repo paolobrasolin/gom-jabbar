@@ -8,9 +8,9 @@ import { FULL_BODY, MIND, isFullBody, mirrorId, type View, type FigureId } from 
 export type Stroke = { region: string; fig: FigureId; view: View; points: [number, number][]; w: number }
 
 /**
- * A set of regions sharing one intensity. An entry has zero or more areas. The mind is always
- * alone in its area, whose level is the highest mental reading (§5.4); every other area is a body area.
- * Strokes, when any, shade exact spots inside a body area (§5.3).
+ * A set of regions sharing one intensity. An entry has zero or more areas. The mind is one region
+ * among the others (§5.4); an area holding nothing but the mind has no pain, so its level is the
+ * highest mental reading instead. Strokes, when any, shade exact spots inside the body regions (§5.3).
  */
 export type Area = { regions: string[]; intensity: number; strokes?: Stroke[] }
 
@@ -26,11 +26,13 @@ export function isFull(areas: Area[]): boolean {
   return areas.some((a) => isFullBody(a.regions))
 }
 
-export const isMindArea = (a: Area): boolean => a.regions.includes(MIND)
-export const hasMind = (areas: Area[]): boolean => areas.some(isMindArea)
-export const bodyAreas = (areas: Area[]): Area[] => areas.filter((a) => !isMindArea(a))
+/** An area holding the mind and nothing else: no body, so no pain level of its own (§5.4). */
+export const isMindOnly = (a: Area): boolean => a.regions.length > 0 && a.regions.every((r) => r === MIND)
+export const hasMind = (areas: Area[]): boolean => areas.some((a) => a.regions.includes(MIND))
+/** The areas with a body in them (an empty one counts: it is the one being built). */
+export const bodyAreas = (areas: Area[]): Area[] => areas.filter((a) => !isMindOnly(a))
 /** Only the mind is selected: nothing on the body, so no pain either. */
-export const mindOnly = (areas: Area[]): boolean => areas.length > 0 && areas.every(isMindArea)
+export const mindOnly = (areas: Area[]): boolean => areas.length > 0 && areas.every(isMindOnly)
 
 /** Pain is the max over the body areas; with only the mind selected it is 0; with no areas at all, the free value. */
 export function overallPain(areas: Area[], fallback: number): number {
@@ -65,23 +67,27 @@ export function pullRegions(areas: Area[], cur: number, ids: string[]): Area[] {
   })
 }
 
-/** A body tap (or stroke) goes to the current area when it is a body area, else to the last body area, else to a new one at the brush level. */
-export function bodyTarget({ areas, cur }: AreaState, brush: number): AreaState {
-  if (areas[cur] && !isMindArea(areas[cur])) return { areas, cur }
-  let i = areas.length - 1
-  while (i >= 0 && isMindArea(areas[i])) i--
-  if (i >= 0) return { areas, cur: i }
+/** The current area, or a new one at the brush level when there is none. */
+function target({ areas, cur }: AreaState, brush: number): AreaState {
+  if (areas[cur]) return { areas, cur }
   return { areas: [...areas, { regions: [], intensity: brush }], cur: areas.length }
 }
 
-/** Tap a region: remove it from the current area if it is there, else move it into the current area. The mind toggles its own area. */
+/** A body tap (or stroke) goes to the current area; one holding only the mind takes the brush level as the body joins it (§5.4). */
+export function bodyTarget(state: AreaState, brush: number): AreaState {
+  const { areas, cur } = target(state, brush)
+  if (!isMindOnly(areas[cur])) return { areas, cur }
+  return { areas: areas.map((a, i) => (i === cur ? { ...a, intensity: brush } : a)), cur }
+}
+
+/** Tap a region: remove it from the current area if it is there, else move it into the current area. The mind is one more region, never mirrored, toggleable under full body. */
 export function tapRegion(state: AreaState, id: string, mirror: boolean, brush: number): AreaState {
-  if (id === MIND) return toggleMind(state, brush)
-  if (isFull(state.areas)) return state
+  const mind = id === MIND
+  if (isFull(state.areas) && !mind) return state
   const ids = [id]
-  const m = mirror ? mirrorId(id) : null
+  const m = mirror && !mind ? mirrorId(id) : null
   if (m) ids.push(m)
-  const { areas, cur } = bodyTarget(state, brush)
+  const { areas, cur } = mind ? target(state, brush) : bodyTarget(state, brush)
   const inCur = areas[cur].regions.includes(id)
   return prune({ areas: inCur ? without(areas, ids) : pullRegions(areas, cur, ids), cur })
 }
@@ -95,30 +101,19 @@ export function tapSet(state: AreaState, set: string[], brush: number): AreaStat
   return prune({ areas: all ? without(areas, ids) : pullRegions(areas, cur, ids), cur })
 }
 
-/** Toggle the mind: off removes its area, on appends one at `level` (the highest mental reading) and makes it current. */
-export function toggleMind(state: AreaState, level: number): AreaState {
-  const i = state.areas.findIndex(isMindArea)
-  if (i >= 0) {
-    const areas = state.areas.filter((_, j) => j !== i)
-    const cur = state.cur === i ? 0 : state.cur > i ? state.cur - 1 : state.cur
-    return prune({ areas, cur })
-  }
-  return prune({ areas: [...state.areas, { regions: [MIND], intensity: level }], cur: state.areas.length })
-}
-
-/** The mind area, if any, takes the level given (the highest mental reading). */
+/** An area holding only the mind has no pain, so it takes the level given (the highest mental reading); the others keep theirs. */
 export function setMindLevel(areas: Area[], level: number): Area[] {
-  return areas.map((a) => (isMindArea(a) ? { ...a, intensity: level } : a))
+  return areas.map((a) => (isMindOnly(a) ? { ...a, intensity: level } : a))
 }
 
-/** Full body replaces every body area with one, keeping their paint; the mind area, if any, stays. */
+/** Full body replaces every area with one, keeping their paint and the mind; off again, the mind, if selected, stays on its own. */
 export function toggleFull(state: AreaState, brush: number): AreaState {
-  const mind = state.areas.filter(isMindArea)
-  if (isFull(state.areas)) return { areas: mind, cur: 0 }
+  const mind = hasMind(state.areas) ? [MIND] : []
   const cur = state.areas[state.cur]
-  const intensity = cur && !isMindArea(cur) ? cur.intensity : brush
-  const strokes = bodyAreas(state.areas).flatMap((a) => a.strokes ?? [])
-  return { areas: [{ regions: [FULL_BODY], intensity, ...(strokes.length ? { strokes } : {}) }, ...mind], cur: 0 }
+  if (isFull(state.areas)) return { areas: mind.length ? [{ regions: mind, intensity: cur?.intensity ?? brush }] : [], cur: 0 }
+  const intensity = cur && !isMindOnly(cur) ? cur.intensity : brush
+  const strokes = state.areas.flatMap((a) => a.strokes ?? [])
+  return { areas: [{ regions: [FULL_BODY, ...mind], intensity, ...(strokes.length ? { strokes } : {}) }], cur: 0 }
 }
 
 export function addArea(state: AreaState, brush: number): AreaState {
@@ -142,7 +137,7 @@ export function finalize(areas: Area[]): Area[] {
   return areas
     .filter((a) => a.regions.length > 0)
     .map((a) => ({
-      regions: isFullBody(a.regions) ? [FULL_BODY] : sortU(a.regions),
+      regions: isFullBody(a.regions) ? [FULL_BODY, ...(a.regions.includes(MIND) ? [MIND] : [])] : sortU(a.regions),
       intensity: clamp(a.intensity),
       ...(a.strokes?.length
         ? { strokes: a.strokes.map((s) => ({ region: s.region, fig: s.fig, view: s.view, points: s.points.map(([x, y]) => [round1(x), round1(y)] as [number, number]), w: round1(s.w) })) }

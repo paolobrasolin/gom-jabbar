@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid'
 import { db } from './db'
 import { addEntry } from './entries'
-import { finalize, mindOnly, isMindArea } from './areas'
+import { finalize, mindOnly, isMindOnly } from './areas'
 import { mindMax } from './vocabulary'
 import { PAIN, type Entry, type Preset } from './types'
 import type { EntryDraft } from './draft'
@@ -34,7 +34,7 @@ export async function restorePreset(p: Preset): Promise<void> {
   await db.presets.put(p)
 }
 
-/** Log an ordinary moment from a preset: its body areas at the pain level given, the mind at the highest mental one, its tags, its episode flag. */
+/** Log an ordinary moment from a preset: its areas at the pain level given (one holding only the mind at the highest mental one), its tags, its episode flag. */
 export async function logPreset(preset: Preset, readings: Record<string, number>, at?: string): Promise<Entry> {
   const pain = readings[PAIN] ?? 0
   const mind = mindMax(readings, await db.symptoms.toArray())
@@ -42,7 +42,7 @@ export async function logPreset(preset: Preset, readings: Record<string, number>
     at,
     ongoing: preset.ongoing,
     readings,
-    areas: preset.areas.map((a) => ({ ...a, intensity: isMindArea(a) ? mind : pain })),
+    areas: preset.areas.map((a) => ({ ...a, intensity: isMindOnly(a) ? mind : pain })),
     tags: preset.tags,
     note: '',
     preset: preset.id,

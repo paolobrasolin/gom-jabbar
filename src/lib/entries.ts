@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid'
 import { db } from './db'
 import { PAIN, type Entry } from './types'
-import { finalize, overallPain, isMindArea, type Area } from './areas'
+import { finalize, overallPain, isMindOnly, bodyAreas, type Area } from './areas'
 import { mindMax } from './vocabulary'
 
 export type EntryInput = {
@@ -78,8 +78,8 @@ export async function reopenEpisode(id: string): Promise<Entry | undefined> {
 
 /**
  * Record new readings on an ongoing episode. Unmentioned symptoms keep their level. A single body area
- * follows the pain reading; several keep their initial split; the mind area follows the highest mental
- * reading. The first update also stores where the episode started, so the history is the complete trail.
+ * follows the pain reading; several keep their initial split; an area holding only the mind follows the
+ * highest mental reading. The first update also stores where the episode started, so the history is the complete trail.
  * `tags`, when given, replace the entry's.
  */
 export async function updateEpisode(id: string, readings: Record<string, number>, at: string = now(), tags?: string[]): Promise<Entry | undefined> {
@@ -88,8 +88,8 @@ export async function updateEpisode(id: string, readings: Record<string, number>
   const next = { ...e.readings, ...readings }
   const pain = next[PAIN] ?? 0
   const mind = mindMax(next, await db.symptoms.toArray())
-  const oneBody = e.areas.filter((a) => !isMindArea(a)).length === 1
-  const areas = e.areas.map((a) => (isMindArea(a) ? { ...a, intensity: mind } : oneBody ? { ...a, intensity: pain } : a))
+  const oneBody = bodyAreas(e.areas).length === 1
+  const areas = e.areas.map((a) => (isMindOnly(a) ? { ...a, intensity: mind } : oneBody ? { ...a, intensity: pain } : a))
   const history = e.history?.length ? [...e.history] : [{ at: e.at, readings: { ...e.readings } }]
   history.push({ at, readings: next })
   await db.entries.update(id, { readings: next, areas, history, updatedAt: now(), ...(tags ? { tags: [...tags] } : {}) })

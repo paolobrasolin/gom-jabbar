@@ -118,14 +118,14 @@ describe('addStroke', () => {
     expect(full.areas).toEqual([{ regions: ['*'], intensity: 4, strokes: [piece('110')] }])
   })
 
-  it('never lands in the mind area: it goes to the last body area, or starts one at the brush level', () => {
+  it('lands in the current area even when it holds only the mind, the area taking the brush level', () => {
     const mindCur = { areas: [{ regions: ['110'], intensity: 4 }, { regions: ['mind'], intensity: 7 }], cur: 1 }
     const s = addStroke(mindCur, dot('152'), 9)
-    expect(s.areas).toEqual([{ regions: ['110', '152'], intensity: 4, strokes: [piece('152')] }, { regions: ['mind'], intensity: 7 }])
-    expect(s.cur).toBe(0)
+    expect(s.areas).toEqual([{ regions: ['110'], intensity: 4 }, { regions: ['152', 'mind'], intensity: 9, strokes: [piece('152')] }])
+    expect(s.cur).toBe(1)
     const mindOnly = addStroke({ areas: [{ regions: ['mind'], intensity: 7 }], cur: 0 }, dot('152'), 9)
-    expect(mindOnly.areas).toEqual([{ regions: ['mind'], intensity: 7 }, { regions: ['152'], intensity: 9, strokes: [piece('152')] }])
-    expect(mindOnly.cur).toBe(1)
+    expect(mindOnly.areas).toEqual([{ regions: ['152', 'mind'], intensity: 9, strokes: [piece('152')] }])
+    expect(mindOnly.cur).toBe(0)
   })
 })
 
