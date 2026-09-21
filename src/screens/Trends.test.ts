@@ -41,7 +41,7 @@ describe('Trends summary', () => {
   it('fills the tiles from the entries in range', async () => {
     await addEntry({ at: at(0, 9), ...legs(8) })
     await addEntry({ at: at(0, 10), ...legs(4) })
-    const ep = await addEntry({ at: at(1, 9), ongoing: true, ...legs(6) })
+    const ep = await addEntry({ at: at(1, 9), kind: 'episode', ...legs(6) })
     await endEpisode(ep.id, at(1, 11))
     await openTrends()
     await waitFor(() => expect(tile('Voci')).toHaveTextContent('3'))
@@ -163,7 +163,7 @@ describe('Trends report', () => {
 
 describe('Trends presets', () => {
   it('draws one line per preset with samples in range', async () => {
-    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: [] }], symptomIds: ['pain'], ongoing: false })
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: [] }], symptomIds: ['pain'], kind: 'chronic' })
     await logPreset(p, { pain: 4 })
     await logPreset(p, { pain: 6 })
     render(App)

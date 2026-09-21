@@ -2,7 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Entry, Preset, Symptom, Tag } from './types'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, MIND_DEFAULTS_V6, defaultCategory } from './vocabulary'
 import { upgradeRegions } from './regions'
-import { entryToLayers, presetToLayers, categoryLookup, type AreaV6, type EntryV6, type PresetV6 } from './legacy'
+import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, type AreaV6, type EntryV6, type EntryV7, type PresetV6, type PresetV7 } from './legacy'
 
 export class GomJabbarDB extends Dexie {
   entries!: EntityTable<Entry, 'id'>
@@ -84,6 +84,30 @@ export class GomJabbarDB extends Dexie {
           p.layers = presetToLayers({ areas: old.areas ?? [], tags: old.tags ?? [] })
           delete p.areas
           delete p.tags
+        })
+      })
+    // 8: an episode is a chain of readings (§5.5, §8): the row becomes the head, its history points become updates
+    // pointing at it, `kind` names what a row is, `preset` becomes `presetId`; `ongoing` and `history` go once replaced.
+    // Presets: `ongoing` becomes `kind`. Nothing is cleared: heads are rewritten in place, updates added beside them.
+    this.version(8)
+      .stores({
+        entries: 'id, at, createdAt, updatedAt, presetId, episodeId',
+        presets: 'id, order',
+      })
+      .upgrade(async (tx) => {
+        const entries = tx.table('entries')
+        const updates: Entry[] = []
+        await entries.toCollection().modify((row: Record<string, unknown>) => {
+          const [head, ...rest] = splitEpisode(row as unknown as EntryV7)
+          updates.push(...rest)
+          for (const k of Object.keys(row)) delete row[k]
+          Object.assign(row, head)
+        })
+        await entries.bulkAdd(updates)
+        await tx.table('presets').toCollection().modify((row: Record<string, unknown>) => {
+          const next = presetKind(row as PresetV7)
+          for (const k of Object.keys(row)) delete row[k]
+          Object.assign(row, next)
         })
       })
     this.on('populate', () => {

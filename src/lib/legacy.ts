@@ -1,4 +1,4 @@
-import { PAIN, type HistoryPoint, type SymptomCategory } from './types'
+import { PAIN, type Entry, type SymptomCategory } from './types'
 import { hasBody, holdsMind, type Layer, type Stroke } from './layers'
 import { defaultCategory } from './vocabulary'
 
@@ -9,6 +9,30 @@ import { defaultCategory } from './vocabulary'
 export type AreaV6 = { regions: string[]; intensity: number; strokes?: Stroke[] }
 export type EntryV6 = { areas: AreaV6[]; readings: Record<string, number>; tags: string[]; history?: { at: string; readings: Record<string, number> }[] }
 export type PresetV6 = { areas: AreaV6[]; tags: string[] }
+
+/** Readings at one moment of an episode as written before version 8: one record per layer, aligned with the entry's layers. */
+export type HistoryPoint = { at: string; layers: Record<string, number>[] }
+
+/**
+ * An entry as written before version 8 (§5.5, §8): an episode was one row whose `layers` held the latest readings and
+ * whose `history` held the trail, the starting readings first (since version 3; before, the first update).
+ */
+export type EntryV7 = {
+  id: string
+  at: string
+  endedAt?: string | null
+  ongoing?: boolean
+  layers: Layer[]
+  history?: HistoryPoint[]
+  preset?: string
+  note: string
+  createdAt: string
+  updatedAt: string
+  [k: string]: unknown
+}
+
+/** A preset as written before version 8: `ongoing` said whether a save opened an episode. */
+export type PresetV7 = { ongoing?: boolean; [k: string]: unknown }
 
 export type CategoryOf = (symptomId: string) => SymptomCategory
 
@@ -62,4 +86,58 @@ export function presetToLayers(p: PresetV6): Layer[] {
   const layers = p.areas.map(layerOf)
   layers[0] = { ...layers[0], tags: [...tags] }
   return layers
+}
+
+/** Each layer with the readings of `records` at its index; a layer without a record keeps its own. */
+const withReadings = (layers: Layer[], records: Record<string, number>[]): Layer[] => layers.map((l, i) => ({ ...l, readings: { ...(records[i] ?? l.readings) } }))
+const sameReadings = (layers: Layer[], records: Record<string, number>[]): boolean =>
+  layers.length === records.length && layers.every((l, i) => JSON.stringify(l.readings) === JSON.stringify(records[i]))
+
+/**
+ * Version 7 → 8 (§8): an episode becomes a chain. The row is the head, `kind: 'episode'`, its own id as `episodeId`,
+ * `endedAt` as it was (null while active); it is an episode when it was ongoing, had ended, or carried a history at
+ * all. Every history point becomes an update: a reading at that time, the head's regions and paint, no tags, id
+ * `<head id>:<n>`. When the first point sits at the start (histories since version 3) the head takes its readings
+ * and the point is not repeated; the row's own readings were the latest, so if they differ from the last point's
+ * they are one more reading at `updatedAt`. Any other row is a chronic snapshot. `preset` becomes `presetId`;
+ * `ongoing`, `history` and `preset` are dropped only after their replacements are written.
+ */
+export function splitEpisode(row: EntryV7): Entry[] {
+  const { ongoing, history, preset, endedAt, ...rest } = row
+  const base = { ...rest, ...(preset ? { presetId: preset } : {}) } as Omit<Entry, 'kind'>
+  const points = Array.isArray(history) ? history : []
+  if (!ongoing && !endedAt && !points.length) return [{ ...base, kind: 'chronic' }]
+  const head: Entry = { ...base, kind: 'episode', episodeId: row.id, endedAt: endedAt ?? null }
+  const startsAtHead = points.length > 0 && points[0].at === row.at
+  if (startsAtHead) head.layers = withReadings(row.layers, points[0].layers)
+  const later = startsAtHead ? points.slice(1) : points
+  const updates: Entry[] = later.map((p, i) => ({
+    id: `${row.id}:${i + 1}`,
+    kind: 'episode',
+    episodeId: row.id,
+    at: p.at,
+    layers: withReadings(row.layers, p.layers).map((l) => ({ ...l, tags: [] })),
+    note: '',
+    createdAt: p.at,
+    updatedAt: p.at,
+  }))
+  if (startsAtHead && !sameReadings(row.layers, points[points.length - 1].layers)) {
+    updates.push({
+      id: `${row.id}:${later.length + 1}`,
+      kind: 'episode',
+      episodeId: row.id,
+      at: row.updatedAt,
+      layers: row.layers.map((l) => ({ ...l, readings: { ...l.readings }, tags: [] })),
+      note: '',
+      createdAt: row.updatedAt,
+      updatedAt: row.updatedAt,
+    })
+  }
+  return [head, ...updates]
+}
+
+/** Version 7 → 8 for a preset: `ongoing` becomes `kind`. */
+export function presetKind(p: PresetV7): Record<string, unknown> {
+  const { ongoing, ...rest } = p
+  return { ...rest, kind: ongoing ? 'episode' : 'chronic' }
 }

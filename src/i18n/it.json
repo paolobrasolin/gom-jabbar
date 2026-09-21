@@ -76,7 +76,7 @@
   "help.tap": "Tocca le zone che fanno male sulle due figure. Con «Entrambi i lati» acceso, toccare una gamba seleziona anche l'altra.",
   "help.level": "Trascina il cursore per l'intensità: il numero è nel pallino.",
   "help.areas": "Zone con intensità diverse? Tocca «+ Altra zona», poi tocca le altre zone e regola il cursore. Il cursore agisce sempre sulla zona evidenziata.",
-  "help.ongoing": "«In corso» segna un episodio che continua: resterà in alto finché non lo termini. Toccalo per aggiornare l'intensità.",
+  "help.ongoing": "«Cronico» è una foto di com'è adesso. «Episodio» ha un inizio e una fine: senza fine resta in alto finché non lo termini, e toccandolo aggiungi una lettura. Se è già finito, metti la fine.",
   "help.time": "Stai registrando qualcosa di prima? Scegli quando con i bottoni del tempo.",
   "help.undo": "Ogni salvataggio, modifica o eliminazione si può annullare subito dal messaggio in basso.",
   "help.edit": "Nel Diario tocca una voce per modificarla o eliminarla.",
@@ -89,8 +89,8 @@
   "preset.created": "Preset creato",
   "preset.deleted": "Preset eliminato",
   "preset.never": "mai",
-  "preset.hint": "Un preset salva zone, sintomi e tag di questa voce: dalla schermata Registra lo tocchi, metti il livello, salvi.",
-  "preset.none": "Nessun preset. Tocca una voce (nella riga Oggi o nel Diario), poi «Crea preset da questa voce».",
+  "preset.hint": "Un preset salva zone, sintomi e tag di questa voce, e se è cronica o un episodio: dalla schermata Registra lo tocchi, metti il livello, salvi.",
+  "preset.none": "Nessun preset. Nel Diario tocca una voce, poi «Crea preset da questa voce».",
   "settings.presets": "Preset",
   "trends.presets": "Per preset",
   "trends.presetsHint": "Solo i momenti registrati dal preset; i giorni senza restano vuoti.",
@@ -212,5 +212,11 @@
   "preset.fromEntry": "Crea preset da questa voce",
   "log.clear": "Azzera",
   "log.cleared": "Modulo azzerato",
-  "log.allTags": "Tutti i tag"
+  "log.allTags": "Tutti i tag",
+  "log.kind.chronic": "Cronico",
+  "log.kind.episode": "Episodio",
+  "time.when": "Quando",
+  "time.start": "Inizio",
+  "time.end": "Fine",
+  "episode.readings": "Letture"
 }

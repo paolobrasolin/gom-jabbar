@@ -76,7 +76,7 @@
   "help.tap": "Tap the areas that hurt on the two figures. With “Both sides” on, tapping one leg also selects the other.",
   "help.level": "Drag the slider for intensity: the number sits in the knob.",
   "help.areas": "Different levels in different places? Tap “+ Another area”, then tap the other areas and adjust the slider. The slider always acts on the highlighted area.",
-  "help.ongoing": "“Ongoing” marks an episode that is still going: it stays at the top until you end it. Tap it to update the level.",
+  "help.ongoing": "“Chronic” is a snapshot of how it is now. “Episode” has a start and an end: without an end it stays at the top until you end it, and tapping it adds a reading. If it is already over, set the end.",
   "help.time": "Logging something from earlier? Pick when with the time buttons.",
   "help.undo": "Every save, edit or delete can be undone right away from the message at the bottom.",
   "help.edit": "In the Diary, tap an entry to edit or delete it.",
@@ -89,8 +89,8 @@
   "preset.created": "Preset created",
   "preset.deleted": "Preset deleted",
   "preset.never": "never",
-  "preset.hint": "A preset saves the areas, symptoms and tags of this entry: on the Log screen you tap it, set the level, save.",
-  "preset.none": "No presets yet. Tap an entry (in the Today strip or the Diary), then “Create a preset from this entry”.",
+  "preset.hint": "A preset saves the areas, symptoms and tags of this entry, and whether it is chronic or an episode: on the Log screen you tap it, set the level, save.",
+  "preset.none": "No presets yet. In the Diary tap an entry, then “Create a preset from this entry”.",
   "settings.presets": "Presets",
   "trends.presets": "By preset",
   "trends.presetsHint": "Only the moments logged from the preset; days without stay empty.",
@@ -212,5 +212,11 @@
   "preset.fromEntry": "Create a preset from this entry",
   "log.clear": "Clear",
   "log.cleared": "Form cleared",
-  "log.allTags": "All tags"
+  "log.allTags": "All tags",
+  "log.kind.chronic": "Chronic",
+  "log.kind.episode": "Episode",
+  "time.when": "When",
+  "time.start": "Start",
+  "time.end": "End",
+  "episode.readings": "Readings"
 }

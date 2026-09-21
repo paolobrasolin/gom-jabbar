@@ -22,6 +22,7 @@ import exportV4 from '../test/fixtures/export-v4.json'
 import exportV5 from '../test/fixtures/export-v5.json'
 import exportV6 from '../test/fixtures/export-v6.json'
 import exportV7 from '../test/fixtures/export-v7.json'
+import exportV8 from '../test/fixtures/export-v8.json'
 import dbV1 from '../test/fixtures/db-v1.json'
 import dbV2 from '../test/fixtures/db-v2.json'
 import dbV3 from '../test/fixtures/db-v3.json'
@@ -29,14 +30,15 @@ import dbV4 from '../test/fixtures/db-v4.json'
 import dbV5 from '../test/fixtures/db-v5.json'
 import dbV6 from '../test/fixtures/db-v6.json'
 import dbV7 from '../test/fixtures/db-v7.json'
+import dbV8 from '../test/fixtures/db-v8.json'
 
 type Row = Record<string, unknown>
 type DbFixture = { version: number; stores: Record<string, string>; tables: Record<string, Row[]> }
 type ExportFixture = { exportedAt: string; vocabulary: { symptoms: Row[]; tags: Row[] }; entries: Row[]; presets?: Row[] }
 type Table = 'entries' | 'presets' | 'symptoms' | 'tags'
 
-const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4, 5: exportV5, 6: exportV6, 7: exportV7 }
-const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4, 5: dbV5, 6: dbV6, 7: dbV7 }
+const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4, 5: exportV5, 6: exportV6, 7: exportV7, 8: exportV8 }
+const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4, 5: dbV5, 6: dbV6, 7: dbV7, 8: dbV8 }
 
 const regionCodes = (e: Row): Row => (Array.isArray(e.areas) ? { ...e, areas: (e.areas as { regions: string[] }[]).map((a) => ({ ...a, regions: upgradeRegions(a.regions) })) } : e)
 
@@ -71,7 +73,7 @@ function layersOf(areas: AreaRow[], readings: Readings, tags: string[], ctx: Ctx
  * The documented, deliberate change from version N to N+1, per table.
  * Anything not written here must come through untouched.
  */
-const UPGRADES: Record<number, Partial<Record<Table, (r: Row, ctx: Ctx) => Row>>> = {
+const UPGRADES: Record<number, Partial<Record<Table, (r: Row, ctx: Ctx) => Row | Row[]>>> = {
   // 1 → 2: `regions` (flat list) became `areas` (region sets with their own level).
   1: {
     entries: ({ regions, ...e }) => ({
@@ -100,6 +102,32 @@ const UPGRADES: Record<number, Partial<Record<Table, (r: Row, ctx: Ctx) => Row>>
     },
     presets: ({ areas, tags, ...p }, ctx) => ({ ...p, layers: layersOf((areas as AreaRow[]) ?? [], {}, (tags as string[]) ?? [], ctx) }),
   },
+  // 7 → 8: an episode is a chain of readings. A row that was ongoing, had ended or carried a history is the head:
+  // `kind: 'episode'`, its own id as `episodeId`, `endedAt` as it was (null while active). Each history point is an
+  // update, `<id>:<n>`, at the point's time with the head's regions and paint, no tags and no note. When the first
+  // point sits at the start the head takes its readings and the point is not repeated; the row's own readings were
+  // the latest, so when they differ from the last point's they are one more update at `updatedAt`. Any other row is
+  // `kind: 'chronic'`. `preset` becomes `presetId`. `ongoing`, `history` and `preset` go, replaced. Presets: `ongoing` becomes `kind`.
+  7: {
+    entries: ({ ongoing, history, preset, endedAt, ...e }) => {
+      const base = { ...e, ...(preset ? { presetId: preset } : {}) }
+      const points = (history as { at: string; layers: Readings[] }[] | undefined) ?? []
+      if (!ongoing && !endedAt && !points.length) return { ...base, kind: 'chronic' }
+      const layers = e.layers as { readings: Readings }[]
+      const readingsOf = (records: Readings[]) => layers.map((l, i) => ({ ...l, readings: { ...(records[i] ?? l.readings) } }))
+      const fromStart = points.length > 0 && points[0].at === e.at
+      const head = { ...base, kind: 'episode', episodeId: e.id, endedAt: endedAt ?? null, ...(fromStart ? { layers: readingsOf(points[0].layers) } : {}) }
+      const later = fromStart ? points.slice(1) : points
+      const update = (n: number, at: string, records: Readings[]) => ({
+        id: `${e.id}:${n}`, kind: 'episode', episodeId: e.id, at, layers: readingsOf(records).map((l) => ({ ...l, tags: [] })), note: '', createdAt: at, updatedAt: at,
+      })
+      const out = [head, ...later.map((p, i) => update(i + 1, p.at, p.layers))]
+      const last = points[points.length - 1]
+      if (fromStart && JSON.stringify(layers.map((l) => l.readings)) !== JSON.stringify(last.layers)) out.push(update(later.length + 1, e.updatedAt as string, layers.map((l) => l.readings)))
+      return out
+    },
+    presets: ({ ongoing, ...p }) => ({ ...p, kind: ongoing ? 'episode' : 'chronic' }),
+  },
 }
 
 /** Rows a database upgrade adds, per version and table: the mind defaults that arrived with version 6, when their ids were free. */
@@ -107,16 +135,16 @@ const ADDED: Record<number, Partial<Record<Table, (rows: Row[]) => Row[]>>> = {
   6: { symptoms: (rows) => MIND_DEFAULTS_V6.filter((s) => !rows.some((r) => r.id === s.id)) as Row[] },
 }
 
-/** What a row of `table` from version `from` must look like today. */
-function today(e: Row, from: number, to: number, table: Table, ctx: Ctx): Row {
-  let r = e
-  for (let v = from; v < to; v++) r = (UPGRADES[v][table] ?? ((x: Row) => x))(r, ctx)
-  return r
+/** What a row of `table` from version `from` must look like today: one row, or the several it became (8). */
+function today(e: Row, from: number, to: number, table: Table, ctx: Ctx): Row[] {
+  let rows: Row[] = [e]
+  for (let v = from; v < to; v++) rows = rows.flatMap((r): Row[] => [(UPGRADES[v][table] ?? ((x: Row) => x))(r, ctx)].flat())
+  return rows
 }
 
 /** Fields the import normaliser is allowed to fill in when a file left them out. */
 function withDefaults(e: Row): Row {
-  return { endedAt: null, ongoing: false, createdAt: e.at, updatedAt: e.at, note: '', ...e }
+  return { createdAt: e.at, updatedAt: e.at, note: '', ...e }
 }
 
 const byId = (rows: Row[]) => [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)))
@@ -140,15 +168,13 @@ describe.each(Object.entries(EXPORT_FIXTURES).map(([v, f]) => [Number(v), f] as 
     expect(parsed.version).toBe(EXPORT_VERSION)
     expect(parsed.exportedAt).toBe(fixture.exportedAt)
     expect(parsed.vocabulary).toEqual({
-      symptoms: fixture.vocabulary.symptoms.map((s) => today(s, version, EXPORT_VERSION, 'symptoms', ctx)),
-      tags: fixture.vocabulary.tags.map((x) => today(x, version, EXPORT_VERSION, 'tags', ctx)),
+      symptoms: fixture.vocabulary.symptoms.flatMap((s) => today(s, version, EXPORT_VERSION, 'symptoms', ctx)),
+      tags: fixture.vocabulary.tags.flatMap((x) => today(x, version, EXPORT_VERSION, 'tags', ctx)),
     })
-    expect(parsed.presets).toEqual((fixture.presets ?? []).map((p) => today(p, version, EXPORT_VERSION, 'presets', ctx)))
-    expect(parsed.entries.map((e) => e.id)).toEqual(fixture.entries.map((e) => e.id))
-    for (const e of fixture.entries) {
-      const got = parsed.entries.find((x) => x.id === e.id)
-      expect(got, String(e.id)).toEqual(withDefaults(today(e, version, EXPORT_VERSION, 'entries', ctx)))
-    }
+    expect(parsed.presets).toEqual((fixture.presets ?? []).flatMap((p) => today(p, version, EXPORT_VERSION, 'presets', ctx)))
+    const want = fixture.entries.flatMap((e) => today(e, version, EXPORT_VERSION, 'entries', ctx).map(withDefaults))
+    expect(parsed.entries.map((e) => e.id)).toEqual(want.map((e) => e.id))
+    for (const e of want) expect(parsed.entries.find((x) => x.id === e.id), String(e.id)).toEqual(e)
   })
 
   it('survives import, storage and export unchanged', async () => {
@@ -182,7 +208,7 @@ describe.each(Object.entries(DB_FIXTURES).map(([v, f]) => [Number(v), f] as cons
       const got = byId(await now.table(table).toArray())
       const added: Row[] = []
       for (let v = version + 1; v <= now.verno; v++) added.push(...(ADDED[v]?.[table as Table]?.([...rows, ...added]) ?? []))
-      const want = byId([...rows.map((r) => today(r, version, now.verno, table as Table, ctx)), ...added])
+      const want = byId([...rows.flatMap((r) => today(r, version, now.verno, table as Table, ctx)), ...added])
       expect(got, table).toEqual(want)
     }
   })

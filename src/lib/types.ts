@@ -8,24 +8,27 @@ export type RegionId = string
 export type LocalizedString = { it: string; en: string }
 export type Lang = keyof LocalizedString
 
-/** Readings at one moment of an episode, one record per layer, aligned with `entry.layers` (§5.5). */
-export type HistoryPoint = { at: string; layers: Record<SymptomId, number>[] }
+/** Two kinds of thing (§5.1): a chronic snapshot, how it is at one time; an episode, a chain of readings with a start and an end. */
+export type EntryKind = 'chronic' | 'episode'
 
+/**
+ * One reading at one time: the only place readings live. An episode is a chain of them: the head, the reading
+ * it started with, carries the end; the updates that follow point at the head (§5.5).
+ */
 export type Entry = {
   id: string
-  /** ISO datetime: when it happened, or when the episode started. */
+  kind: EntryKind
+  /** ISO datetime: a chronic snapshot's reference time; an episode reading's time, the head's being the start. */
   at: string
-  /** ISO datetime: when the episode ended, if it was one. */
-  endedAt: string | null
-  /** True while an episode is active. */
-  ongoing: boolean
   /** What and where, as independent layers (§5.4). Never empty: an entry with no location is one layer without regions. */
   layers: Layer[]
-  /** Readings over time while an episode was ongoing: the starting point first, then one per update. */
-  history?: HistoryPoint[]
-  /** The preset this moment was logged from, if any (§5.6). */
-  preset?: string
   note: string
+  /** Episode only: the head's id. The head is the entry whose `episodeId` is its own id. */
+  episodeId?: string
+  /** Head only: when the episode ended; null while it is active. */
+  endedAt?: string | null
+  /** The preset this entry was logged from, if any (§5.6); an update inherits its head's. */
+  presetId?: string
   createdAt: string
   updatedAt: string
 }
@@ -51,7 +54,7 @@ export type Tag = {
   order: number
 }
 
-/** A named, saved shape of an entry: tap it, set the level(s), save. Each tap logs an ordinary moment. */
+/** A named, saved shape of an entry: tap it, set the level(s), save. Each save logs a chronic snapshot or opens an episode. */
 export type Preset = {
   id: string
   name: string
@@ -59,7 +62,8 @@ export type Preset = {
   layers: Layer[]
   /** Sliders the preset sheet shows, in order. */
   symptomIds: SymptomId[]
-  ongoing: boolean
+  /** What a save logs (§5.6). */
+  kind: EntryKind
   order: number
 }
 

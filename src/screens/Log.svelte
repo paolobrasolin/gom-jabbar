@@ -10,21 +10,21 @@
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
-  import { addEntry, deleteEntry, endEpisode, reopenEpisode, durationMs } from '../lib/entries'
+  import { addEntry, deleteEntry, endEpisode, reopenEpisode, durationMs, activeEpisodes, latest, type Episode } from '../lib/entries'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration } from '../lib/time'
   import { PAIN, type Entry, type Preset } from '../lib/types'
-  import { lastByPreset } from '../lib/presets'
+  import { lastByPreset, presetEntries } from '../lib/presets'
   import { entryHeadline, symptomName } from '../lib/summary'
   import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
 
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
-  const active = live(() => null, () => db.entries.filter((e) => e.ongoing).sortBy('at'), [])
+  const active = live(() => null, () => activeEpisodes(), [] as Episode[])
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
-  const lastBy = live(() => null, async () => lastByPreset(await db.entries.filter((e) => !!e.preset).toArray()), {} as Record<string, Entry>)
+  const lastBy = live(() => null, async () => lastByPreset(await presetEntries()), {} as Record<string, Entry>)
   const oldest = live(() => null, async () => (await db.entries.orderBy('createdAt').first())?.createdAt ?? null, null)
 
   async function backupNow() {
@@ -60,10 +60,10 @@
     return () => clearInterval(id)
   })
   const nudge = $derived(backupDue(prefs.lastBackupAt, oldest.value, prefs.backupSnoozedUntil, tick))
-  let draft = $state(emptyDraft({ ongoing: prefs.ongoing }))
+  let draft = $state(emptyDraft({ kind: prefs.ongoing ? 'episode' : 'chronic' }))
   /** Anything worth clearing: a region, a tag or a reading other than pain on any layer, a time, a note. The pain level alone is not. */
   const dirty = $derived(
-    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.entries(l.readings).some(([id, v]) => id !== PAIN && v > 0)) || draft.at !== null || draft.note.trim() !== '',
+    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.entries(l.readings).some(([id, v]) => id !== PAIN && v > 0)) || draft.at !== null || draft.endedAt !== null || draft.note.trim() !== '',
   )
   let saving = $state(false)
   let editing = $state.raw<Entry | null>(null)
@@ -72,14 +72,14 @@
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 
   function reset() {
-    draft = emptyDraft({ ongoing: draft.ongoing, pain: draft.layers[draft.cur]?.readings[PAIN] ?? 5 })
+    draft = emptyDraft({ kind: draft.kind, pain: draft.layers[draft.cur]?.readings[PAIN] ?? 5 })
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
   }
 
   /** Azzera: back to an empty form, undoable from the toast (no confirmation dialogs, §6.1). */
   function clear() {
     const before = $state.snapshot(draft) as EntryDraft
-    draft = emptyDraft({ ongoing: draft.ongoing })
+    draft = emptyDraft({ kind: draft.kind })
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
     haptic(20)
     showToast(t('log.cleared'), { label: t('log.undo'), run: () => (draft = before) })
@@ -89,7 +89,7 @@
     if (saving) return
     saving = true
     try {
-      prefs.ongoing = draft.ongoing
+      prefs.ongoing = draft.kind === 'episode'
       savePrefs()
       const entry = await addEntry(draftToInput(draft))
       haptic(20)
@@ -112,17 +112,18 @@
 <div class="screen log">
   {#if active.value.length}
     <div class="episodes">
-      {#each active.value as e (e.id)}
-        {@const hl = entryHeadline(e)}
+      {#each active.value as ep (ep.head.id)}
+        {@const cur = latest(ep)}
+        {@const hl = entryHeadline(cur)}
         <div class="card episode row">
-          <button class="row grow open" onclick={() => (episode = e)} aria-label={t('episode.active')}>
+          <button class="row grow open" onclick={() => (episode = ep.head)} aria-label={t('episode.active')}>
             <span class="pill" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
             <span class="grow small text">
-              <span class="line"><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={e.layers} tagDefs={tags.value} /></span>
-              <span class="muted">{t('episode.since', { d: formatDuration(durationMs(e, tick) ?? 0, units) })}</span>
+              <span class="line"><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={cur.layers} tagDefs={tags.value} /></span>
+              <span class="muted">{t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })}</span>
             </span>
           </button>
-          <button class="btn" onclick={() => end(e.id)}>{t('episode.end')}</button>
+          <button class="btn" onclick={() => end(ep.head.id)}>{t('episode.end')}</button>
         </div>
       {/each}
     </div>

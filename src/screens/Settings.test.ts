@@ -52,7 +52,7 @@ async function pickFile(text: string) {
 
 describe('Settings presets', () => {
   it('lists presets and deletes with undo', async () => {
-    await addPreset({ name: 'Schiena', layers: [], symptomIds: ['pain'], ongoing: false })
+    await addPreset({ name: 'Schiena', layers: [], symptomIds: ['pain'], kind: 'chronic' })
     await openSettings()
     const row = (await screen.findByText('Schiena')).closest('.preset')!
     await fireEvent.click(row.querySelector('button')!)
@@ -174,7 +174,7 @@ describe('Settings backup', () => {
     expect(shared[0].name).toMatch(/^gom-jabbar-\d{8}\.csv$/)
     expect(shared[0].type).toBe('text/csv')
     const csv = await readFile(shared[0])
-    expect(csv.startsWith('id,at,endedAt,ongoing,pain,swelling')).toBe(true)
+    expect(csv.startsWith('id,kind,at,episodeId,endedAt,presetId,pain,swelling')).toBe(true)
     expect(csv).toContain('152:pain=4:rest,gamba sx:pain=4,rest,Riposo')
     expect(prefs.lastBackupAt).toBeNull()
   })

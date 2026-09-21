@@ -3,7 +3,7 @@
   import EntryForm from './EntryForm.svelte'
   import { t } from '../i18n/index.svelte'
   import { draftFromEntry, draftToInput, emptyDraft, type EntryDraft } from '../lib/draft'
-  import { updateEntry, deleteEntry, restoreEntry } from '../lib/entries'
+  import { updateEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode } from '../lib/entries'
   import { addPreset, presetFromDraft } from '../lib/presets'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import type { Entry, Layer, Symptom, Tag } from '../lib/types'
@@ -13,6 +13,8 @@
   let draft = $state<EntryDraft>(emptyDraft())
   let open = $state(false)
   let editing: Entry | null = null
+  /** What the form may not change (§5.5): an update is a reading of its episode; a head with updates stays an episode. */
+  let lock = $state<'none' | 'kind' | 'reading'>('none')
   let naming = $state(false)
   let presetName = $state('')
 
@@ -21,9 +23,11 @@
       dismissToast()
       editing = entry
       draft = draftFromEntry(entry)
+      lock = isUpdate(entry) ? 'reading' : 'none'
       naming = false
       presetName = ''
       open = true
+      if (isHead(entry)) void loadEpisode(entry.id).then((ep) => { if (ep?.updates.length && editing === entry) lock = 'kind' })
     }
   })
 
@@ -47,41 +51,50 @@
   async function save() {
     if (!editing) return
     const input = draftToInput(draft)
-    const patch: Partial<Entry> = { at: input.at!, ongoing: input.ongoing!, layers: input.layers as Layer[], note: input.note! }
-    if (editing.ongoing && !input.ongoing) patch.endedAt = new Date().toISOString()
-    if (!editing.ongoing && input.ongoing) patch.endedAt = null
+    const patch: Partial<Entry> = { at: input.at!, layers: input.layers as Layer[], note: input.note! }
+    if (lock === 'none') {
+      // The kind may change: an episode is its own head with an end; a chronic snapshot has neither.
+      patch.kind = input.kind
+      patch.episodeId = input.kind === 'episode' ? editing.id : undefined
+      patch.endedAt = input.kind === 'episode' ? input.endedAt : undefined
+    } else if (lock === 'kind') {
+      patch.endedAt = input.endedAt
+    }
     await updateEntry(editing.id, patch)
     haptic(20)
     open = false
     showToast(t('log.saved'))
   }
 
+  /** Deleting a head takes its updates along; the toast brings them all back. */
   async function remove() {
     if (!editing) return
     const gone = await deleteEntry(editing.id)
     open = false
     haptic(20)
-    if (gone) showToast(t('diary.deleted'), { label: t('log.undo'), run: () => void restoreEntry(gone) })
+    if (gone.length) showToast(t('diary.deleted'), { label: t('log.undo'), run: () => void restoreEntries(gone) })
   }
 </script>
 
 <Sheet bind:open title={t('diary.edit')}>
-  <EntryForm bind:draft {symptoms} {tags} />
+  <EntryForm bind:draft {symptoms} {tags} {lock} />
   <div class="row">
     <button class="btn danger" onclick={remove}>{t('diary.delete')}</button>
     <button class="btn primary grow" onclick={save}>{t('common.save')}</button>
   </div>
-  <div class="preset">
-    {#if naming}
-      <div class="row">
-        <input class="grow" type="text" placeholder={t('preset.name')} aria-label={t('preset.name')} bind:value={presetName} use:focus onkeydown={(e) => e.key === 'Enter' && createPreset()} />
-        <button class="chip small" disabled={!presetName.trim()} onclick={createPreset}>{t('preset.create')}</button>
-      </div>
-      <p class="small muted">{t('preset.hint')}</p>
-    {:else}
-      <button class="chip small outline" onclick={() => (naming = true)}>{t('preset.fromEntry')}</button>
-    {/if}
-  </div>
+  {#if lock !== 'reading'}
+    <div class="preset">
+      {#if naming}
+        <div class="row">
+          <input class="grow" type="text" placeholder={t('preset.name')} aria-label={t('preset.name')} bind:value={presetName} use:focus onkeydown={(e) => e.key === 'Enter' && createPreset()} />
+          <button class="chip small" disabled={!presetName.trim()} onclick={createPreset}>{t('preset.create')}</button>
+        </div>
+        <p class="small muted">{t('preset.hint')}</p>
+      {:else}
+        <button class="chip small outline" onclick={() => (naming = true)}>{t('preset.fromEntry')}</button>
+      {/if}
+    </div>
+  {/if}
 </Sheet>
 
 <style>

@@ -4,7 +4,7 @@
   import IntensitySlider from './IntensitySlider.svelte'
   import EntrySummary from './EntrySummary.svelte'
   import { regionText, layerLevel, headline, symptomName } from '../lib/summary'
-  import { t, tl, locale } from '../i18n/index.svelte'
+  import { t, tl } from '../i18n/index.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { PAIN, type Symptom, type Tag, type TagGroup } from '../lib/types'
@@ -15,13 +15,15 @@
   import { isFull, showsCategory, readingsFor, tapRegion, tapSet, toggleFull, addLayer, selectLayer, setReading, toggleTag, pieceCount, type LayerState } from '../lib/layers'
   import { addStroke, undoStroke, clearStrokes, mainView, type RawStroke } from '../lib/strokes'
   import { isMindSymptom } from '../lib/vocabulary'
-  import { toLocalInput, fromLocalInput, thisMorning, lastNight, hoursAgo, formatTime, formatDay } from '../lib/time'
+  import TimeChips from './TimeChips.svelte'
   import type { EntryDraft } from '../lib/draft'
   import { haptic, showToast } from '../lib/toast.svelte'
 
-  let { draft = $bindable(), symptoms = [], tags = [] }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[] } = $props()
-
-  let showPicker = $state(false)
+  /**
+   * `lock` (§5.5): 'kind' for a head that has updates, which stays an episode (its end still moves); 'reading' for an
+   * update, a reading of its episode, whose kind and end are the head's.
+   */
+  let { draft = $bindable(), symptoms = [], tags = [], lock = 'none' }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[]; lock?: 'none' | 'kind' | 'reading' } = $props()
 
   // The strip: every enabled tag, the most used first (§6.1 item 8). Expanded, the same tags by group take its place.
   const entries = live(() => null, () => db.entries.toArray(), [])
@@ -63,26 +65,6 @@
     const base = tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' })
     return draft.layers.length > 1 && cur.regions.length ? `${base} · ${regionText(cur.regions, t)}` : base
   })
-
-  type TimeChoice = { key: string; label: string; iso: string | null }
-  const timeChoices = $derived.by((): TimeChoice[] => {
-    const now = new Date()
-    return [
-      { key: 'now', label: t('time.now'), iso: null },
-      { key: 'h1', label: t('time.hoursAgo', { n: 1 }), iso: hoursAgo(1, now).toISOString() },
-      { key: 'h3', label: t('time.hoursAgo', { n: 3 }), iso: hoursAgo(3, now).toISOString() },
-      { key: 'morning', label: t('time.thisMorning'), iso: thisMorning(now).toISOString() },
-      { key: 'night', label: t('time.lastNight'), iso: lastNight(now).toISOString() },
-    ]
-  })
-  const activeTimeKey = $derived.by(() => {
-    if (draft.at === null) return 'now'
-    const m = timeChoices.find((c) => c.iso && Math.abs(Date.parse(c.iso) - Date.parse(draft.at!)) < 60_000)
-    return m?.key ?? 'custom'
-  })
-  const customLabel = $derived(
-    draft.at ? `${formatDay(draft.at, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') })} ${formatTime(draft.at, locale())}` : '',
-  )
 
   function apply(next: LayerState) {
     draft.layers = next.layers
@@ -201,29 +183,22 @@
     {/if}
   </div>
 
-  <div class="chips time">
-    <button class="chip small ongoing" aria-pressed={draft.ongoing} onclick={() => (draft.ongoing = !draft.ongoing)}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-      {t('log.ongoing')}
-    </button>
-    {#each timeChoices as c (c.key)}
-      <button
-        class="chip small"
-        aria-pressed={activeTimeKey === c.key}
-        onclick={() => {
-          draft.at = c.iso
-          showPicker = false
-        }}>{c.label}</button>
-    {/each}
-    <button class="chip small" aria-pressed={activeTimeKey === 'custom'} onclick={() => (showPicker = !showPicker)}>
-      {activeTimeKey === 'custom' ? customLabel : t('time.pick')}
-    </button>
-  </div>
-  {#if showPicker}
-    <input
-      type="datetime-local"
-      value={toLocalInput(draft.at ?? new Date().toISOString())}
-      onchange={(e) => (draft.at = fromLocalInput((e.target as HTMLInputElement).value))} />
+  {#snippet kind()}
+    {#if lock === 'none'}
+      <button class="chip small kind" aria-pressed={draft.kind === 'chronic'} onclick={() => (draft.kind = 'chronic')}>{t('log.kind.chronic')}</button>
+      <button class="chip small kind" aria-pressed={draft.kind === 'episode'} onclick={() => (draft.kind = 'episode')}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+        {t('log.kind.episode')}
+      </button>
+    {/if}
+  {/snippet}
+
+  <!-- Two kinds of thing (§5.1): a chronic snapshot has a time; an episode has a start and, once over, an end. -->
+  {#if draft.kind === 'episode' && lock !== 'reading'}
+    <TimeChips bind:value={draft.at} label={t('time.start')} caption={t('time.start')} none={t('time.now')} lead={kind} />
+    <TimeChips bind:value={draft.endedAt} label={t('time.end')} caption={t('time.end')} none={t('log.ongoing')} nullIsNow={false} day={false} />
+  {:else}
+    <TimeChips bind:value={draft.at} label={t('time.when')} none={t('time.now')} lead={kind} />
   {/if}
 
   {#snippet expander()}
@@ -288,10 +263,10 @@
   .drawbar::-webkit-scrollbar { display: none; }
   .grow { flex: 1; }
   .hint { margin-top: -4px; line-height: 1.25; }
-  .ongoing { border-color: var(--border); }
-  .ongoing[aria-pressed='true'] { border-color: transparent; }
-  .tools, .time, .areas, .suggest { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
-  .tools::-webkit-scrollbar, .time::-webkit-scrollbar, .areas::-webkit-scrollbar, .suggest::-webkit-scrollbar { display: none; }
+  .kind { border-color: var(--border); }
+  .kind[aria-pressed='true'] { border-color: transparent; }
+  .tools, .areas, .suggest { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
+  .tools::-webkit-scrollbar, .areas::-webkit-scrollbar, .suggest::-webkit-scrollbar { display: none; }
   .map { flex: 1 1 var(--map-h, 320px); min-height: var(--map-min, 320px); max-height: var(--map-max, 640px); }
   .chip:disabled { opacity: 0.4; }
   .expanded { display: flex; gap: 10px; align-items: stretch; }

@@ -4,13 +4,13 @@
   import { mergedTags, type Layer } from '../lib/layers'
   import type { Tag } from '../lib/types'
 
-  /** `lead` goes first, e.g. the headline symptom name when it is not pain. Several layers each show their level; the tags are the union. */
-  let { lead = '', layers, tagDefs = [] }: { lead?: string; layers: Layer[]; tagDefs?: Tag[] } = $props()
+  /** `lead` goes first, e.g. the headline symptom name when it is not pain. Several layers each show their level; the tags are the union. `where: false` leaves the regions out (a row named after its preset, §6.2). */
+  let { lead = '', layers, tagDefs = [], where = true }: { lead?: string; layers: Layer[]; tagDefs?: Tag[]; where?: boolean } = $props()
 
   const regionText = (regions: string[]) => rt(regions, t)
   const parts = $derived([
     ...(lead ? [lead] : []),
-    ...layers.filter((l) => l.regions.length).map((l) => (layers.length > 1 ? `${regionText(l.regions)} ${layerLevel(l)}` : regionText(l.regions))),
+    ...(where ? layers.filter((l) => l.regions.length).map((l) => (layers.length > 1 ? `${regionText(l.regions)} ${layerLevel(l)}` : regionText(l.regions))) : []),
   ])
   const tagText = $derived(
     mergedTags(layers)

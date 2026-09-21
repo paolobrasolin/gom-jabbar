@@ -1,0 +1,925 @@
+{
+ "app": "gom-jabbar",
+ "version": 8,
+ "exportedAt": "2026-09-23T13:00:00.000Z",
+ "vocabulary": {
+  "symptoms": [
+   {
+    "id": "pain",
+    "label": {
+     "it": "Dolore",
+     "en": "Pain"
+    },
+    "enabled": true,
+    "order": 0,
+    "category": "body"
+   },
+   {
+    "id": "swelling",
+    "label": {
+     "it": "Gonfiore",
+     "en": "Swelling"
+    },
+    "enabled": true,
+    "order": 1,
+    "category": "body"
+   },
+   {
+    "id": "heaviness",
+    "label": {
+     "it": "Pesantezza",
+     "en": "Heaviness"
+    },
+    "enabled": true,
+    "order": 2,
+    "category": "body"
+   },
+   {
+    "id": "fog",
+    "label": {
+     "it": "Nebbia mentale",
+     "en": "Brain fog"
+    },
+    "enabled": true,
+    "order": 4,
+    "category": "mind"
+   },
+   {
+    "id": "stiffness",
+    "label": {
+     "it": "Rigidità",
+     "en": "Stiffness"
+    },
+    "enabled": false,
+    "order": 6,
+    "category": "body"
+   },
+   {
+    "id": "anxiety",
+    "label": {
+     "it": "Ansia",
+     "en": "Anxiety"
+    },
+    "category": "mind",
+    "enabled": true,
+    "order": 7
+   },
+   {
+    "id": "sym-u7",
+    "label": {
+     "it": "Formicolio",
+     "en": "Tingling"
+    },
+    "enabled": true,
+    "order": 7,
+    "category": "body"
+   },
+   {
+    "id": "depression",
+    "label": {
+     "it": "Depressione",
+     "en": "Depression"
+    },
+    "category": "mind",
+    "enabled": false,
+    "order": 8
+   },
+   {
+    "id": "sym-u8",
+    "label": {
+     "it": "Ansia",
+     "en": "Anxiety"
+    },
+    "category": "mind",
+    "enabled": true,
+    "order": 9
+   }
+  ],
+  "tags": [
+   {
+    "id": "compression",
+    "label": {
+     "it": "Compressione",
+     "en": "Compression"
+    },
+    "group": "intervention",
+    "enabled": true,
+    "order": 0
+   },
+   {
+    "id": "med-x1",
+    "label": {
+     "it": "Tachipirina",
+     "en": "Tachipirina"
+    },
+    "group": "medication",
+    "enabled": true,
+    "order": 0
+   },
+   {
+    "id": "period",
+    "label": {
+     "it": "Ciclo",
+     "en": "Period"
+    },
+    "group": "context",
+    "enabled": false,
+    "order": 0
+   }
+  ]
+ },
+ "entries": [
+  {
+   "id": "v2-two-areas",
+   "at": "2026-09-01T07:30:00.000Z",
+   "note": "gambe e spalle",
+   "createdAt": "2026-09-01T07:31:00.000Z",
+   "updatedAt": "2026-09-01T07:31:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "150",
+      "151",
+      "152",
+      "153"
+     ],
+     "readings": {
+      "pain": 8,
+      "swelling": 4,
+      "sym-u7": 2
+     },
+     "tags": [
+      "compression",
+      "med-x1"
+     ]
+    },
+    {
+     "regions": [
+      "130",
+      "131"
+     ],
+     "readings": {
+      "pain": 3
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic"
+  },
+  {
+   "id": "v2-ended-episode",
+   "at": "2026-09-02T20:00:00.000Z",
+   "note": "",
+   "createdAt": "2026-09-02T20:00:30.000Z",
+   "updatedAt": "2026-09-03T02:00:10.000Z",
+   "layers": [
+    {
+     "regions": [
+      "100",
+      "101",
+      "102",
+      "103"
+     ],
+     "readings": {
+      "pain": 4
+     },
+     "tags": [
+      "med-x1"
+     ]
+    }
+   ],
+   "kind": "episode",
+   "episodeId": "v2-ended-episode",
+   "endedAt": "2026-09-03T02:00:00.000Z"
+  },
+  {
+   "id": "v2-ended-episode:1",
+   "kind": "episode",
+   "episodeId": "v2-ended-episode",
+   "at": "2026-09-02T22:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "100",
+      "101",
+      "102",
+      "103"
+     ],
+     "readings": {
+      "pain": 7
+     },
+     "tags": []
+    }
+   ],
+   "note": "",
+   "createdAt": "2026-09-02T22:00:00.000Z",
+   "updatedAt": "2026-09-02T22:00:00.000Z"
+  },
+  {
+   "id": "v2-ended-episode:2",
+   "kind": "episode",
+   "episodeId": "v2-ended-episode",
+   "at": "2026-09-03T00:30:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "100",
+      "101",
+      "102",
+      "103"
+     ],
+     "readings": {
+      "pain": 4
+     },
+     "tags": []
+    }
+   ],
+   "note": "",
+   "createdAt": "2026-09-03T00:30:00.000Z",
+   "updatedAt": "2026-09-03T00:30:00.000Z"
+  },
+  {
+   "id": "v2-fullbody",
+   "at": "2026-09-10T22:00:00.000Z",
+   "note": "tutto",
+   "createdAt": "2026-09-10T22:00:00.000Z",
+   "updatedAt": "2026-09-10T22:05:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "*"
+     ],
+     "readings": {
+      "pain": 9,
+      "heaviness": 7
+     },
+     "tags": [
+      "period"
+     ]
+    }
+   ],
+   "kind": "chronic"
+  },
+  {
+   "id": "v2-no-pain",
+   "at": "2026-09-11T12:00:00.000Z",
+   "note": "solo gonfiore",
+   "createdAt": "2026-09-11T12:00:00.000Z",
+   "updatedAt": "2026-09-11T12:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "160",
+      "161"
+     ],
+     "readings": {
+      "pain": 0,
+      "swelling": 3
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic"
+  },
+  {
+   "id": "v2-ongoing",
+   "at": "2026-09-14T09:00:00.000Z",
+   "note": "",
+   "createdAt": "2026-09-14T09:00:00.000Z",
+   "updatedAt": "2026-09-14T09:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "224",
+      "225"
+     ],
+     "readings": {
+      "pain": 5
+     },
+     "tags": []
+    }
+   ],
+   "kind": "episode",
+   "episodeId": "v2-ongoing",
+   "endedAt": null
+  },
+  {
+   "id": "v3-swelling-episode",
+   "at": "2026-09-15T08:00:00.000Z",
+   "note": "gambe gonfie",
+   "createdAt": "2026-09-15T08:00:00.000Z",
+   "updatedAt": "2026-09-15T12:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "152",
+      "153",
+      "160",
+      "161"
+     ],
+     "readings": {
+      "pain": 0,
+      "swelling": 2
+     },
+     "tags": [
+      "compression"
+     ]
+    }
+   ],
+   "kind": "episode",
+   "episodeId": "v3-swelling-episode",
+   "endedAt": null
+  },
+  {
+   "id": "v3-swelling-episode:1",
+   "kind": "episode",
+   "episodeId": "v3-swelling-episode",
+   "at": "2026-09-15T12:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "152",
+      "153",
+      "160",
+      "161"
+     ],
+     "readings": {
+      "pain": 0,
+      "swelling": 4
+     },
+     "tags": []
+    }
+   ],
+   "note": "",
+   "createdAt": "2026-09-15T12:00:00.000Z",
+   "updatedAt": "2026-09-15T12:00:00.000Z"
+  },
+  {
+   "id": "v4-preset-moment",
+   "at": "2026-09-15T13:00:00.000Z",
+   "note": "",
+   "createdAt": "2026-09-15T13:00:00.000Z",
+   "updatedAt": "2026-09-15T13:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "224",
+      "225"
+     ],
+     "readings": {
+      "pain": 4
+     },
+     "tags": []
+    }
+   ],
+   "presetId": "p-schiena",
+   "kind": "chronic"
+  },
+  {
+   "id": "v6-mind",
+   "at": "2026-09-18T09:00:00.000Z",
+   "note": "testa vuota",
+   "createdAt": "2026-09-18T09:00:00.000Z",
+   "updatedAt": "2026-09-18T09:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {
+      "pain": 0,
+      "fog": 6,
+      "sym-u8": 3
+     },
+     "tags": [
+      "badsleep"
+     ]
+    }
+   ],
+   "kind": "chronic"
+  },
+  {
+   "id": "v6-strokes",
+   "at": "2026-09-18T18:00:00.000Z",
+   "note": "disegno",
+   "createdAt": "2026-09-18T18:00:30.000Z",
+   "updatedAt": "2026-09-18T18:00:30.000Z",
+   "layers": [
+    {
+     "regions": [
+      "152",
+      "154",
+      "160",
+      "261"
+     ],
+     "readings": {
+      "pain": 6
+     },
+     "tags": [],
+     "strokes": [
+      {
+       "region": "160",
+       "fig": "female",
+       "view": "front",
+       "points": [
+        [
+         165.5,
+         468.2
+        ],
+        [
+         167.2,
+         480.1
+        ],
+        [
+         166.1,
+         492.3
+        ]
+       ],
+       "w": 8
+      },
+      {
+       "region": "261",
+       "fig": "male",
+       "view": "back",
+       "points": [
+        [
+         171.7,
+         462.6
+        ]
+       ],
+       "w": 8
+      }
+     ]
+    },
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {},
+     "tags": []
+    }
+   ],
+   "kind": "chronic"
+  },
+  {
+   "id": "v6-mind-episode",
+   "at": "2026-09-19T08:00:00.000Z",
+   "note": "",
+   "createdAt": "2026-09-19T08:00:00.000Z",
+   "updatedAt": "2026-09-19T11:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {
+      "pain": 0,
+      "fog": 7
+     },
+     "tags": []
+    }
+   ],
+   "presetId": "p-testa",
+   "kind": "episode",
+   "episodeId": "v6-mind-episode",
+   "endedAt": null
+  },
+  {
+   "id": "v6-mind-episode:1",
+   "kind": "episode",
+   "episodeId": "v6-mind-episode",
+   "at": "2026-09-19T11:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {
+      "pain": 0,
+      "fog": 4
+     },
+     "tags": []
+    }
+   ],
+   "note": "",
+   "createdAt": "2026-09-19T11:00:00.000Z",
+   "updatedAt": "2026-09-19T11:00:00.000Z"
+  },
+  {
+   "id": "v6-full-brain",
+   "at": "2026-09-19T20:00:00.000Z",
+   "note": "",
+   "createdAt": "2026-09-19T20:00:00.000Z",
+   "updatedAt": "2026-09-19T20:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "*"
+     ],
+     "readings": {
+      "pain": 4,
+      "heaviness": 5
+     },
+     "tags": []
+    },
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {
+      "fog": 5
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic"
+  },
+  {
+   "id": "v7-layers",
+   "at": "2026-09-20T18:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "152",
+      "153",
+      "160",
+      "161"
+     ],
+     "readings": {
+      "pain": 9,
+      "heaviness": 4
+     },
+     "tags": [
+      "compression"
+     ],
+     "strokes": [
+      {
+       "region": "160",
+       "fig": "female",
+       "view": "front",
+       "points": [
+        [
+         165.5,
+         468.2
+        ],
+        [
+         167.2,
+         480.1
+        ]
+       ],
+       "w": 8
+      }
+     ]
+    },
+    {
+     "regions": [
+      "152",
+      "153"
+     ],
+     "readings": {
+      "pain": 0,
+      "swelling": 6
+     },
+     "tags": [
+      "med-x1"
+     ]
+    },
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {
+      "fog": 5,
+      "sym-u8": 2
+     },
+     "tags": [
+      "period"
+     ]
+    }
+   ],
+   "note": "due strati sulle gambe",
+   "createdAt": "2026-09-20T18:00:00.000Z",
+   "updatedAt": "2026-09-20T21:00:00.000Z",
+   "kind": "episode",
+   "episodeId": "v7-layers",
+   "endedAt": "2026-09-20T21:00:00.000Z"
+  },
+  {
+   "id": "v7-layers:1",
+   "kind": "episode",
+   "episodeId": "v7-layers",
+   "at": "2026-09-20T21:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "152",
+      "153",
+      "160",
+      "161"
+     ],
+     "readings": {
+      "pain": 7,
+      "heaviness": 4
+     },
+     "tags": [],
+     "strokes": [
+      {
+       "region": "160",
+       "fig": "female",
+       "view": "front",
+       "points": [
+        [
+         165.5,
+         468.2
+        ],
+        [
+         167.2,
+         480.1
+        ]
+       ],
+       "w": 8
+      }
+     ]
+    },
+    {
+     "regions": [
+      "152",
+      "153"
+     ],
+     "readings": {
+      "pain": 0,
+      "swelling": 6
+     },
+     "tags": []
+    },
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {
+      "fog": 5,
+      "sym-u8": 2
+     },
+     "tags": []
+    }
+   ],
+   "note": "",
+   "createdAt": "2026-09-20T21:00:00.000Z",
+   "updatedAt": "2026-09-20T21:00:00.000Z"
+  },
+  {
+   "id": "v7-body-mind",
+   "at": "2026-09-21T09:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "*",
+      "mind"
+     ],
+     "readings": {
+      "pain": 3,
+      "fog": 6
+     },
+     "tags": []
+    }
+   ],
+   "note": "",
+   "createdAt": "2026-09-21T09:00:00.000Z",
+   "updatedAt": "2026-09-21T09:00:00.000Z",
+   "presetId": "p-v7",
+   "kind": "chronic"
+  },
+  {
+   "id": "v7-unlocated",
+   "at": "2026-09-21T12:00:00.000Z",
+   "layers": [
+    {
+     "regions": [],
+     "readings": {
+      "pain": 0,
+      "swelling": 2,
+      "fog": 1
+     },
+     "tags": [
+      "badsleep"
+     ]
+    }
+   ],
+   "note": "senza zona",
+   "createdAt": "2026-09-21T12:00:00.000Z",
+   "updatedAt": "2026-09-21T12:00:00.000Z",
+   "kind": "episode",
+   "episodeId": "v7-unlocated",
+   "endedAt": null
+  },
+  {
+   "id": "v8-over",
+   "kind": "episode",
+   "at": "2026-09-22T15:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "100",
+      "101",
+      "102",
+      "103"
+     ],
+     "readings": {
+      "pain": 8
+     },
+     "tags": [
+      "med-x1"
+     ]
+    }
+   ],
+   "note": "finita da sola",
+   "episodeId": "v8-over",
+   "endedAt": "2026-09-22T20:00:00.000Z",
+   "createdAt": "2026-09-21T23:04:13.106Z",
+   "updatedAt": "2026-09-21T23:04:13.106Z"
+  },
+  {
+   "id": "v8-preset-episode",
+   "kind": "episode",
+   "at": "2026-09-23T09:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "224",
+      "225"
+     ],
+     "readings": {
+      "pain": 6,
+      "stiffness": 4
+     },
+     "tags": []
+    }
+   ],
+   "note": "",
+   "episodeId": "v8-preset-episode",
+   "endedAt": null,
+   "presetId": "p-testa",
+   "createdAt": "2026-09-21T23:04:13.107Z",
+   "updatedAt": "2026-09-21T23:04:13.107Z"
+  },
+  {
+   "id": "v8-preset-episode-u1",
+   "kind": "episode",
+   "episodeId": "v8-preset-episode",
+   "at": "2026-09-23T12:00:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "224",
+      "225"
+     ],
+     "readings": {
+      "pain": 3,
+      "stiffness": 4
+     },
+     "tags": [
+      "heat"
+     ]
+    }
+   ],
+   "note": "",
+   "createdAt": "2026-09-21T23:04:13.108Z",
+   "updatedAt": "2026-09-21T23:04:13.108Z"
+  }
+ ],
+ "presets": [
+  {
+   "id": "p-schiena",
+   "name": "Schiena",
+   "symptomIds": [
+    "pain"
+   ],
+   "order": 0,
+   "layers": [
+    {
+     "regions": [
+      "224",
+      "225"
+     ],
+     "readings": {
+      "pain": 5
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic"
+  },
+  {
+   "id": "p-testa",
+   "name": "Testa",
+   "symptomIds": [
+    "fog",
+    "sym-u8"
+   ],
+   "order": 1,
+   "layers": [
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {},
+     "tags": []
+    }
+   ],
+   "kind": "episode"
+  },
+  {
+   "id": "pr-strokes",
+   "name": "Coscia",
+   "symptomIds": [
+    "pain"
+   ],
+   "order": 2,
+   "layers": [
+    {
+     "regions": [
+      "160"
+     ],
+     "readings": {
+      "pain": 5
+     },
+     "tags": [],
+     "strokes": [
+      {
+       "region": "160",
+       "fig": "female",
+       "view": "front",
+       "points": [
+        [
+         165.5,
+         468.2
+        ],
+        [
+         166.1,
+         492.3
+        ]
+       ],
+       "w": 8
+      }
+     ]
+    }
+   ],
+   "kind": "chronic"
+  },
+  {
+   "id": "p-v7",
+   "name": "Corpo e mente",
+   "layers": [
+    {
+     "regions": [
+      "*"
+     ],
+     "readings": {
+      "pain": 3
+     },
+     "tags": [
+      "compression"
+     ]
+    },
+    {
+     "regions": [
+      "mind"
+     ],
+     "readings": {
+      "fog": 6
+     },
+     "tags": [
+      "period"
+     ]
+    }
+   ],
+   "symptomIds": [
+    "pain",
+    "fog"
+   ],
+   "order": 3,
+   "kind": "chronic"
+  },
+  {
+   "id": "p-v8",
+   "name": "Vulvodinia",
+   "layers": [
+    {
+     "regions": [
+      "114",
+      "115"
+     ],
+     "readings": {
+      "pain": 5
+     },
+     "tags": []
+    }
+   ],
+   "symptomIds": [
+    "pain"
+   ],
+   "kind": "chronic",
+   "order": 4
+  }
+ ]
+}

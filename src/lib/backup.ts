@@ -1,12 +1,12 @@
 import { db } from './db'
-import { PAIN, type Entry, type HistoryPoint, type Preset, type Symptom, type Tag, type Lang } from './types'
+import { PAIN, type Entry, type Preset, type Symptom, type Tag, type Lang } from './types'
 import { regionText } from './summary'
-import { mergedReadings, mergedTags, maxReadings, type Layer } from './layers'
-import { entryToLayers, presetToLayers, categoryLookup, type AreaV6, type CategoryOf } from './legacy'
+import { mergedReadings, mergedTags, type Layer } from './layers'
+import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7 } from './legacy'
 import { upgradeRegions } from './regions'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
 
-export const EXPORT_VERSION = 7
+export const EXPORT_VERSION = 8
 
 export type ExportFile = {
   app: 'gom-jabbar'
@@ -48,7 +48,7 @@ export function parseImport(text: string): ExportFile {
   const vocab = (o.vocabulary ?? {}) as Partial<ExportFile['vocabulary']>
   const symptoms = Array.isArray(vocab.symptoms) ? vocab.symptoms.map(normalizeSymptom) : []
   const categoryOf = categoryLookup(symptoms)
-  const entries = (o.entries as Row[]).map((e) => normalizeEntry(e, version, categoryOf))
+  const entries = (o.entries as Row[]).flatMap((e) => normalizeEntry(e, version, categoryOf))
   return {
     app: 'gom-jabbar',
     version: EXPORT_VERSION,
@@ -59,12 +59,19 @@ export function parseImport(text: string): ExportFile {
   }
 }
 
-/** Before version 7 a preset had `areas` and `tags`; they became layers (converted, never dropped). */
+/**
+ * Before version 7 a preset had `areas` and `tags`; they became layers (converted, never dropped). Before version 8
+ * `ongoing` said what a save logged; it became `kind`.
+ */
 function normalizePreset(p: Row, version: number): Preset {
-  if (version >= 7) return p as Preset
-  const areas = version < 5 ? upgradeAreas(p.areas as AreaV6[]) : (p.areas as AreaV6[])
-  const { areas: _a, tags: _t, ...rest } = p
-  return { ...rest, layers: presetToLayers({ areas: areas ?? [], tags: (p.tags as string[]) ?? [] }) } as Preset
+  let out = p
+  if (version < 7) {
+    const areas = version < 5 ? upgradeAreas(p.areas as AreaV6[]) : (p.areas as AreaV6[])
+    const { areas: _a, tags: _t, ...rest } = p
+    out = { ...rest, layers: presetToLayers({ areas: areas ?? [], tags: (p.tags as string[]) ?? [] }) }
+  }
+  if (version < 8) out = presetKind(out as PresetV7)
+  return out as Preset
 }
 
 type Row = Record<string, unknown>
@@ -107,32 +114,43 @@ function layersOf(e: Row, version: number, categoryOf: CategoryOf): { layers: La
   return entryToLayers({ areas, readings, tags: Array.isArray(e.tags) ? (e.tags as string[]) : [], history }, categoryOf)
 }
 
-function normalizeEntry(e: Row, version: number, categoryOf: CategoryOf): Entry {
+/**
+ * An entry of any version as today's rows. Before version 8 an episode was one row with a history; it becomes a
+ * chain, so one row may come back as several (§8).
+ */
+function normalizeEntry(e: Row, version: number, categoryOf: CategoryOf): Entry[] {
   if (typeof e.id !== 'string' || typeof e.at !== 'string') throw new Error('invalid-entry')
   const { layers, history } = layersOf(e, version, categoryOf)
   const ts = typeof e.updatedAt === 'string' ? e.updatedAt : e.at
   // Spread first: a field this version does not know about is still the user's data and must survive.
-  const out: Entry = {
+  const base = {
     ...(e as object),
     id: e.id,
     at: e.at,
-    endedAt: typeof e.endedAt === 'string' ? e.endedAt : null,
-    ongoing: e.ongoing === true,
     layers,
     note: typeof e.note === 'string' ? e.note : '',
-    history,
     createdAt: typeof e.createdAt === 'string' ? e.createdAt : e.at,
     updatedAt: ts,
   }
-  // Only a converted field may be dropped: `regions` became `areas` (2), `readings`, `areas` and `tags` became `layers` (7).
-  const o = out as Record<string, unknown>
+  // Only a converted field may be dropped: `regions` became `areas` (2), `readings`, `areas` and `tags` became `layers` (7),
+  // `ongoing`, `history` and `preset` became the chain (8).
+  const o = base as Record<string, unknown>
   if (version < 2) delete o.regions
   if (version < 7) {
     delete o.readings
     delete o.areas
     delete o.tags
   }
-  return out
+  if (version < 8) {
+    return splitEpisode({ ...o, endedAt: typeof e.endedAt === 'string' ? e.endedAt : null, ongoing: e.ongoing === true, history } as EntryV7)
+  }
+  const episode = e.kind === 'episode' || typeof e.episodeId === 'string' || e.endedAt !== undefined
+  const out: Entry = { ...(o as unknown as Entry), kind: episode ? 'episode' : 'chronic' }
+  if (episode) {
+    out.episodeId = typeof e.episodeId === 'string' ? e.episodeId : e.id
+    if (out.episodeId === e.id) out.endedAt = typeof e.endedAt === 'string' ? e.endedAt : null
+  }
+  return [out]
 }
 
 export type ImportPreview = { entries: number; added: number; updated: number; unchanged: number; symptoms: number; tags: number }
@@ -187,22 +205,23 @@ export function toCsv(entries: Entry[], symptoms: Symptom[], tags: Tag[], lang: 
   const symIds = [PAIN, ...symptoms.filter((s) => s.id !== PAIN).map((s) => s.id)]
   const tagLabel = new Map(tags.map((x) => [x.id, x.label[lang] || x.label.it]))
   const levels = (r: Record<string, number>) => symIds.filter((id) => r[id] !== undefined).map((id) => `${id}=${r[id]}`).join(';')
-  const head = ['id', 'at', 'endedAt', 'ongoing', ...symIds, 'layers', 'layers_text', 'tags', 'tags_text', 'note', 'history']
+  const head = ['id', 'kind', 'at', 'episodeId', 'endedAt', 'presetId', ...symIds, 'layers', 'layers_text', 'tags', 'tags_text', 'note']
   const rows = entries.map((e) => {
     const readings = mergedReadings(e.layers)
     const tags = mergedTags(e.layers)
     return [
       e.id,
+      e.kind,
       e.at,
+      e.episodeId ?? '',
       e.endedAt ?? '',
-      e.ongoing ? '1' : '0',
+      e.presetId ?? '',
       ...symIds.map((id) => (readings[id] ?? '').toString()),
       e.layers.map((l) => `${l.regions.join('+')}:${levels(l.readings)}${l.tags.length ? ':' + l.tags.join('+') : ''}`).join('|'),
       e.layers.map((l) => `${regionText(l.regions, t)}:${levels(l.readings)}`).join('|'),
       tags.join('|'),
       tags.map((id) => tagLabel.get(id) ?? id).join('|'),
       e.note,
-      (e.history ?? []).map((h) => `${h.at}:${symIds.map((id) => maxReadings(h.layers)[id] ?? '').join(';')}`).join('|'),
     ]
   })
   const esc = (v: string) => (/[",\n\r]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v)

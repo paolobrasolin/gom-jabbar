@@ -1,6 +1,6 @@
 import { summarizeRegions } from './regions'
 import { mergedReadings, maxReadings } from './layers'
-import { PAIN, type Entry, type LocalizedString, type Symptom } from './types'
+import { PAIN, type LocalizedString, type Symptom } from './types'
 
 /** Human summary of a region list, e.g. "fianchi, gambe". `t` is the i18n lookup. */
 export function regionText(regions: string[], t: (k: string) => string): string {
@@ -36,7 +36,7 @@ export function symptomName(id: string, symptoms: Symptom[], tl: (s: LocalizedSt
   return def ? tl(def.label).toLowerCase() : id
 }
 
-/** One symptom's levels through an episode's history, e.g. [7, 4, 2]: the max over the layers at each point; points without it are skipped. */
-export function trail(e: Entry, id: string): number[] {
-  return (e.history ?? []).map((h) => maxReadings(h.layers)[id]).filter((v): v is number => typeof v === 'number')
+/** One symptom's levels through an episode's readings, e.g. [7, 4, 2]: the max over the layers of each; readings without it are skipped. */
+export function trail(readings: { layers: { readings: Record<string, number> }[] }[], id: string): number[] {
+  return readings.map((e) => maxReadings(e.layers.map((l) => l.readings))[id]).filter((v): v is number => typeof v === 'number')
 }

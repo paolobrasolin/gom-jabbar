@@ -14,7 +14,7 @@ const t = (k: string) => k
 describe('backup', () => {
   it('round-trips export → parse → replace', async () => {
     await addEntry({ layers: [{ regions: ['152'], readings: { pain: 6 }, tags: ['rest'] }], note: 'x' })
-    await addEntry({ ongoing: true, layers: [{ regions: ['*'], readings: { pain: 9 } }] })
+    await addEntry({ kind: 'episode', layers: [{ regions: ['*'], readings: { pain: 9 } }] })
     const file = await buildExport()
     expect(file.entries).toHaveLength(2)
     expect(file.vocabulary.symptoms.length).toBeGreaterThan(3)
@@ -55,7 +55,10 @@ describe('backup', () => {
     })
     const parsed = parseImport(text)
     expect(parsed.entries[0].layers).toEqual([{ regions: ['154'], readings: { pain: 5, fog: 2 }, tags: ['rest'] }])
-    expect(parsed.entries[0].history).toEqual([{ at: 'h', layers: [{ pain: 6 }] }])
+    // A version 1 history point sits after the start: the head keeps its readings, the point is an update.
+    expect(parsed.entries.map((e) => e.id)).toEqual(['v1', 'v1:1'])
+    expect(parsed.entries[0]).toMatchObject({ kind: 'episode', episodeId: 'v1', endedAt: null })
+    expect(parsed.entries[1]).toMatchObject({ kind: 'episode', episodeId: 'v1', at: 'h', layers: [{ regions: ['154'], readings: { pain: 6 }, tags: [] }] })
     expect(parsed.entries[0]).not.toHaveProperty('readings')
     expect(parsed.entries[0]).not.toHaveProperty('areas')
     expect(parsed.entries[0]).not.toHaveProperty('tags')
@@ -69,11 +72,11 @@ describe('backup', () => {
       version: 6,
       vocabulary: { symptoms: [{ id: 'x_mind', label: { it: 'X', en: 'X' }, category: 'mind', enabled: true, order: 9 }], tags: [] },
       entries: [{ id: 'a', at: '2026-01-01T00:00:00.000Z', readings: { pain: 4, x_mind: 3, fog: 1 }, areas: [{ regions: ['*'], intensity: 4 }, { regions: ['mind'], intensity: 3 }], tags: ['t'], note: '' }],
-      presets: [{ id: 'p', name: 'P', areas: [{ regions: ['224'], intensity: 5 }], symptomIds: ['pain'], tags: ['m'], ongoing: false, order: 0 }],
+      presets: [{ id: 'p', name: 'P', areas: [{ regions: ['224'], intensity: 5 }], symptomIds: ['pain'], tags: ['m'], ongoing: true, order: 0 }],
     }
     const parsed = parseImport(JSON.stringify(file))
     expect(parsed.entries[0].layers).toEqual([{ regions: ['*'], readings: { pain: 4 }, tags: ['t'] }, { regions: ['mind'], readings: { x_mind: 3, fog: 1 }, tags: [] }])
-    expect(parsed.presets[0]).toEqual({ id: 'p', name: 'P', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: ['m'] }], symptomIds: ['pain'], ongoing: false, order: 0 })
+    expect(parsed.presets[0]).toEqual({ id: 'p', name: 'P', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: ['m'] }], symptomIds: ['pain'], kind: 'episode', order: 0 })
     const bare = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 7, entries: [{ id: 'b', at: '2026-01-01T00:00:00.000Z' }] }))
     expect(bare.entries[0].layers).toEqual([{ regions: [], readings: { pain: 0 }, tags: [] }])
   })
@@ -109,7 +112,7 @@ describe('backup', () => {
     const csv = toCsv(file.entries, file.vocabulary.symptoms, file.vocabulary.tags, 'it', t)
     const lines = csv.trim().split('\r\n')
     expect(lines).toHaveLength(2)
-    expect(lines[0].startsWith('id,at,endedAt,ongoing,pain,swelling')).toBe(true)
+    expect(lines[0].startsWith('id,kind,at,episodeId,endedAt,presetId,pain,swelling')).toBe(true)
     expect(lines[1]).toContain('152+153:pain=6;swelling=3:rest|mind:fog=2')
     expect(lines[1]).toContain('Riposo')
     expect(lines[1]).toContain('"he said ""ow"", twice"')
