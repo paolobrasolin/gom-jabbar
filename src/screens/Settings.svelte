@@ -1,6 +1,7 @@
 <script lang="ts">
   import Sheet from '../components/Sheet.svelte'
   import VocabEditor from '../components/VocabEditor.svelte'
+  import PresetForm, { type PresetSeed } from '../components/PresetForm.svelte'
   import { t, locale } from '../i18n/index.svelte'
   import { prefs, savePrefs, type Theme } from '../lib/prefs.svelte'
   import type { FigureId } from '../lib/figures'
@@ -13,6 +14,9 @@
 
   const count = live(() => null, () => db.entries.count(), 0)
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
+  const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
+  /** Modifica opens the preset form on the preset (§5.6): edited in place, its stream of entries stays with it. */
+  let presetSeed = $state.raw<PresetSeed | null>(null)
   async function removePreset(id: string) {
     const gone = await deletePreset(id)
     haptic(20)
@@ -150,7 +154,8 @@
       <div class="plist">
         {#each presets.value as p (p.id)}
           <div class="row preset">
-            <span class="grow">{p.name}</span>
+            <span class="grow name">{p.name}</span>
+            <button class="chip small outline" onclick={() => (presetSeed = { preset: p })} aria-label="{t('diary.edit')} {p.name}">{t('diary.edit')}</button>
             <button class="chip small outline" onclick={() => removePreset(p.id)} aria-label="{t('diary.delete')} {p.name}">{t('diary.delete')}</button>
           </div>
         {/each}
@@ -213,6 +218,8 @@
   {/if}
 </Sheet>
 
+<PresetForm bind:seed={presetSeed} symptoms={symptoms.value} />
+
 <style>
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .top { margin-top: 10px; }
@@ -221,4 +228,5 @@
   .center { text-align: center; }
   .plist { display: flex; flex-direction: column; gap: 4px; }
   .preset { min-height: 40px; }
+  .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

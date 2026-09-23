@@ -49,6 +49,15 @@ describe('draft conversions', () => {
 })
 
 describe('strokes in drafts', () => {
+  it('the preset an entry was logged from rides along, and a draft without one saves none', () => {
+    const e = makeEntry({ readings: { pain: 3 }, presetId: 'p1' })
+    const d = draftFromEntry(e)
+    expect(d.presetId).toBe('p1')
+    expect(draftToInput(d).presetId).toBe('p1')
+    expect(draftFromEntry(makeEntry({ readings: { pain: 3 } }))).not.toHaveProperty('presetId')
+    expect(draftToInput(emptyDraft())).not.toHaveProperty('presetId')
+  })
+
   it('draftFromEntry and draftToInput copy strokes so edits do not touch the entry', () => {
     const stroke = { region: '152', fig: 'female' as const, view: 'front' as const, points: [[100, 250]] as [number, number][], w: 8 }
     const e = makeEntry({ layers: [{ regions: ['152'], readings: { pain: 7 }, strokes: [stroke] }] })

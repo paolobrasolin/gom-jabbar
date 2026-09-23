@@ -1,10 +1,10 @@
 <script lang="ts">
   import Sheet from './Sheet.svelte'
   import EntryForm from './EntryForm.svelte'
+  import PresetForm, { type PresetSeed } from './PresetForm.svelte'
   import { t } from '../i18n/index.svelte'
   import { draftFromEntry, draftToInput, emptyDraft, type EntryDraft } from '../lib/draft'
   import { updateEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode } from '../lib/entries'
-  import { addPreset, presetFromDraft } from '../lib/presets'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import type { Entry, Layer, Symptom, Tag } from '../lib/types'
 
@@ -15,8 +15,8 @@
   let editing: Entry | null = null
   /** What the form may not change (§5.5): an update is a reading of its episode; a head with updates stays an episode. */
   let lock = $state<'none' | 'kind' | 'reading'>('none')
-  let naming = $state(false)
-  let presetName = $state('')
+  /** The entry as it stands in the form, handed to the preset form (§5.6); this sheet stays open and nothing else is saved. */
+  let presetSeed = $state.raw<PresetSeed | null>(null)
 
   $effect(() => {
     if (entry) {
@@ -24,26 +24,11 @@
       editing = entry
       draft = draftFromEntry(entry)
       lock = isUpdate(entry) ? 'reading' : 'none'
-      naming = false
-      presetName = ''
       open = true
       if (isHead(entry)) void loadEpisode(entry.id).then((ep) => { if (ep?.updates.length && editing === entry) lock = 'kind' })
     }
   })
 
-  /** The entry as it stands in the form becomes a preset (§5.6); the sheet stays open, edits are untouched. */
-  async function createPreset() {
-    const name = presetName.trim()
-    if (!name) return
-    await addPreset(presetFromDraft(draft, name))
-    presetName = ''
-    naming = false
-    haptic(20)
-    showToast(t('preset.created'))
-  }
-  function focus(el: HTMLInputElement) {
-    el.focus()
-  }
   $effect(() => {
     if (!open) entry = null
   })
@@ -84,22 +69,12 @@
   </div>
   {#if lock !== 'reading'}
     <div class="preset">
-      {#if naming}
-        <div class="row">
-          <input class="grow" type="text" placeholder={t('preset.name')} aria-label={t('preset.name')} bind:value={presetName} use:focus onkeydown={(e) => e.key === 'Enter' && createPreset()} />
-          <button class="chip small" disabled={!presetName.trim()} onclick={createPreset}>{t('preset.create')}</button>
-        </div>
-        <p class="small muted">{t('preset.hint')}</p>
-      {:else}
-        <button class="chip small outline" onclick={() => (naming = true)}>{t('preset.fromEntry')}</button>
-      {/if}
+      <button class="chip small outline" onclick={() => (presetSeed = { draft: $state.snapshot(draft) as EntryDraft })}>{t('preset.fromEntry')}</button>
     </div>
   {/if}
 </Sheet>
+<PresetForm bind:seed={presetSeed} {symptoms} />
 
 <style>
-  .preset { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding-top: 4px; }
-  .preset .row { align-self: stretch; }
-  .preset input { min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); min-width: 0; }
-  .preset .chip:disabled { opacity: 0.4; }
+  .preset { display: flex; padding-top: 4px; }
 </style>

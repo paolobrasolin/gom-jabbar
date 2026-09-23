@@ -163,9 +163,9 @@ describe('Trends report', () => {
 
 describe('Trends presets', () => {
   it('draws one line per preset with samples in range', async () => {
-    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: [] }], symptomIds: ['pain'], kind: 'chronic' })
-    await logPreset(p, { pain: 4 })
-    await logPreset(p, { pain: 6 })
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic' })
+    await logPreset(p, [{ pain: 4 }])
+    await logPreset(p, [{ pain: 6 }])
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Andamento' }))
     const card = (await screen.findByText('Per preset')).closest('.card')!

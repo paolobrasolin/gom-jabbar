@@ -3,7 +3,9 @@ import { resetDb } from './db'
 import { addEntry, makeEntry, logUpdate } from './entries'
 import { emptyDraft } from './draft'
 import { LEG_IDS } from './regions'
-import { presetFromDraft, addPreset, deletePreset, restorePreset, logPreset, lastForPreset, lastByPreset, presetEntries } from './presets'
+import { finalize } from './layers'
+import { DEFAULT_SYMPTOMS } from './vocabulary'
+import { presetFromDraft, defaultAsks, addPreset, updatePreset, deletePreset, restorePreset, logPreset, lastForPreset, lastByPreset, presetEntries } from './presets'
 
 let db: ReturnType<typeof resetDb>
 beforeEach(() => {
@@ -11,26 +13,62 @@ beforeEach(() => {
 })
 
 const L = (regions: string[], readings: Record<string, number>, tags: string[] = []) => ({ regions, readings, tags })
+const P = (regions: string[], asks: string[]) => ({ regions, asks })
+const finalizeWith = (layers: ReturnType<typeof L>[]) => finalize(layers, DEFAULT_SYMPTOMS)
 
 describe('presets', () => {
-  it('captures a draft as a preset: its layers, pain first then every symptom above 0 on any layer, the kind', () => {
+  it('captures a draft as a shape: each kept layer with its regions, what it asks (its list, else the default), no readings, no tags', () => {
     const d = emptyDraft({ kind: 'episode' })
     d.layers = [L(['153', '152'], { pain: 6, swelling: 3, fatigue: 0 }, ['compression']), L(['mind'], { fog: 2 }), L([], { pain: 3 })]
     expect(presetFromDraft(d, '  Gambe ')).toEqual({
       name: 'Gambe',
-      layers: [L(['152', '153'], { pain: 6, swelling: 3, fatigue: 0 }, ['compression']), L(['mind'], { fog: 2 })],
-      symptomIds: ['pain', 'swelling', 'fog'],
+      layers: [
+        { regions: ['152', '153'], asks: ['pain', 'swelling'] },
+        { regions: ['mind'], asks: ['fog'] },
+      ],
       kind: 'episode',
     })
+    d.layers[0].asks = ['swelling', 'swelling']
+    expect(presetFromDraft(d, 'Gambe').layers[0].asks).toEqual(['swelling'])
     // Only the mind: no pain slider.
     const m = emptyDraft()
     m.layers = [L(['mind'], { pain: 5, fog: 6 })]
-    expect(presetFromDraft(m, 'Testa').symptomIds).toEqual(['fog'])
+    expect(presetFromDraft(m, 'Testa').layers).toEqual([{ regions: ['mind'], asks: ['fog'] }])
+    // Nothing located: the first layer alone, asking everything it holds.
+    const n = emptyDraft()
+    expect(presetFromDraft(n, 'Vago').layers).toEqual([{ regions: [], asks: ['pain'] }])
+  })
+
+  it('with the vocabulary, a layer asks only what its regions show, whether the list is the default or the form set it', () => {
+    // A detour through the brain left ansia 3 on a body layer's draft (§6.1): it is not asked.
+    const d = emptyDraft()
+    d.layers = [L(['224'], { pain: 4, anxiety: 3, swelling: 2 })]
+    expect(presetFromDraft(d, 'Schiena', DEFAULT_SYMPTOMS)).toEqual({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain', 'swelling'] }], kind: 'chronic' })
+    d.layers[0].asks = ['pain', 'anxiety', 'stiffness']
+    expect(presetFromDraft(d, 'Schiena', DEFAULT_SYMPTOMS).layers[0].asks).toEqual(['pain', 'stiffness'])
+    expect(defaultAsks(finalizeWith(d.layers)[0])).toEqual(['pain', 'swelling'])
+  })
+
+  it('paint rides along, readings and tags do not', () => {
+    const d = emptyDraft()
+    const strokes = [{ region: '160', fig: 'female' as const, view: 'front' as const, points: [[1, 2]] as [number, number][], w: 8 }]
+    d.layers = [{ ...L(['160'], { pain: 5 }, ['heat']), strokes }]
+    expect(presetFromDraft(d, 'Coscia').layers).toEqual([{ regions: ['160'], asks: ['pain'], strokes }])
+  })
+
+  it('updates a preset in place: same id, same order, new name and shape', async () => {
+    const a = await addPreset({ name: 'Schiena', layers: [P(['224'], ['pain'])], kind: 'chronic' })
+    const b = await addPreset({ name: 'Gambe', layers: [P([], ['pain'])], kind: 'chronic' })
+    const next = await updatePreset(a.id, { name: 'Dorso', layers: [P(['224', '225'], ['pain', 'swelling'])], kind: 'episode' })
+    expect(next).toEqual({ id: a.id, order: 0, name: 'Dorso', layers: [P(['224', '225'], ['pain', 'swelling'])], kind: 'episode' })
+    expect((await db.presets.orderBy('order').toArray()).map((p) => p.name)).toEqual(['Dorso', 'Gambe'])
+    expect(b.order).toBe(1)
+    expect(await updatePreset('nope', { name: 'x', layers: [], kind: 'chronic' })).toBeUndefined()
   })
 
   it('adds in order, deletes and restores', async () => {
-    const a = await addPreset({ name: 'Schiena', layers: [L(['224'], { pain: 5 })], symptomIds: ['pain'], kind: 'chronic' })
-    const b = await addPreset({ name: 'Gambe', layers: [], symptomIds: ['pain', 'swelling'], kind: 'chronic' })
+    const a = await addPreset({ name: 'Schiena', layers: [P(['224'], ['pain'])], kind: 'chronic' })
+    const b = await addPreset({ name: 'Gambe', layers: [P([], ['pain', 'swelling'])], kind: 'chronic' })
     expect(a.order).toBe(0)
     expect(b.order).toBe(1)
     const gone = await deletePreset(a.id)
@@ -40,21 +78,24 @@ describe('presets', () => {
     expect(await db.presets.count()).toBe(2)
   })
 
-  it('logs a chronic snapshot from a preset, each layer taking the readings it shows, and finds the last one', async () => {
-    const p = await addPreset({ name: 'Gambe', layers: [L(LEG_IDS, { pain: 9 }, ['compression']), L(['mind'], {})], symptomIds: ['pain', 'swelling', 'fog'], kind: 'chronic' })
+  it('logs a chronic snapshot from a preset, each layer taking its own levels, and finds the last one', async () => {
+    const strokes = [{ region: '160', fig: 'female' as const, view: 'front' as const, points: [[1, 2]] as [number, number][], w: 8 }]
+    const p = await addPreset({ name: 'Gambe', layers: [{ ...P(LEG_IDS, ['pain', 'swelling']), strokes }, P(['mind'], ['fog'])], kind: 'chronic' })
     expect(await lastForPreset(p.id)).toBeUndefined()
-    const e1 = await logPreset(p, { pain: 4, swelling: 6, fog: 2 }, '2026-09-01T10:00:00.000Z')
+    const e1 = await logPreset(p, [{ pain: 4, swelling: 6 }, { fog: 2 }], '2026-09-01T10:00:00.000Z')
     expect(e1).toMatchObject({ presetId: p.id, kind: 'chronic', note: '' })
     expect(e1).not.toHaveProperty('endedAt')
-    expect(e1.layers).toEqual([L([...LEG_IDS].sort(), { pain: 4, swelling: 6 }, ['compression']), L(['mind'], { fog: 2 })])
-    const e2 = await logPreset(p, { pain: 2 }, '2026-09-03T10:00:00.000Z')
+    expect(e1.layers).toEqual([{ ...L([...LEG_IDS].sort(), { pain: 4, swelling: 6 }), strokes }, L(['mind'], { fog: 2 })])
+    // A slider the sheet did not report records 0; a level for a symptom not asked is ignored.
+    const e2 = await logPreset(p, [{ pain: 2, stiffness: 9 }, {}], '2026-09-03T10:00:00.000Z')
+    expect(e2.layers.map((l) => l.readings)).toEqual([{ pain: 2, swelling: 0 }, { fog: 0 }])
     await addEntry({ readings: { pain: 9 }, at: '2026-09-05T10:00:00.000Z' })
     expect((await lastForPreset(p.id))?.id).toBe(e2.id)
   })
 
   it('an episode preset opens an episode, and its updates count as its samples', async () => {
-    const p = await addPreset({ name: 'Testa', layers: [L(['100', '101'], { pain: 5 })], symptomIds: ['pain'], kind: 'episode' })
-    const head = await logPreset(p, { pain: 6 }, '2026-09-01T10:00:00.000Z')
+    const p = await addPreset({ name: 'Testa', layers: [P(['100', '101'], ['pain'])], kind: 'episode' })
+    const head = await logPreset(p, [{ pain: 6 }], '2026-09-01T10:00:00.000Z')
     expect(head).toMatchObject({ kind: 'episode', episodeId: head.id, endedAt: null, presetId: p.id })
     const u = await logUpdate(head.id, [{ pain: 2 }], '2026-09-01T12:00:00.000Z')
     expect(u).not.toHaveProperty('presetId')
@@ -79,9 +120,16 @@ describe('preset edge cases', () => {
     expect(lastByPreset([newer, upd])).toEqual({ a: newer })
   })
 
+  it('a layer asking nothing is a location: a body layer records pain 0 there, a mind layer nothing', async () => {
+    const p = await addPreset({ name: 'Posti', layers: [P(['224'], ['swelling']), P(['160'], []), P(['mind'], [])], kind: 'episode' })
+    const e = await logPreset(p, [{ swelling: 4 }, {}, {}])
+    expect(e.layers).toEqual([L(['224'], { swelling: 4, pain: 0 }), L(['160'], { pain: 0 }), L(['mind'], {})])
+    expect(e).toMatchObject({ kind: 'episode', episodeId: e.id, endedAt: null })
+  })
+
   it('a body layer records pain 0 when the preset does not track pain', async () => {
-    const p = await addPreset({ name: 'Gonfiore', layers: [L(['160'], { pain: 3 })], symptomIds: ['swelling'], kind: 'chronic' })
-    const e = await logPreset(p, { swelling: 4 })
+    const p = await addPreset({ name: 'Gonfiore', layers: [P(['160'], ['swelling'])], kind: 'chronic' })
+    const e = await logPreset(p, [{ swelling: 4 }])
     expect(e.layers).toEqual([L(['160'], { swelling: 4, pain: 0 })])
   })
 })

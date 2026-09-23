@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
-import { figureBox } from '../lib/regions'
+import { figureBox, LEG_IDS } from '../lib/regions'
 import { addPreset } from '../lib/presets'
 import { addEntry } from '../lib/entries'
 import { buildExport } from '../lib/backup'
@@ -52,10 +52,10 @@ async function pickFile(text: string) {
 
 describe('Settings presets', () => {
   it('lists presets and deletes with undo', async () => {
-    await addPreset({ name: 'Schiena', layers: [], symptomIds: ['pain'], kind: 'chronic' })
+    await addPreset({ name: 'Schiena', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic' })
     await openSettings()
-    const row = (await screen.findByText('Schiena')).closest('.preset')!
-    await fireEvent.click(row.querySelector('button')!)
+    await screen.findByText('Schiena')
+    await fireEvent.click(screen.getByRole('button', { name: 'Elimina Schiena' }))
     await waitFor(async () => expect(await db.presets.count()).toBe(0))
     await fireEvent.click(await screen.findByRole('button', { name: 'Annulla' }))
     await waitFor(async () => expect(await db.presets.count()).toBe(1))
@@ -63,7 +63,64 @@ describe('Settings presets', () => {
 
   it('explains how to create the first preset', async () => {
     await openSettings()
-    expect(await screen.findByText(/Nessun preset.*Crea preset da questa voce/)).toBeInTheDocument()
+    expect(await screen.findByText(/Nessun preset.*Nuovo preset/)).toBeInTheDocument()
+  })
+
+  it('edits a preset in place: same id, new name and shape, undo restores', async () => {
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }, { regions: LEG_IDS, asks: ['pain', 'swelling'] }], kind: 'chronic' })
+    await addEntry({ layers: [{ regions: ['224'], readings: { pain: 3 }, tags: [] }], presetId: p.id })
+    await openSettings()
+    await fireEvent.click(await screen.findByRole('button', { name: 'Modifica Schiena' }))
+    const form = await screen.findByRole('dialog', { name: 'Modifica preset' })
+    const name = within(form).getByRole('textbox', { name: 'Nome del preset' })
+    expect(name).toHaveValue('Schiena')
+    const asks = within(form).getByRole('group', { name: 'Chiede' })
+    expect(await within(asks).findByRole('button', { name: 'Dolore' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(asks).getByRole('button', { name: 'Gonfiore' })).toHaveAttribute('aria-pressed', 'false')
+    await fireEvent.input(name, { target: { value: 'Dorso' } })
+    await fireEvent.click(within(asks).getByRole('button', { name: 'Gonfiore' }))
+    // Chiede follows the layer: the legs already ask for swelling; drop pain there.
+    const chips = form.querySelectorAll<HTMLButtonElement>('.chips.areas .area')
+    expect(chips).toHaveLength(2)
+    await fireEvent.click(chips[1])
+    expect(within(asks).getByRole('button', { name: 'Gonfiore' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(asks).getByRole('button', { name: 'Dolore' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(within(asks).getByRole('button', { name: 'Dolore' }))
+    await fireEvent.click(within(form).getByRole('button', { name: 'Episodio' }))
+    await fireEvent.click(within(form).getByRole('button', { name: 'Salva' }))
+    expect(await screen.findByText('Preset salvato')).toBeInTheDocument()
+    await waitFor(async () => expect((await db.presets.get(p.id))?.name).toBe('Dorso'))
+    expect(await db.presets.get(p.id)).toEqual({ id: p.id, order: 0, name: 'Dorso', kind: 'episode', layers: [{ regions: ['224'], asks: ['pain', 'swelling'] }, { regions: [...LEG_IDS].sort(), asks: ['swelling'] }] })
+    expect(await screen.findByText('Dorso')).toBeInTheDocument()
+    // The entry logged from it still belongs to it.
+    expect((await db.entries.toArray())[0].presetId).toBe(p.id)
+    await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+    await waitFor(async () => expect(await db.presets.get(p.id)).toMatchObject({ name: 'Schiena', kind: 'chronic', layers: [{ regions: ['224'], asks: ['pain'] }, { regions: LEG_IDS, asks: ['pain', 'swelling'] }] }))
+  })
+
+  it('saving the form of a preset deleted meanwhile changes nothing', async () => {
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic' })
+    await openSettings()
+    await fireEvent.click(await screen.findByRole('button', { name: 'Modifica Schiena' }))
+    const form = await screen.findByRole('dialog', { name: 'Modifica preset' })
+    await within(within(form).getByRole('group', { name: 'Chiede' })).findByRole('button', { name: 'Dolore' })
+    await db.presets.delete(p.id)
+    await fireEvent.click(within(form).getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Modifica preset' })).not.toBeInTheDocument())
+    expect(screen.queryByText('Preset salvato')).not.toBeInTheDocument()
+    expect(await db.presets.count()).toBe(0)
+  })
+
+  it('a preset without a shape opens on the empty form and asks for every symptom', async () => {
+    await addPreset({ name: 'Vago', layers: [{ regions: [], asks: ['fog'] }], kind: 'chronic' })
+    await openSettings()
+    await fireEvent.click(await screen.findByRole('button', { name: 'Modifica Vago' }))
+    const form = await screen.findByRole('dialog', { name: 'Modifica preset' })
+    expect(within(form).getByText('Nessuna zona: tocca le figure')).toBeInTheDocument()
+    const asks = within(form).getByRole('group', { name: 'Chiede' })
+    expect(await within(asks).findByRole('button', { name: 'Nebbia mentale' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(asks).getByRole('button', { name: 'Dolore' })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(form).getByRole('button', { name: 'Salva' })).toBeEnabled()
   })
 })
 

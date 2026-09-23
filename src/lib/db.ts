@@ -2,7 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Entry, Preset, Symptom, Tag } from './types'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, MIND_DEFAULTS_V6, defaultCategory } from './vocabulary'
 import { upgradeRegions } from './regions'
-import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, type AreaV6, type EntryV6, type EntryV7, type PresetV6, type PresetV7 } from './legacy'
+import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, type AreaV6, type EntryV6, type EntryV7, type PresetV6, type PresetV7, type PresetV8 } from './legacy'
 
 export class GomJabbarDB extends Dexie {
   entries!: EntityTable<Entry, 'id'>
@@ -106,6 +106,19 @@ export class GomJabbarDB extends Dexie {
         await entries.bulkAdd(updates)
         await tx.table('presets').toCollection().modify((row: Record<string, unknown>) => {
           const next = presetKind(row as PresetV7)
+          for (const k of Object.keys(row)) delete row[k]
+          Object.assign(row, next)
+        })
+      })
+    // 9: a preset's `symptomIds` become `asks` on each of its layers (§5.6): the old list kept to what that layer shows
+    // by symptom category; a preset without layers gets one unlocated layer asking the whole list. `symptomIds` goes
+    // once replaced; a layer's readings and tags stay, unread. Entries are untouched.
+    this.version(9)
+      .stores({})
+      .upgrade(async (tx) => {
+        const categoryOf = categoryLookup(await tx.table('symptoms').toArray())
+        await tx.table('presets').toCollection().modify((row: Record<string, unknown>) => {
+          const next = presetAsks(row as PresetV8, categoryOf)
           for (const k of Object.keys(row)) delete row[k]
           Object.assign(row, next)
         })

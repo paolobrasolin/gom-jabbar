@@ -1,7 +1,7 @@
 {
  "app": "gom-jabbar",
- "version": 8,
- "exportedAt": "2026-09-23T13:00:00.000Z",
+ "version": 9,
+ "exportedAt": "2026-09-24T09:00:00.000Z",
  "vocabulary": {
   "symptoms": [
    {
@@ -791,10 +791,8 @@
   {
    "id": "p-schiena",
    "name": "Schiena",
-   "symptomIds": [
-    "pain"
-   ],
    "order": 0,
+   "kind": "chronic",
    "layers": [
     {
      "regions": [
@@ -804,37 +802,37 @@
      "readings": {
       "pain": 5
      },
-     "tags": []
+     "tags": [],
+     "asks": [
+      "pain"
+     ]
     }
-   ],
-   "kind": "chronic"
+   ]
   },
   {
    "id": "p-testa",
    "name": "Testa",
-   "symptomIds": [
-    "fog",
-    "sym-u8"
-   ],
    "order": 1,
+   "kind": "episode",
    "layers": [
     {
      "regions": [
       "mind"
      ],
      "readings": {},
-     "tags": []
+     "tags": [],
+     "asks": [
+      "fog",
+      "sym-u8"
+     ]
     }
-   ],
-   "kind": "episode"
+   ]
   },
   {
    "id": "pr-strokes",
    "name": "Coscia",
-   "symptomIds": [
-    "pain"
-   ],
    "order": 2,
+   "kind": "chronic",
    "layers": [
     {
      "regions": [
@@ -861,14 +859,18 @@
        ],
        "w": 8
       }
+     ],
+     "asks": [
+      "pain"
      ]
     }
-   ],
-   "kind": "chronic"
+   ]
   },
   {
    "id": "p-v7",
    "name": "Corpo e mente",
+   "order": 3,
+   "kind": "chronic",
    "layers": [
     {
      "regions": [
@@ -879,6 +881,9 @@
      },
      "tags": [
       "compression"
+     ],
+     "asks": [
+      "pain"
      ]
     },
     {
@@ -890,19 +895,18 @@
      },
      "tags": [
       "period"
+     ],
+     "asks": [
+      "fog"
      ]
     }
-   ],
-   "symptomIds": [
-    "pain",
-    "fog"
-   ],
-   "order": 3,
-   "kind": "chronic"
+   ]
   },
   {
    "id": "p-v8",
    "name": "Vulvodinia",
+   "kind": "chronic",
+   "order": 4,
    "layers": [
     {
      "regions": [
@@ -912,28 +916,32 @@
      "readings": {
       "pain": 5
      },
-     "tags": []
+     "tags": [],
+     "asks": [
+      "pain"
+     ]
     }
-   ],
-   "symptomIds": [
-    "pain"
-   ],
-   "kind": "chronic",
-   "order": 4
+   ]
   },
   {
    "id": "p-empty",
    "name": "Vago",
-   "layers": [],
-   "symptomIds": [
-    "fog"
-   ],
    "kind": "chronic",
-   "order": 5
+   "order": 5,
+   "layers": [
+    {
+     "regions": [],
+     "asks": [
+      "fog"
+     ]
+    }
+   ]
   },
   {
    "id": "p-orphan",
    "name": "Solo corpo",
+   "kind": "episode",
+   "order": 6,
    "layers": [
     {
      "regions": [
@@ -944,28 +952,32 @@
      },
      "tags": [
       "heat"
+     ],
+     "asks": [
+      "pain"
      ]
     }
-   ],
-   "symptomIds": [
-    "pain",
-    "fog"
-   ],
-   "kind": "episode",
-   "order": 6
+   ]
   },
   {
    "id": "p-nolayers",
    "name": "Senza strati",
-   "symptomIds": [
-    "pain"
-   ],
    "kind": "chronic",
-   "order": 7
+   "order": 7,
+   "layers": [
+    {
+     "regions": [],
+     "asks": [
+      "pain"
+     ]
+    }
+   ]
   },
   {
    "id": "p-nolist",
    "name": "Senza lista",
+   "kind": "chronic",
+   "order": 8,
    "layers": [
     {
      "regions": [
@@ -974,29 +986,52 @@
      "readings": {
       "pain": 1
      },
-     "tags": []
+     "tags": [],
+     "asks": []
     }
-   ],
-   "kind": "chronic",
-   "order": 8
+   ]
   },
   {
    "id": "p-none",
    "name": "Chiede niente",
+   "kind": "chronic",
+   "order": 9,
    "layers": [
     {
      "regions": [
       "mind"
      ],
      "readings": {},
-     "tags": []
+     "tags": [],
+     "asks": []
+    }
+   ]
+  },
+  {
+   "id": "p-v9",
+   "name": "Gambe e spalla",
+   "layers": [
+    {
+     "regions": [
+      "152",
+      "153"
+     ],
+     "asks": [
+      "pain",
+      "swelling"
+     ]
+    },
+    {
+     "regions": [
+      "130"
+     ],
+     "asks": [
+      "pain"
+     ]
     }
    ],
-   "symptomIds": [
-    "pain"
-   ],
    "kind": "chronic",
-   "order": 9
+   "order": 10
   }
  ]
 }

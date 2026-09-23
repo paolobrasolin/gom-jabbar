@@ -228,18 +228,20 @@ describe('Edit sheet', () => {
   })
 
   it('a row logged from a preset is named after it', async () => {
-    const p = await addPreset({ name: 'Schiena', layers: [L(['224', '225'], 5, ['heat'])], symptomIds: ['pain'], kind: 'chronic' })
-    await logPreset(p, { pain: 4 }, ago(30))
-    const two = await addPreset({ name: 'Gambe', layers: [L(['152', '153'], 5), L(['150', '151'], 5)], symptomIds: ['pain'], kind: 'chronic' })
-    await logPreset(two, { pain: 6 }, ago(20))
-    const gone = await addPreset({ name: 'Sparito', layers: [L(['110'], 5)], symptomIds: ['pain'], kind: 'chronic' })
-    await logPreset(gone, { pain: 2 }, ago(10))
+    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224', '225'], asks: ['pain'] }], kind: 'chronic' })
+    await logPreset(p, [{ pain: 4 }], ago(30))
+    const two = await addPreset({ name: 'Gambe', layers: [{ regions: ['152', '153'], asks: ['pain'] }, { regions: ['150', '151'], asks: ['pain'] }], kind: 'chronic' })
+    await logPreset(two, [{ pain: 6 }, { pain: 6 }], ago(20))
+    const gone = await addPreset({ name: 'Sparito', layers: [{ regions: ['110'], asks: ['pain'] }], kind: 'chronic' })
+    await logPreset(gone, [{ pain: 2 }], ago(10))
     await deletePreset(gone.id)
     await openDiary()
     await waitFor(() => expect(rows()).toHaveLength(3))
     const [orphan, legs, back] = rows()
-    await waitFor(() => expect(back).toHaveAccessibleName(/4\s*Schiena · Calore/))
+    await waitFor(() => expect(back).toHaveAccessibleName(/4\s*Schiena/))
     expect(back).not.toHaveTextContent('schiena')
+    // A shape holds no tags: nothing is replayed onto the reading.
+    expect(back).not.toHaveTextContent('Calore')
     // Several layers keep their levels beside the name.
     expect(legs).toHaveAccessibleName(/6\s*Gambe · gambe 6 · fianchi 6/)
     // A preset that no longer exists leaves the row as any other.

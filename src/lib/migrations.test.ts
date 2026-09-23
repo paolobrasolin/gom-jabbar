@@ -23,6 +23,7 @@ import exportV5 from '../test/fixtures/export-v5.json'
 import exportV6 from '../test/fixtures/export-v6.json'
 import exportV7 from '../test/fixtures/export-v7.json'
 import exportV8 from '../test/fixtures/export-v8.json'
+import exportV9 from '../test/fixtures/export-v9.json'
 import dbV1 from '../test/fixtures/db-v1.json'
 import dbV2 from '../test/fixtures/db-v2.json'
 import dbV3 from '../test/fixtures/db-v3.json'
@@ -31,14 +32,15 @@ import dbV5 from '../test/fixtures/db-v5.json'
 import dbV6 from '../test/fixtures/db-v6.json'
 import dbV7 from '../test/fixtures/db-v7.json'
 import dbV8 from '../test/fixtures/db-v8.json'
+import dbV9 from '../test/fixtures/db-v9.json'
 
 type Row = Record<string, unknown>
 type DbFixture = { version: number; stores: Record<string, string>; tables: Record<string, Row[]> }
 type ExportFixture = { exportedAt: string; vocabulary: { symptoms: Row[]; tags: Row[] }; entries: Row[]; presets?: Row[] }
 type Table = 'entries' | 'presets' | 'symptoms' | 'tags'
 
-const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4, 5: exportV5, 6: exportV6, 7: exportV7, 8: exportV8 }
-const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4, 5: dbV5, 6: dbV6, 7: dbV7, 8: dbV8 }
+const EXPORT_FIXTURES: Record<number, ExportFixture> = { 1: exportV1, 2: exportV2, 3: exportV3, 4: exportV4, 5: exportV5, 6: exportV6, 7: exportV7, 8: exportV8, 9: exportV9 }
+const DB_FIXTURES: Record<number, DbFixture> = { 1: dbV1, 2: dbV2, 3: dbV3, 4: dbV4, 5: dbV5, 6: dbV6, 7: dbV7, 8: dbV8, 9: dbV9 }
 
 const regionCodes = (e: Row): Row => (Array.isArray(e.areas) ? { ...e, areas: (e.areas as { regions: string[] }[]).map((a) => ({ ...a, regions: upgradeRegions(a.regions) })) } : e)
 
@@ -127,6 +129,21 @@ const UPGRADES: Record<number, Partial<Record<Table, (r: Row, ctx: Ctx) => Row |
       return out
     },
     presets: ({ ongoing, ...p }) => ({ ...p, kind: ongoing ? 'episode' : 'chronic' }),
+  },
+  // 8 → 9: a preset's `symptomIds` become `asks` on each of its layers: the old list, in its order, kept to what that
+  // layer's regions show by symptom category. Without layers, one unlocated layer asks the whole list. `symptomIds`
+  // goes once replaced; a layer's `readings` and `tags` stay as they were, unread. Entries are untouched.
+  8: {
+    presets: ({ symptomIds, layers, ...p }, ctx) => {
+      const ids = (symptomIds as string[] | undefined) ?? []
+      const shows = (l: { regions: string[] }, id: string) => {
+        const body = hasBody(l)
+        const mind = l.regions.includes('mind')
+        return !body && !mind ? true : ctx.categoryOf(id) === 'mind' ? mind : body
+      }
+      const ls = (layers as { regions: string[] }[] | undefined) ?? []
+      return { ...p, layers: ls.length ? ls.map((l) => ({ ...l, asks: ids.filter((id) => shows(l, id)) })) : [{ regions: [], asks: ids }] }
+    },
   },
 }
 
