@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { entryToLayers, presetToLayers, placeReadings, categoryLookup, splitEpisode, presetKind } from './legacy'
+import { entryToLayers, presetToLayers, placeReadings, categoryLookup, splitEpisode, presetKind, presetAsks } from './legacy'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
 
 const cat = categoryLookup(DEFAULT_SYMPTOMS)
@@ -155,5 +155,21 @@ describe('version 7 rows become chains (§8, 7 → 8)', () => {
   it('a preset: ongoing becomes kind', () => {
     expect(presetKind({ id: 'p', ongoing: true, name: 'x' })).toEqual({ id: 'p', kind: 'episode', name: 'x' })
     expect(presetKind({ id: 'p', name: 'x' })).toEqual({ id: 'p', kind: 'chronic', name: 'x' })
+  })
+})
+
+describe('version 8 → 9: a preset asks per layer', () => {
+  const categoryOf = categoryLookup([{ id: 'fog', category: 'mind' }])
+  it('splits symptomIds over the layers by what each shows, keeps readings and tags, drops the list', () => {
+    const p = presetAsks({ id: 'p', symptomIds: ['pain', 'fog', 'swelling'], layers: [{ regions: ['224'], readings: { pain: 3 }, tags: ['heat'] }, { regions: ['mind'], readings: {}, tags: [] }], kind: 'chronic' }, categoryOf)
+    expect(p).toEqual({ id: 'p', kind: 'chronic', layers: [{ regions: ['224'], readings: { pain: 3 }, tags: ['heat'], asks: ['pain', 'swelling'] }, { regions: ['mind'], readings: {}, tags: [], asks: ['fog'] }] })
+    expect(p).not.toHaveProperty('symptomIds')
+  })
+  it('a preset without layers gets one unlocated layer asking the whole list; an unlocated layer shows everything', () => {
+    expect(presetAsks({ symptomIds: ['fog', 'pain'], layers: [] }, categoryOf)).toEqual({ layers: [{ regions: [], asks: ['fog', 'pain'] }] })
+    expect(presetAsks({ symptomIds: ['fog', 'pain'], layers: [{ regions: [], readings: {}, tags: [] }] }, categoryOf)).toEqual({ layers: [{ regions: [], readings: {}, tags: [], asks: ['fog', 'pain'] }] })
+    expect(presetAsks({}, categoryOf)).toEqual({ layers: [{ regions: [], asks: [] }] })
+    // A layer without regions (only a hand-edited file) is read as unlocated rather than throwing inside the upgrade.
+    expect(presetAsks({ symptomIds: ['pain'], layers: [{ readings: {} }] }, categoryOf)).toEqual({ layers: [{ readings: {}, regions: [], asks: ['pain'] }] })
   })
 })

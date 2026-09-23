@@ -1,5 +1,5 @@
 import { PAIN, type Entry, type SymptomCategory } from './types'
-import { hasBody, holdsMind, type Layer, type Stroke } from './layers'
+import { hasBody, holdsMind, showsCategory, type Layer, type Stroke } from './layers'
 import { defaultCategory } from './vocabulary'
 
 /**
@@ -33,6 +33,9 @@ export type EntryV7 = {
 
 /** A preset as written before version 8: `ongoing` said whether a save opened an episode. */
 export type PresetV7 = { ongoing?: boolean; [k: string]: unknown }
+
+/** A preset as written before version 9: one list of sliders, `symptomIds`, for every layer. */
+export type PresetV8 = { symptomIds?: string[]; layers?: { regions?: string[]; [k: string]: unknown }[]; [k: string]: unknown }
 
 export type CategoryOf = (symptomId: string) => SymptomCategory
 
@@ -134,6 +137,20 @@ export function splitEpisode(row: EntryV7): Entry[] {
     })
   }
   return [head, ...updates]
+}
+
+/**
+ * Version 8 → 9 for a preset (§5.6): `symptomIds` becomes `asks` on each layer, the old list in its order kept to
+ * what that layer's regions show by symptom category, which is what the old sheet ended up recording there. A
+ * preset without layers gets one unlocated layer asking the whole list. `symptomIds` goes once replaced; a layer's
+ * `readings` and `tags` stay as they were, unread.
+ */
+export function presetAsks(p: PresetV8, categoryOf: CategoryOf): Record<string, unknown> {
+  const { symptomIds, layers, ...rest } = p
+  const ids = Array.isArray(symptomIds) ? symptomIds : []
+  const ls = Array.isArray(layers) ? layers : []
+  const withRegions = (l: { regions?: unknown; [k: string]: unknown }) => ({ ...l, regions: Array.isArray(l.regions) ? (l.regions as string[]) : [] })
+  return { ...rest, layers: ls.length ? ls.map(withRegions).map((l) => ({ ...l, asks: ids.filter((id) => showsCategory(l, categoryOf(id))) })) : [{ regions: [], asks: [...ids] }] }
 }
 
 /** Version 7 → 8 for a preset: `ongoing` becomes `kind`. */

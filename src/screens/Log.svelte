@@ -4,6 +4,7 @@
   import EditSheet from '../components/EditSheet.svelte'
   import EpisodeSheet from '../components/EpisodeSheet.svelte'
   import PresetSheet from '../components/PresetSheet.svelte'
+  import PresetForm, { type PresetSeed } from '../components/PresetForm.svelte'
   import Sheet from '../components/Sheet.svelte'
   import { t, tl } from '../i18n/index.svelte'
   import { db } from '../lib/db'
@@ -61,9 +62,13 @@
   })
   const nudge = $derived(backupDue(prefs.lastBackupAt, oldest.value, prefs.backupSnoozedUntil, tick))
   let draft = $state(emptyDraft({ kind: prefs.ongoing ? 'episode' : 'chronic' }))
-  /** Anything worth clearing: a region, a tag or a reading other than pain on any layer, a time, a note. The pain level alone is not. */
+  /** Anything worth clearing: a region, a tag or a reading other than pain on any layer, a time, a note, a preset just named. The pain level alone is not. */
   const dirty = $derived(
-    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.entries(l.readings).some(([id, v]) => id !== PAIN && v > 0)) || draft.at !== null || draft.endedAt !== null || draft.note.trim() !== '',
+    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.entries(l.readings).some(([id, v]) => id !== PAIN && v > 0)) ||
+      draft.at !== null ||
+      draft.endedAt !== null ||
+      draft.note.trim() !== '' ||
+      !!draft.presetId,
   )
   let saving = $state(false)
   let editing = $state.raw<Entry | null>(null)
@@ -101,6 +106,19 @@
   }
 
   let presetOpen = $state.raw<Preset | null>(null)
+  let presetSeed = $state.raw<PresetSeed | null>(null)
+
+  /** "+" in the strip (§5.6): name what is on the form, as it stands, empty included. */
+  function newPreset() {
+    presetSeed = { draft: $state.snapshot(draft) as EntryDraft }
+  }
+  /** The form now carries the name: the ordinary Salva logs the first reading under it, and so does the chip's sheet, which then empties the form. Undo on the toast unlinks it. */
+  function linkPreset(p: Preset) {
+    draft.presetId = p.id
+  }
+  function unlinkPreset(p: Preset) {
+    if (draft.presetId === p.id) draft.presetId = undefined
+  }
 
   async function end(id: string) {
     await endEpisode(id)
@@ -129,18 +147,18 @@
     </div>
   {/if}
 
-  {#if presets.value.length}
-    <div class="chips presets" aria-label={t('preset.strip')}>
-      {#each presets.value as p (p.id)}
-        {@const last = lastBy.value[p.id]}
-        {@const hl = last ? entryHeadline(last) : null}
-        <button class="chip small tchip" onclick={() => (presetOpen = p)}>
-          {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>{/if}
-          {p.name} · {last ? formatDuration(Math.max(0, tick - Date.parse(last.at)), units) : t('preset.never')}
-        </button>
-      {/each}
-    </div>
-  {/if}
+  <!-- Always there (§5.6): "+" first so it never scrolls away, and, before the first preset, its name. -->
+  <div class="chips presets" aria-label={t('preset.strip')}>
+    <button class="chip small outline" aria-label={t('preset.new')} onclick={newPreset}>+{#if !presets.value.length}&nbsp;{t('preset.new')}{/if}</button>
+    {#each presets.value as p (p.id)}
+      {@const last = lastBy.value[p.id]}
+      {@const hl = last ? entryHeadline(last) : null}
+      <button class="chip small tchip" aria-pressed={draft.presetId === p.id} onclick={() => (presetOpen = p)}>
+        {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>{/if}
+        {p.name} · {last ? formatDuration(Math.max(0, tick - Date.parse(last.at)), units) : t('preset.never')}
+      </button>
+    {/each}
+  </div>
 
   {#if nudge}
     <div class="card row nudge small">
@@ -165,7 +183,8 @@
     <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
   </div>
 </div>
-<PresetSheet bind:preset={presetOpen} last={presetOpen ? lastBy.value[presetOpen.id] : undefined} symptoms={symptoms.value} tagDefs={tags.value} />
+<PresetForm bind:seed={presetSeed} symptoms={symptoms.value} oncreate={linkPreset} onundo={unlinkPreset} />
+<PresetSheet bind:preset={presetOpen} symptoms={symptoms.value} onsaved={(p) => draft.presetId === p.id && reset()} />
 <EpisodeSheet bind:entry={episode} tagDefs={tags.value} symptoms={symptoms.value} onedit={(e) => (editing = e)} />
 <EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
 <Sheet bind:open={howTo} title={t('install.title')}>

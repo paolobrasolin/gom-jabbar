@@ -169,7 +169,8 @@ export function presetSeries(entries: Entry[], presets: Preset[]): { preset: Pre
   const heads = new Map(entries.filter((e) => e.presetId && e.episodeId === e.id).map((e) => [e.id, e]))
   return presets
     .map((preset) => {
-      const id = preset.symptomIds[0] ?? PAIN
+      // Pain when any layer asks for it, else the first thing its first layer asks (§6.3).
+      const id = preset.layers.some((l) => l.asks?.includes(PAIN)) ? PAIN : (preset.layers[0]?.asks?.[0] ?? PAIN)
       const points = entries
         .filter((e) => presetOf(e, heads) === preset.id)
         .map((e) => ({ at: Date.parse(e.at), value: readings(e)[id] ?? 0 }))

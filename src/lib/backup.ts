@@ -2,11 +2,11 @@ import { db } from './db'
 import { PAIN, type Entry, type Preset, type Symptom, type Tag, type Lang } from './types'
 import { regionText } from './summary'
 import { mergedReadings, mergedTags, type Layer } from './layers'
-import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7 } from './legacy'
+import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7, type PresetV8 } from './legacy'
 import { upgradeRegions } from './regions'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
 
-export const EXPORT_VERSION = 8
+export const EXPORT_VERSION = 9
 
 export type ExportFile = {
   app: 'gom-jabbar'
@@ -55,15 +55,16 @@ export function parseImport(text: string): ExportFile {
     exportedAt: typeof o.exportedAt === 'string' ? o.exportedAt : new Date().toISOString(),
     vocabulary: { symptoms, tags: Array.isArray(vocab.tags) ? vocab.tags : [] },
     entries,
-    presets: Array.isArray(o.presets) ? (o.presets as Row[]).map((p) => normalizePreset(p, version)) : [],
+    presets: Array.isArray(o.presets) ? (o.presets as Row[]).map((p) => normalizePreset(p, version, categoryOf)) : [],
   }
 }
 
 /**
  * Before version 7 a preset had `areas` and `tags`; they became layers (converted, never dropped). Before version 8
- * `ongoing` said what a save logged; it became `kind`.
+ * `ongoing` said what a save logged; it became `kind`. Before version 9 `symptomIds` was one list for every layer;
+ * it became `asks` on each layer (§5.6).
  */
-function normalizePreset(p: Row, version: number): Preset {
+function normalizePreset(p: Row, version: number, categoryOf: CategoryOf): Preset {
   let out = p
   if (version < 7) {
     const areas = version < 5 ? upgradeAreas(p.areas as AreaV6[]) : (p.areas as AreaV6[])
@@ -71,6 +72,7 @@ function normalizePreset(p: Row, version: number): Preset {
     out = { ...rest, layers: presetToLayers({ areas: areas ?? [], tags: (p.tags as string[]) ?? [] }) }
   }
   if (version < 8) out = presetKind(out as PresetV7)
+  if (version < 9) out = presetAsks(out as PresetV8, categoryOf)
   return out as Preset
 }
 

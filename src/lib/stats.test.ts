@@ -98,31 +98,34 @@ describe('stats', () => {
 })
 
 describe('presetSeries', () => {
-  it('gives one line per preset with samples only, following the preset first symptom', () => {
+  it('gives one line per preset with samples only: pain when any layer asks for it, else the first thing its first layer asks', () => {
     const presets: Preset[] = [
-      { id: 'a', name: 'Schiena', layers: [], symptomIds: ['pain'], kind: 'chronic', order: 0 },
-      { id: 'b', name: 'Gambe', layers: [], symptomIds: ['swelling', 'pain'], kind: 'chronic', order: 1 },
-      { id: 'c', name: 'Unused', layers: [], symptomIds: ['pain'], kind: 'chronic', order: 2 },
+      { id: 'a', name: 'Schiena', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic', order: 0 },
+      { id: 'b', name: 'Gambe', layers: [{ regions: ['mind'], asks: ['fog'] }, { regions: ['224'], asks: ['swelling'] }], kind: 'chronic', order: 1 },
+      { id: 'c', name: 'Unused', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic', order: 2 },
+      { id: 'd', name: 'Testa e schiena', layers: [{ regions: ['mind'], asks: ['fog'] }, { regions: ['224'], asks: ['swelling', 'pain'] }], kind: 'chronic', order: 3 },
     ]
     const mk = (id: string, at: string, readings: Record<string, number>, presetId?: string) => ({ ...makeEntry({ at, readings, presetId }), id })
     const entries = [
       mk('1', '2026-09-03T10:00:00.000Z', { pain: 4 }, 'a'),
       mk('2', '2026-09-01T10:00:00.000Z', { pain: 6 }, 'a'),
-      mk('3', '2026-09-02T10:00:00.000Z', { pain: 1, swelling: 5 }, 'b'),
+      mk('3', '2026-09-02T10:00:00.000Z', { pain: 1, swelling: 5, fog: 2 }, 'b'),
       mk('4', '2026-09-02T12:00:00.000Z', { pain: 7 }),
+      mk('5', '2026-09-02T13:00:00.000Z', { pain: 1, swelling: 5, fog: 2 }, 'd'),
     ]
     const rows = presetSeries(entries, presets)
-    expect(rows.map((r) => r.preset.id)).toEqual(['a', 'b'])
+    expect(rows.map((r) => r.preset.id)).toEqual(['a', 'b', 'd'])
     expect(rows[0].points.map((p) => [p.at, p.value])).toEqual([[Date.parse('2026-09-01T10:00:00.000Z'), 6], [Date.parse('2026-09-03T10:00:00.000Z'), 4]])
-    expect(rows[1].points.map((p) => p.value)).toEqual([5])
+    expect(rows[1].points.map((p) => p.value)).toEqual([2])
+    expect(rows[2].points.map((p) => p.value)).toEqual([1])
   })
 })
 
 describe('presetSeries edge cases', () => {
   it('falls back to pain for a preset without symptoms and to 0 for a missing reading', () => {
     const presets: Preset[] = [
-      { id: 'x', name: 'X', layers: [], symptomIds: [], kind: 'chronic', order: 0 },
-      { id: 'y', name: 'Y', layers: [], symptomIds: ['swelling'], kind: 'chronic', order: 1 },
+      { id: 'x', name: 'X', layers: [], kind: 'chronic', order: 0 },
+      { id: 'y', name: 'Y', layers: [{ regions: [], asks: ['swelling'] }], kind: 'chronic', order: 1 },
     ]
     const entries = [
       makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 }, presetId: 'x' }),
@@ -132,7 +135,7 @@ describe('presetSeries edge cases', () => {
   })
 
   it('an update of an episode opened from a preset is a sample of that preset', () => {
-    const presets: Preset[] = [{ id: 'x', name: 'X', layers: [], symptomIds: ['pain'], kind: 'episode', order: 0 }]
+    const presets: Preset[] = [{ id: 'x', name: 'X', layers: [{ regions: [], asks: ['pain'] }], kind: 'episode', order: 0 }]
     const head = makeEntry({ at: '2026-09-01T10:00:00.000Z', kind: 'episode', readings: { pain: 7 }, presetId: 'x' })
     const upd = { ...makeEntry({ at: '2026-09-01T12:00:00.000Z', kind: 'episode', readings: { pain: 3 } }), episodeId: head.id }
     expect(presetSeries([upd, head], presets)[0].points.map((p) => p.value)).toEqual([7, 3])

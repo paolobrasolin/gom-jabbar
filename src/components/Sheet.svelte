@@ -1,3 +1,8 @@
+<script module lang="ts">
+  /** The sheets open, bottom first: Escape closes only the top one, so a sheet over a sheet peels off one at a time. */
+  const stack: symbol[] = []
+</script>
+
 <script lang="ts">
   import type { Snippet } from 'svelte'
 
@@ -5,16 +10,22 @@
 
   let panel = $state<HTMLDivElement | undefined>()
   let returnTo: Element | null = null
+  const token = Symbol()
+  /** How many sheets sit under this one: a sheet over a sheet covers it, backdrop included. */
+  let depth = $state(0)
 
   function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') open = false
+    if (e.key === 'Escape' && stack.at(-1) === token) open = false
   }
   // Move focus into the sheet when it opens and give it back when it closes.
   $effect(() => {
     if (open && panel) {
+      depth = stack.length
+      stack.push(token)
       returnTo = document.activeElement
       panel.focus()
       return () => {
+        stack.splice(stack.indexOf(token), 1)
         if (returnTo instanceof HTMLElement) returnTo.focus()
       }
     }
@@ -24,8 +35,8 @@
 <svelte:window onkeydown={onKey} />
 
 {#if open}
-  <div class="backdrop" onclick={() => (open = false)} role="presentation"></div>
-  <div class="sheet" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" bind:this={panel}>
+  <div class="backdrop" style="z-index: {40 + depth * 2}" onclick={() => (open = false)} role="presentation"></div>
+  <div class="sheet" style="z-index: {41 + depth * 2}" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" bind:this={panel}>
     <div class="handle"></div>
     {#if title}<h2 class="title">{title}</h2>{/if}
     <div class="content">{@render children()}</div>

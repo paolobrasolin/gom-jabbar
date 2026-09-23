@@ -13,7 +13,14 @@ export type Stroke = { region: string; fig: FigureId; view: View; points: [numbe
  * which tags go with it. Layers are independent: a region may sit in several, each with its own readings.
  * A layer without regions is a reading without a location.
  */
-export type Layer = { regions: string[]; readings: Record<string, number>; tags: string[]; strokes?: Stroke[] }
+export type Layer = {
+  regions: string[]
+  readings: Record<string, number>
+  tags: string[]
+  strokes?: Stroke[]
+  /** Preset form only (§5.6): the sliders this layer will ask for. Entries never carry it: `finalize` leaves it out. */
+  asks?: string[]
+}
 
 /** Form state: the layers and which one the map, the sliders and the tag strip edit. */
 export type LayerState = { layers: Layer[]; cur: number }
@@ -136,6 +143,12 @@ export function pieceCount(layers: Layer[]): number {
   return layers.reduce((t, l) => t + (l.strokes?.length ?? 0), 0)
 }
 
+/** The layers a save keeps, in order: the located ones, or the first alone when none is. */
+export function keptLayers<T extends { regions: string[] }>(layers: T[]): T[] {
+  const located = layers.filter((l) => l.regions.length > 0)
+  return located.length ? located : layers.slice(0, 1)
+}
+
 const clamp = (n: number) => Math.max(0, Math.min(10, Math.round(n)))
 const round1 = (n: number) => Math.round(n * 10) / 10
 
@@ -146,8 +159,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10
  * the mind, no mental readings on a body layer.
  */
 export function finalize(layers: Layer[], symptoms?: Symptom[]): Layer[] {
-  const located = layers.filter((l) => l.regions.length > 0)
-  const kept = located.length ? located : layers.slice(0, 1)
+  const kept = keptLayers(layers)
   const category = symptoms ? new Map(symptoms.map((s) => [s.id, s.category])) : null
   return kept.map((l) => {
     const readings: Record<string, number> = {}

@@ -54,14 +54,18 @@ export type Tag = {
   order: number
 }
 
-/** A named, saved shape of an entry: tap it, set the level(s), save. Each save logs a chronic snapshot or opens an episode. */
+/**
+ * One layer of a preset (§5.6): a where, with its paint, and the sliders to ask there. No readings (they are set at
+ * each save) and no tags (a tag is a fact about one reading). Before version 9 the sliders were one list on the preset.
+ */
+export type PresetLayer = { regions: RegionId[]; asks: SymptomId[]; strokes?: Stroke[] }
+
+/** A named, saved shape of an entry: tap it, set the levels, save. Each save logs a chronic snapshot or opens an episode. */
 export type Preset = {
   id: string
   name: string
-  /** The layers as captured: regions, tags and paint matter, the readings are set at each save. */
-  layers: Layer[]
-  /** Sliders the preset sheet shows, in order. */
-  symptomIds: SymptomId[]
+  /** Never empty: a shape without a location is one layer without regions. */
+  layers: PresetLayer[]
   /** What a save logs (§5.6). */
   kind: EntryKind
   order: number

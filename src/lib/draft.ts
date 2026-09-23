@@ -23,6 +23,8 @@ export type EntryDraft = {
   /** The layer the map, the sliders and the tag strip edit. */
   cur: number
   note: string
+  /** The preset the entry will be logged under (§5.6): set when a preset was just named from this form. */
+  presetId?: string
 }
 
 export function emptyDraft(opts: { kind?: EntryKind; pain?: number } = {}): EntryDraft {
@@ -44,6 +46,7 @@ export function draftFromEntry(e: Entry): EntryDraft {
     layers: e.layers.length ? copyLayers(e.layers) : [newLayer({ [PAIN]: 0 })],
     cur: 0,
     note: e.note,
+    ...(e.presetId ? { presetId: e.presetId } : {}),
   }
 }
 
@@ -54,5 +57,6 @@ export function draftToInput(d: EntryDraft): EntryInput {
     endedAt: d.kind === 'episode' ? d.endedAt : null,
     layers: copyLayers(d.layers),
     note: d.note.trim(),
+    ...(d.presetId ? { presetId: d.presetId } : {}),
   }
 }

@@ -21,9 +21,16 @@
 
   /**
    * `lock` (§5.5): 'kind' for a head that has updates, which stays an episode (its end still moves); 'reading' for an
-   * update, a reading of its episode, whose kind and end are the head's.
+   * update, a reading of its episode, whose kind and end are the head's. `mode` 'preset' (§5.6) is the shape alone:
+   * the map, the layers and the kind, without time, tags, sliders or note.
    */
-  let { draft = $bindable(), symptoms = [], tags = [], lock = 'none' }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[]; lock?: 'none' | 'kind' | 'reading' } = $props()
+  let {
+    draft = $bindable(),
+    symptoms = [],
+    tags = [],
+    lock = 'none',
+    mode = 'entry',
+  }: { draft: EntryDraft; symptoms?: Symptom[]; tags?: Tag[]; lock?: 'none' | 'kind' | 'reading'; mode?: 'entry' | 'preset' } = $props()
 
   // The strip: every enabled tag, the most used first (§6.1 item 8). Expanded, the same tags by group take its place.
   const entries = live(() => null, () => db.entries.toArray(), [])
@@ -173,7 +180,7 @@
           aria-pressed={i === draft.cur}
           style="--c: {intensityColor(level)}; --ink-on: {intensityInk(level)}"
           onclick={() => apply(selectLayer(st(), i))}>
-          <span class="dot">{level}</span>
+          {#if mode !== 'preset'}<span class="dot">{level}</span>{/if}
           {#if l.regions.length}<EntrySummary lead={symptomName(headline(l.readings).id, symptoms, tl)} layers={[l]} tagDefs={tags} />{:else}<span class="muted">…</span>{/if}
         </button>
       {/each}
@@ -193,6 +200,9 @@
     {/if}
   {/snippet}
 
+  {#if mode === 'preset'}
+    <div class="chips">{@render kind()}</div>
+  {:else}
   <!-- Two kinds of thing (§5.1): a chronic snapshot has a time; an episode has a start and, once over, an end. -->
   {#if draft.kind === 'episode' && lock !== 'reading'}
     <TimeChips bind:value={draft.at} label={t('time.start')} caption={t('time.start')} none={t('time.now')} lead={kind} />
@@ -252,6 +262,7 @@
   {/if}
 
   <textarea class="note" rows="1" placeholder={t('log.notePlaceholder')} bind:value={draft.note} aria-label={t('log.note')}></textarea>
+  {/if}
 </div>
 
 <style>
