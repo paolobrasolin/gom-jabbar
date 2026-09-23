@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fitScale, clampCamera, lookAt, toFigure, pinchCamera, MARGIN } from './camera'
+import { fitScale, clampCamera, lookAt, toFigure, pinchCamera, zoomAt, MARGIN } from './camera'
 
 const stage = { w: 300, h: 320 }
 const box = { w: 100, h: 200 }
@@ -38,5 +38,21 @@ describe('camera', () => {
     expect(pinchCamera(start, { x: 100, y: 100 }, 1000, [1, 3]).k).toBe(3)
     // A single finger (no distance) only drags.
     expect(pinchCamera({ ...start, dist: 0 }, { x: 120, y: 100 }, 0, [1, 8])).toEqual({ k: 2, tx: 20, ty: 0 })
+  })
+
+  it('zoomAt scales about the middle of the stage, within the range, and keeps the figure on the stage', () => {
+    const stage = { w: 300, h: 320 }
+    const box = { w: 100, h: 100 }
+    const cam = { k: 2, tx: 50, ty: 60 }
+    const z = zoomAt(stage, box, cam, 2, [1, 8])
+    expect(z.k).toBe(4)
+    // The figure point that was in the middle of the stage is still there.
+    expect(toFigure(z, 150, 160)).toEqual(toFigure(cam, 150, 160))
+    expect(zoomAt(stage, box, cam, 10, [1, 6]).k).toBe(6)
+    // Zooming out past the fit is clamped, and the figure floats within the margin.
+    const out = zoomAt(stage, box, cam, 0.1, [1, 8])
+    expect(out.k).toBe(1)
+    expect(out.tx).toBeLessThanOrEqual(200 + MARGIN)
+    expect(out.tx).toBeGreaterThanOrEqual(-MARGIN)
   })
 })

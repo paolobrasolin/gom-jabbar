@@ -92,7 +92,7 @@
     <section class="two">
       <div>
         <h2>{t('trends.heatmap')}</h2>
-        <div class="map"><BodyMap {heat} {strokes} readonly labels={{ front: t('log.front'), back: t('log.back') }} /></div>
+        <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       </div>
       <div>
         <h2>{t('trends.overTime')}</h2>

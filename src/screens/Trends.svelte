@@ -66,7 +66,7 @@
           {/each}
         </div>
       {/if}
-      <div class="map"><BodyMap {heat} {strokes} readonly labels={{ front: t('log.front'), back: t('log.back') }} /></div>
+      <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
 

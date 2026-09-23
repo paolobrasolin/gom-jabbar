@@ -61,17 +61,22 @@
   }
 </script>
 
-<Sheet bind:open title={t('diary.edit')}>
-  <EntryForm bind:draft {symptoms} {tags} {lock} />
-  <div class="row">
-    <button class="btn danger" onclick={remove}>{t('diary.delete')}</button>
-    <button class="btn primary grow" onclick={save}>{t('common.save')}</button>
-  </div>
-  {#if lock !== 'reading'}
-    <div class="preset">
-      <button class="chip small outline" onclick={() => (presetSeed = { draft: $state.snapshot(draft) as EntryDraft })}>{t('preset.fromEntry')}</button>
-    </div>
-  {/if}
+<Sheet bind:open title={t('diary.edit')} tall>
+  <EntryForm bind:draft {symptoms} {tags} {lock}>
+    {#snippet actions()}
+      <div class="row">
+        <button class="btn danger" onclick={remove}>{t('diary.delete')}</button>
+        <button class="btn primary grow" onclick={save}>{t('common.save')}</button>
+      </div>
+    {/snippet}
+    {#snippet more()}
+      {#if lock !== 'reading'}
+        <div class="preset">
+          <button class="chip small outline" onclick={() => (presetSeed = { draft: $state.snapshot(draft) as EntryDraft })}>{t('preset.fromEntry')}</button>
+        </div>
+      {/if}
+    {/snippet}
+  </EntryForm>
 </Sheet>
 <PresetForm bind:seed={presetSeed} {symptoms} />
 

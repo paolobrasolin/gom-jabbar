@@ -7,7 +7,10 @@ export type Tab = 'log' | 'diary' | 'trends' | 'settings'
 type Prefs = {
   lang: Lang
   theme: Theme
+  /** A tap takes the other side along (§5.3). */
   mirror: boolean
+  /** A tap takes the other view along (#22). */
+  mirrorViews: boolean
   /** Which of the two CHOIR silhouettes the body map draws (§5.3). */
   figure: FigureId
   ongoing: boolean
@@ -28,7 +31,8 @@ function load(): Prefs {
   const defaults: Prefs = {
     lang: detectLang(),
     theme: 'system',
-    mirror: true,
+    mirror: false,
+    mirrorViews: true,
     figure: 'female',
     ongoing: false,
     lastBackupAt: null,
@@ -37,7 +41,11 @@ function load(): Prefs {
   }
   try {
     const raw = localStorage.getItem(KEY)
-    return raw ? { ...defaults, ...JSON.parse(raw) } : defaults
+    if (!raw) return defaults
+    const stored = JSON.parse(raw) as Partial<Prefs>
+    // Before #22 the sides mirror was on by default, so a store without the views mirror holds a default, not a choice: it starts off like a fresh install.
+    if (!('mirrorViews' in stored)) delete stored.mirror
+    return { ...defaults, ...stored }
   } catch {
     return defaults
   }
