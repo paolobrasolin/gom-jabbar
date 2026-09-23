@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  REGIONS, REGION_BY_ID, regionsFor, shapeOf, figureBox, limbOf, shapeCenter, pathFor, shapeArea, mirrorId, toggleRegion, toggleSet, toggleFullBody,
-  summarizeRegions, upgradeRegions, LEGACY_REGIONS, LEG_IDS, ARM_IDS, FULL_BODY, MIND, MIND_SHAPE, isMind,
+  REGIONS, REGION_BY_ID, regionsFor, shapeOf, figureBox, shapeCenter, pathFor, shapeArea, mirrorId, flipId, counterparts, toggleRegion, toggleSet, toggleFullBody,
+  summarizeRegions, upgradeRegions, LEGACY_REGIONS, LEG_IDS, ARM_IDS, HEAD_IDS, TORSO_IDS, sided, viewBox, FULL_BODY, MIND, MIND_SHAPE, isMind, onFigure,
 } from './regions'
 
 describe('region codes', () => {
@@ -50,9 +50,6 @@ describe('region codes', () => {
       }
     }
     expect(shapeArea({ kind: 'poly', points: [[0, 0], [10, 0], [10, 10], [0, 10]], r: 2 })).toBe(100)
-    expect(pathFor({ kind: 'ellipse', cx: 5, cy: 5, rx: 2, ry: 1 })).toMatch(/^M 3 5 a 2 1/)
-    expect(shapeArea({ kind: 'ellipse', cx: 0, cy: 0, rx: 1, ry: 1 })).toBeCloseTo(Math.PI)
-    expect(shapeCenter({ kind: 'ellipse', cx: 3, cy: 4, rx: 1, ry: 1 })).toEqual([3, 4])
   })
 
   it('mirrors by flipping the parity', () => {
@@ -82,16 +79,6 @@ describe('region codes', () => {
     expect(LEG_IDS).not.toContain('114')
   })
 
-  it('limbOf selects the whole limb on one side, both views; the trunk stays on its view', () => {
-    const leg = limbOf('152')
-    expect(leg).toEqual(['150', '152', '154', '160', '162', '164', '250', '252', '254', '260', '262', '264'])
-    expect(limbOf('131')).toEqual(['131', '133', '135', '141', '143', '145', '231', '233', '235', '241', '243', '245'])
-    expect(limbOf('110')).toEqual(['110', '112', '114'])
-    expect(limbOf('221')).toEqual(['221', '223', '225', '227'])
-    expect(limbOf('104')).toEqual(['100', '102', '104', '200', '202', '204'])
-    expect(limbOf('nope')).toEqual(['nope'])
-  })
-
   it('summarizes into coarse groups with sides', () => {
     expect(summarizeRegions([FULL_BODY])).toEqual([{ group: 'full', side: 'none' }])
     expect(summarizeRegions(['152', '153', '150'])).toEqual([{ group: 'hip', side: 'l' }, { group: 'leg', side: 'both' }])
@@ -107,7 +94,6 @@ describe('region codes', () => {
     expect(isMind('152')).toBe(false)
     expect(REGION_BY_ID[MIND]).toBeUndefined()
     expect(mirrorId(MIND)).toBeNull()
-    expect(limbOf(MIND)).toEqual([MIND])
     expect(LEG_IDS).not.toContain(MIND)
     expect(MIND_SHAPE.outline).toMatch(/^M .* Z$/)
     expect(MIND_SHAPE.seams).toMatch(/^M /)
@@ -129,5 +115,71 @@ describe('region codes', () => {
       const back = old.includes('back') || ['upperback', 'lowerback', 'buttock.l', 'buttock.r', 'calf.l', 'calf.r', 'heel.l', 'heel.r'].includes(old)
       for (const c of codes) if (!old.startsWith('hand')) expect(c[0], `${old} → ${c}`).toBe(back ? '2' : '1')
     }
+  })
+})
+
+describe('onFigure', () => {
+  it('is true on the skin of the view and false in the air around it', () => {
+    const [x, y] = shapeCenter(shapeOf('female', REGION_BY_ID['152']))
+    expect(onFigure('female', 'front', x, y)).toBe(true)
+    // The middle of a back segment is skin on the back, air or another segment in front: the thigh's centre is skin on both.
+    expect(onFigure('female', 'back', ...shapeCenter(shapeOf('female', REGION_BY_ID['252'])))).toBe(true)
+    expect(onFigure('female', 'front', -50, -50)).toBe(false)
+    expect(onFigure('male', 'front', 0, 0)).toBe(false)
+  })
+})
+
+describe('quick sets', () => {
+  it('head and torso cover their families on both views; a side keeps one side of a limb', () => {
+    expect(HEAD_IDS).toHaveLength(12)
+    expect(HEAD_IDS).toEqual(expect.arrayContaining(['100', '105', '200', '205']))
+    expect(TORSO_IDS).toHaveLength(14)
+    expect(TORSO_IDS).toEqual(expect.arrayContaining(['110', '115', '220', '227']))
+    expect(sided(LEG_IDS, 'l')).toHaveLength(12)
+    expect(sided(LEG_IDS, 'l').every((id) => Number(id) % 2 === 0)).toBe(true)
+    expect(sided(ARM_IDS, 'r').every((id) => Number(id) % 2 === 1)).toBe(true)
+    expect([...sided(ARM_IDS, 'l'), ...sided(ARM_IDS, 'r')].sort()).toEqual([...ARM_IDS].sort())
+  })
+})
+
+describe('viewBox', () => {
+  it('is the box the segments of that view fill, smaller than the figure box and different per view', () => {
+    const fb = figureBox('female')
+    const front = viewBox('female', 'front')
+    const back = viewBox('female', 'back')
+    expect(front.w).toBeLessThanOrEqual(fb.w)
+    expect(front.h).toBeLessThanOrEqual(fb.h)
+    expect(back).not.toEqual(front)
+    // Every point of every segment lies in its view's box.
+    for (const r of regionsFor('back')) {
+      const s = shapeOf('female', r)
+      for (const [x, y] of s.points) {
+        expect(x).toBeGreaterThanOrEqual(back.x)
+        expect(x).toBeLessThanOrEqual(back.x + back.w)
+        expect(y).toBeGreaterThanOrEqual(back.y)
+        expect(y).toBeLessThanOrEqual(back.y + back.h)
+      }
+    }
+    expect(viewBox('female', 'back')).toBe(back)
+  })
+})
+
+describe('the other view', () => {
+  it('flips the view digit for a limb or the head, never for the trunk, and never for what does not exist', () => {
+    expect(flipId('152')).toBe('252')
+    expect(flipId('252')).toBe('152')
+    expect(flipId('100')).toBe('200')
+    expect(flipId('110')).toBeNull()
+    expect(flipId('226')).toBeNull()
+    expect(flipId('nope')).toBeNull()
+    expect(flipId(MIND)).toBeNull()
+  })
+  it('counterparts: the tap alone, its mirror, its other view, or all four', () => {
+    expect(counterparts('152', {})).toEqual(['152'])
+    expect(counterparts('152', { sides: true })).toEqual(['152', '153'])
+    expect(counterparts('152', { views: true })).toEqual(['152', '252'])
+    expect(counterparts('152', { sides: true, views: true })).toEqual(['152', '252', '153', '253'])
+    // The trunk has no other view; the mirror still applies.
+    expect(counterparts('110', { sides: true, views: true })).toEqual(['110', '111'])
   })
 })

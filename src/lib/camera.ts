@@ -6,9 +6,8 @@ export type Camera = { k: number; tx: number; ty: number }
 export type Size = { w: number; h: number }
 export type Point = { x: number; y: number }
 
-/** How much bigger than "fitted" the figure opens at, and how far a pinch may go either way. */
-export const ZOOM = 2.5
-export const ZOOM_RANGE: [number, number] = [1.5, 6]
+/** How far past "fitted" a pinch may go. */
+export const MAX_ZOOM = 6
 /** Pixels of stage the figure may be dragged past its edge. */
 export const MARGIN = 40
 
@@ -45,4 +44,12 @@ export function pinchCamera(start: Pinch, mid: Point, dist: number, kRange: [num
   const k = Math.max(kRange[0], Math.min(kRange[1], start.camera.k * scale))
   const [fx, fy] = toFigure(start.camera, start.mid.x, start.mid.y)
   return { k, tx: mid.x - fx * k, ty: mid.y - fy * k }
+}
+
+/** The camera zoomed by `f` about the middle of the stage, within `kRange`, kept on the stage: the visible equivalent of a pinch. */
+export function zoomAt(stage: Size, box: Size, cam: Camera, f: number, kRange: [number, number]): Camera {
+  const k = Math.max(kRange[0], Math.min(kRange[1], cam.k * f))
+  const [cx, cy] = [stage.w / 2, stage.h / 2]
+  const [fx, fy] = toFigure(cam, cx, cy)
+  return clampCamera(stage, box, { k, tx: cx - fx * k, ty: cy - fy * k })
 }

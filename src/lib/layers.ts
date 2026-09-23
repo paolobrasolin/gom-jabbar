@@ -1,4 +1,4 @@
-import { FULL_BODY, MIND, isFullBody, mirrorId, type View, type FigureId } from './regions'
+import { FULL_BODY, MIND, isFullBody, counterparts, type Both, type View, type FigureId } from './regions'
 import { PAIN, type Symptom, type SymptomCategory } from './types'
 
 /**
@@ -83,14 +83,12 @@ function add(l: Layer, ids: string[]): Layer {
 }
 
 /** Tap a region: it leaves the current layer if it is there, else joins it. Other layers are never touched. The mind is one more region, never mirrored, toggleable under full body. */
-export function tapRegion(state: LayerState, id: string, mirror: boolean): LayerState {
+export function tapRegion(state: LayerState, id: string, both: boolean | Both): LayerState {
   const l = state.layers[state.cur]
   if (!l) return state
   const mind = id === MIND
   if (isFull(l) && !mind) return state
-  const ids = [id]
-  const m = mirror && !mind ? mirrorId(id) : null
-  if (m) ids.push(m)
+  const ids = mind ? [id] : counterparts(id, typeof both === 'boolean' ? { sides: both } : both)
   return replace(state, l.regions.includes(id) ? strip(l, ids) : add(l, ids))
 }
 

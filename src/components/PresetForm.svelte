@@ -95,23 +95,27 @@
   }
 </script>
 
-<Sheet bind:open title={editing ? t('preset.edit') : t('preset.new')}>
+<Sheet bind:open title={editing ? t('preset.edit') : t('preset.new')} tall>
   <input class="name" type="text" placeholder={t('preset.name')} aria-label={t('preset.name')} bind:value={name} onkeydown={(e) => e.key === 'Enter' && save()} />
-  <EntryForm bind:draft {symptoms} mode="preset" />
-  <div role="group" aria-label={t('preset.asks')}>
-    <p class="group-title">{t('preset.asks')}</p>
-    <div class="chips">
-      {#each askable as s (s.id)}
-        <button class="chip small" aria-pressed={asked.includes(s.id)} onclick={() => toggle(s.id)}>{tl(s.label)}</button>
-      {/each}
-    </div>
-  </div>
-  <p class="small muted">{t('preset.hint')}</p>
-  <button class="btn primary block" disabled={!ready} onclick={save}>{editing ? t('common.save') : t('preset.create')}</button>
+  <EntryForm bind:draft {symptoms} mode="preset">
+    {#snippet reading()}
+      <div role="group" aria-label={t('preset.asks')}>
+        <p class="group-title">{t('preset.asks')}</p>
+        <div class="chips">
+          {#each askable as s (s.id)}
+            <button class="chip small" aria-pressed={asked.includes(s.id)} onclick={() => toggle(s.id)}>{tl(s.label)}</button>
+          {/each}
+        </div>
+      </div>
+    {/snippet}
+    {#snippet actions()}
+      <button class="btn primary block" disabled={!ready} onclick={save}>{editing ? t('common.save') : t('preset.create')}</button>
+    {/snippet}
+  </EntryForm>
 </Sheet>
 
 <style>
-  .name { min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); min-width: 0; font-size: 16px; }
+  .name { flex: none; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); min-width: 0; font-size: 16px; }
   .group-title { font-size: 13px; font-weight: 600; color: var(--ink-2); padding-left: 2px; margin-bottom: 6px; }
   .chip[aria-pressed='false'] { border-color: var(--border); }
 </style>

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
-import { figureBox, LEG_IDS } from '../lib/regions'
+import { LEG_IDS, REGION_BY_ID, pathFor, shapeOf } from '../lib/regions'
 import { addPreset } from '../lib/presets'
 import { addEntry } from '../lib/entries'
 import { buildExport } from '../lib/backup'
@@ -116,7 +116,7 @@ describe('Settings presets', () => {
     await openSettings()
     await fireEvent.click(await screen.findByRole('button', { name: 'Modifica Vago' }))
     const form = await screen.findByRole('dialog', { name: 'Modifica preset' })
-    expect(within(form).getByText('Nessuna zona: tocca le figure')).toBeInTheDocument()
+    expect(within(form).getByText('Nessuna zona: tocca la figura')).toBeInTheDocument()
     const asks = within(form).getByRole('group', { name: 'Chiede' })
     expect(await within(asks).findByRole('button', { name: 'Nebbia mentale' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(asks).getByRole('button', { name: 'Dolore' })).toHaveAttribute('aria-pressed', 'false')
@@ -174,8 +174,9 @@ describe('Settings preferences', () => {
     expect(prefs.figure).toBe('male')
     expect(JSON.parse(localStorage.getItem('gj.prefs')!).figure).toBe('male')
     await fireEvent.click(screen.getByRole('button', { name: 'Registra' }))
-    const front = await screen.findByRole('group', { name: 'Davanti' })
-    expect(front.getAttribute('viewBox')).toBe(`-4 -4 ${figureBox('male').w + 8} ${figureBox('male').h + 8}`)
+    await screen.findByRole('group', { name: 'Davanti' })
+    // The stage draws the male polygons now.
+    expect(document.querySelector('.region[data-region="152"]')!.getAttribute('d')).toBe(pathFor(shapeOf('male', REGION_BY_ID['152'])))
     // Same regions on either figure: the thigh is still there to tap.
     expect(screen.getByRole('button', { name: 'Coscia sx' })).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))

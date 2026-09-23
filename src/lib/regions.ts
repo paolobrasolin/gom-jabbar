@@ -20,9 +20,8 @@ export type Side = 'l' | 'r'
 /** Display groups, for summaries and the limb shortcuts. */
 export type Group = 'head' | 'arm' | 'torso' | 'back' | 'hip' | 'leg'
 
-export type Shape =
-  | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number }
-  | { kind: 'poly'; points: [number, number][]; r: number }
+/** A region's polygon on a figure, with rounded corners. (Before version 5 a region could be an ellipse; every segment is a CHOIR polygon now.) */
+export type Shape = { kind: 'poly'; points: [number, number][]; r: number }
 
 /**
  * A region id is a three-digit code (§5.3): view (1 front, 2 back), part family
@@ -120,12 +119,25 @@ export function figureBox(fig: FigureId): { w: number; h: number } {
   return FIGURE_SIZE[fig]
 }
 
+export type Box = { x: number; y: number; w: number; h: number }
+const viewBoxes = new Map<string, Box>()
+/** The box the segments of one view actually fill (#22): the CHOIR back sits off the front's centre and is a little smaller, so a stage fits and centres each view on its own box. */
+export function viewBox(fig: FigureId, view: View): Box {
+  const key = `${fig}/${view}`
+  let b = viewBoxes.get(key)
+  if (!b) {
+    let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity]
+    for (const r of regionsFor(view)) {
+      for (const [x, y] of shapeOf(fig, r).points) [x0, y0, x1, y1] = [Math.min(x0, x), Math.min(y0, y), Math.max(x1, x), Math.max(y1, y)]
+    }
+    b = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
+    viewBoxes.set(key, b)
+  }
+  return b
+}
+
 /** SVG path for a polygon with rounded corners. */
 export function pathFor(s: Shape): string {
-  if (s.kind === 'ellipse') {
-    const { cx, cy, rx, ry } = s
-    return `M ${cx - rx} ${cy} a ${rx} ${ry} 0 1 0 ${2 * rx} 0 a ${rx} ${ry} 0 1 0 ${-2 * rx} 0 Z`
-  }
   const pts = s.points
   const n = pts.length
   const parts: string[] = []
@@ -148,7 +160,6 @@ export function pathFor(s: Shape): string {
 }
 
 export function shapeArea(s: Shape): number {
-  if (s.kind === 'ellipse') return Math.PI * s.rx * s.ry
   let a = 0
   for (let i = 0; i < s.points.length; i++) {
     const [x1, y1] = s.points[i]
@@ -160,7 +171,6 @@ export function shapeArea(s: Shape): number {
 
 /** Point in shape. Polygons are tested on their corners; the rounding is cosmetic. */
 export function shapeContains(s: Shape, x: number, y: number): boolean {
-  if (s.kind === 'ellipse') return ((x - s.cx) / s.rx) ** 2 + ((y - s.cy) / s.ry) ** 2 <= 1
   let on = false
   const pts = s.points
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -171,8 +181,12 @@ export function shapeContains(s: Shape, x: number, y: number): boolean {
   return on
 }
 
+/** Whether a point of a figure lies on its skin: inside any segment of the view. */
+export function onFigure(fig: FigureId, view: View, x: number, y: number): boolean {
+  return regionsFor(view).some((r) => shapeContains(shapeOf(fig, r), x, y))
+}
+
 export function shapeCenter(s: Shape): [number, number] {
-  if (s.kind === 'ellipse') return [s.cx, s.cy]
   const n = s.points.length
   return [s.points.reduce((t, p) => t + p[0], 0) / n, s.points.reduce((t, p) => t + p[1], 0) / n]
 }
@@ -185,20 +199,30 @@ export function mirrorId(id: string): string | null {
   return String(n % 2 === 0 ? n + 1 : n - 1)
 }
 
+/** The same part seen from the other view: flip the view digit. The trunk families do not correspond (§5.3), so they have none. */
+export function flipId(id: string): string | null {
+  const def = REGION_BY_ID[id]
+  if (!def || def.group === 'torso' || def.group === 'back') return null
+  const other = (id[0] === '1' ? '2' : '1') + id.slice(1)
+  return REGION_BY_ID[other] ? other : null
+}
+
+/** What a tap on `id` takes along (#22): its mirror on the other side, its counterpart on the other view, and both at once. */
+export type Both = { sides?: boolean; views?: boolean }
+export function counterparts(id: string, both: Both): string[] {
+  let ids = [id]
+  if (both.sides) ids = ids.flatMap((x) => [x, mirrorId(x) ?? x])
+  if (both.views) ids = ids.flatMap((x) => [x, flipId(x) ?? x])
+  return [...new Set(ids)]
+}
+
 const family = (id: string) => id[1]
 export const LEG_IDS = REGIONS.filter((r) => family(r.id) === '5' || family(r.id) === '6').map((r) => r.id)
 export const ARM_IDS = REGIONS.filter((r) => family(r.id) === '3' || family(r.id) === '4').map((r) => r.id)
-
-/** All regions of the same family and side as `id`: the whole arm or leg on both views, the head, or one side of the trunk on that view. */
-export function limbOf(id: string): string[] {
-  const def = REGION_BY_ID[id]
-  if (!def) return [id]
-  const fams: Record<string, string[]> = { '0': ['0'], '1': ['1'], '2': ['2'], '3': ['3', '4'], '4': ['3', '4'], '5': ['5', '6'], '6': ['5', '6'] }
-  const f = fams[family(id)]
-  return REGIONS.filter((r) => f.includes(family(r.id)) && r.side === def.side && (family(id) === '1' || family(id) === '2' ? r.view === def.view : true))
-    .map((r) => r.id)
-    .sort()
-}
+/** The quick sets of the rail (#22): the head and the trunk on both views, and each limb on one side. */
+export const HEAD_IDS = REGIONS.filter((r) => family(r.id) === '0').map((r) => r.id)
+export const TORSO_IDS = REGIONS.filter((r) => family(r.id) === '1' || family(r.id) === '2').map((r) => r.id)
+export const sided = (ids: string[], side: Side): string[] => ids.filter((id) => REGION_BY_ID[id].side === side)
 
 export function isFullBody(regions: string[]): boolean {
   return regions.includes(FULL_BODY)

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { regionAt, partition, simplify, addStroke, undoStroke, clearStrokes, allStrokes, strokePath, clientToFigure, figureCenter, mainView, BRUSH, type RawStroke } from './strokes'
+import { regionAt, regionNear, partition, simplify, addStroke, undoStroke, clearStrokes, allStrokes, strokePath, clientToFigure, figureCenter, mainView, BRUSH, type RawStroke } from './strokes'
 import { finalize, tapRegion, tapSet, toggleFull, newLayer, pieceCount, type Stroke } from './layers'
 import { REGION_BY_ID, shapeOf, shapeCenter, figureBox, type FigureId } from './regions'
 
@@ -43,6 +43,18 @@ describe('regionAt', () => {
     expect(regionAt(F, 'front', box.w / 2, -20)).toMatch(/^10[01]$/)
     expect(regionAt(F, 'front', -20, centre('145')[1])).toBe('145')
     expect(regionAt(F, 'back', box.w + 20, centre('245')[1])).toBe('245')
+  })
+})
+
+describe('regionNear', () => {
+  it('is the segment under a point, the nearest one just outside the skin, and nothing further away', () => {
+    const [cx, cy] = shapeCenter(shapeOf('female', REGION_BY_ID['152']))
+    expect(regionNear('female', 'front', cx, cy, 6)).toBe('152')
+    // Just outside the patient's right hand (front 145, drawn at the left edge) is air within reach; far out is not.
+    const hand = shapeOf('female', REGION_BY_ID['145'])
+    const [left, hy] = hand.points.reduce((a, p) => (p[0] < a[0] ? p : a))
+    expect(regionNear('female', 'front', left - 3, hy, 6)).toBe('145')
+    expect(regionNear('female', 'front', left - 30, hy, 6)).toBeNull()
   })
 })
 

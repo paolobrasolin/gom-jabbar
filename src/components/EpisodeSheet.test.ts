@@ -101,6 +101,7 @@ describe('Episode sheet', () => {
     expect(screen.queryByRole('dialog', { name: 'Episodio in corso' })).not.toBeInTheDocument()
     const edit = await screen.findByRole('dialog', { name: 'Modifica' })
     expect(within(edit).getByRole('slider', { name: 'Dolore' })).toHaveValue('7')
+    await fireEvent.click(within(edit).getByRole('button', { name: /^Altro/ }))
     expect(within(edit).getByRole('button', { name: 'Episodio' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(within(edit).getByRole('group', { name: 'Fine' })).getByRole('button', { name: 'In corso' })).toHaveAttribute('aria-pressed', 'true')
   })

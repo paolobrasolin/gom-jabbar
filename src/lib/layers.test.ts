@@ -47,6 +47,12 @@ describe('editing layers', () => {
     expect(s.layers).toEqual([{ regions: ['153', MIND], readings: { pain: 6 }, tags: [] }, { regions: ['153'], readings: { pain: 2 }, tags: [] }])
     expect(s.cur).toBe(1)
     expect(tapRegion({ layers: [], cur: 0 }, '152', true)).toEqual({ layers: [], cur: 0 })
+    // Both views as well: a thigh in front takes the one behind; the mind still goes alone.
+    s = tapRegion(one(), '152', { sides: true, views: true })
+    expect(s.layers[0].regions).toEqual(['152', '153', '252', '253'])
+    s = tapRegion(s, '252', { views: true })
+    expect(s.layers[0].regions).toEqual(['153', '253'])
+    expect(tapRegion(s, MIND, { sides: true, views: true }).layers[0].regions).toEqual(['153', '253', MIND])
   })
 
   it('a set joins or leaves the current layer as a whole; the mind is never part of a set', () => {

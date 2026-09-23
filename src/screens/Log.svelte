@@ -176,12 +176,15 @@
     </div>
   {/if}
 
-  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value} />
-
-  <div class="actions">
-    <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>
-    <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
-  </div>
+  <!-- The slot over the frame (#22): the form draws the figure, the frame carries the fast path and the Salva bar. -->
+  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value}>
+    {#snippet actions()}
+      <div class="actions">
+        <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>
+        <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
+      </div>
+    {/snippet}
+  </EntryForm>
 </div>
 <PresetForm bind:seed={presetSeed} symptoms={symptoms.value} oncreate={linkPreset} onundo={unlinkPreset} />
 <PresetSheet bind:preset={presetOpen} symptoms={symptoms.value} onsaved={(p) => draft.presetId === p.id && reset()} />
@@ -193,7 +196,9 @@
 </Sheet>
 
 <style>
-  .log { padding-bottom: 0; } /* the sticky bar carries the bottom padding, so nothing scrolls out under it */
+  /* Nothing scrolls here (§6.1): the slot takes what the frame leaves. Only when the banners crowd it does the page give, so Salva is always reachable. */
+  .log { padding-bottom: 0; }
+  .log > :global(.form) { min-height: 520px; }
   .episodes { display: flex; flex-direction: column; gap: 8px; }
   .nudge { padding: 8px 8px 8px 12px; }
   .episode { padding: 8px 8px 8px 12px; }
@@ -204,16 +209,7 @@
   .presets { flex: none; min-height: 38px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
   .tchip { padding-left: 6px; gap: 6px; font-variant-numeric: tabular-nums; }
   .dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-weight: 700; font-size: 12px; }
-  .actions {
-    position: sticky;
-    bottom: 0;
-    z-index: 1; /* above the slider thumbs scrolling under it */
-    display: flex;
-    gap: 10px;
-    padding: 8px 0;
-    background: linear-gradient(to top, var(--bg) 70%, transparent);
-    margin-top: auto;
-  }
+  .actions { display: flex; gap: 10px; flex: none; }
   .actions .btn.primary { min-height: 56px; font-size: 18px; }
   .actions .btn:not(.primary) { min-height: 56px; padding: 0 18px; }
 </style>

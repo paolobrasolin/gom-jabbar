@@ -95,9 +95,11 @@ describe('Edit sheet', () => {
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
     expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('7')
+    expect(within(sheet).getByRole('button', { name: 'Coscia sx' })).toHaveAttribute('aria-pressed', 'true')
+    // The rest of the entry is on the Altro face of the slot (#22); the slider and Salva stay in the frame.
+    await fireEvent.click(within(sheet).getByRole('button', { name: /^Altro/ }))
     expect(within(sheet).getByRole('textbox', { name: 'Note' })).toHaveValue('dopo la corsa')
     expect(await within(sheet).findByRole('button', { name: 'Riposo' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(sheet).getByRole('button', { name: 'Coscia sx' })).toHaveAttribute('aria-pressed', 'true')
 
     await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '3' } })
     await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'meglio' } })
@@ -134,7 +136,10 @@ describe('Edit sheet', () => {
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
     const ep = await screen.findByRole('dialog', { name: /Episodio/ })
     await fireEvent.click(within(ep).getByRole('button', { name: 'Modifica zone e note' }))
-    return screen.findByRole('dialog', { name: 'Modifica' })
+    const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
+    // The kind and the bounds are on the Altro face (#22).
+    await fireEvent.click(within(sheet).getByRole('button', { name: /^Altro/ }))
+    return sheet
   }
 
   it('the form ends an episode from the Fine chips, reopens it with In corso, and Cronico makes it a snapshot', async () => {
@@ -208,6 +213,7 @@ describe('Edit sheet', () => {
     await fireEvent.click(points[1])
     let sheet = await screen.findByRole('dialog', { name: 'Modifica' })
     expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('3')
+    await fireEvent.click(within(sheet).getByRole('button', { name: /^Altro/ }))
     expect(within(sheet).queryByRole('button', { name: 'Cronico' })).not.toBeInTheDocument()
     expect(within(sheet).queryByRole('group', { name: 'Fine' })).not.toBeInTheDocument()
     expect(within(sheet).getByRole('group', { name: 'Quando' })).toBeInTheDocument()

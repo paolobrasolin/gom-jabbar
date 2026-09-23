@@ -21,7 +21,6 @@ function segmentDistance(x: number, y: number, [ax, ay]: [number, number], [bx, 
 
 /** Distance from a point outside the shape to its edge. */
 function distance(s: Shape, x: number, y: number): number {
-  if (s.kind === 'ellipse') return (Math.hypot((x - s.cx) / s.rx, (y - s.cy) / s.ry) - 1) * Math.min(s.rx, s.ry)
   let best = Infinity
   const pts = s.points
   for (let i = 0; i < pts.length; i++) best = Math.min(best, segmentDistance(x, y, pts[i], pts[(i + 1) % pts.length]))
@@ -43,6 +42,19 @@ export function regionAt(fig: FigureId, view: View, x: number, y: number): strin
     }
   }
   return best.id
+}
+
+/** The segment under a point, or the nearest one within `tol` figure units of its edge (#22): a tap just off the skin still lands. */
+export function regionNear(fig: FigureId, view: View, x: number, y: number, tol: number): string | null {
+  let best: string | null = null
+  let bd = tol
+  for (const r of regionsFor(view)) {
+    const s = shapeOf(fig, r)
+    if (shapeContains(s, x, y)) return regionAt(fig, view, x, y)
+    const d = distance(s, x, y)
+    if (d < bd) [bd, best] = [d, r.id]
+  }
+  return best
 }
 
 /** A gesture as drawn, before it is cut into pieces: one figure, one view, the centreline and the brush width. */

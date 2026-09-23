@@ -25,7 +25,6 @@
     liveColor = '',
     readonly = false,
     onToggle,
-    onLongPress,
   }: {
     view: View
     layers?: Layer[]
@@ -40,7 +39,6 @@
     liveColor?: string
     readonly?: boolean
     onToggle?: (id: string) => void
-    onLongPress?: (id: string) => void
   } = $props()
 
   // Clip ids must be unique: Trends keeps its map mounted under the report's.
@@ -75,29 +73,6 @@
   /** Hit layer: smallest regions drawn last so they win over big neighbours. */
   const hits = $derived([...regions].sort((a, b) => shapeArea(shapeOf(fig, b)) - shapeArea(shapeOf(fig, a))))
 
-  // Long press: fire after a hold, then swallow the click that follows.
-  const HOLD_MS = 450
-  let timer: ReturnType<typeof setTimeout> | undefined
-  let held = false
-  function down(id: string) {
-    held = false
-    clearTimeout(timer)
-    if (!onLongPress) return
-    timer = setTimeout(() => {
-      held = true
-      onLongPress(id)
-    }, HOLD_MS)
-  }
-  function cancel() {
-    clearTimeout(timer)
-  }
-  function click(id: string) {
-    if (held) {
-      held = false
-      return
-    }
-    onToggle?.(id)
-  }
 </script>
 
 {#snippet hit(r: RegionDef, extra: Record<string, unknown>)}
@@ -142,11 +117,7 @@
         role: 'button',
         'aria-pressed': !!current && covers(current, r.id),
         'aria-label': regionLabel(r.id, t),
-        onclick: () => click(r.id),
-        onpointerdown: () => down(r.id),
-        onpointerup: cancel,
-        onpointercancel: cancel,
-        onpointerleave: cancel,
+        onclick: () => onToggle?.(r.id),
         oncontextmenu: (e: Event) => e.preventDefault(),
       })}
     {/each}

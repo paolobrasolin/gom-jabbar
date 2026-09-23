@@ -6,7 +6,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
 
-  let { open = $bindable(false), title = '', children }: { open?: boolean; title?: string; children: Snippet } = $props()
+  /** `tall`: a fixed 92dvh, for a form whose slot and frame must not move (#22); otherwise the sheet is as tall as its content. */
+  let { open = $bindable(false), title = '', tall = false, children }: { open?: boolean; title?: string; tall?: boolean; children: Snippet } = $props()
 
   let panel = $state<HTMLDivElement | undefined>()
   let returnTo: Element | null = null
@@ -36,7 +37,7 @@
 
 {#if open}
   <div class="backdrop" style="z-index: {40 + depth * 2}" onclick={() => (open = false)} role="presentation"></div>
-  <div class="sheet" style="z-index: {41 + depth * 2}" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" bind:this={panel}>
+  <div class="sheet" class:tall style="z-index: {41 + depth * 2}" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" bind:this={panel}>
     <div class="handle"></div>
     {#if title}<h2 class="title">{title}</h2>{/if}
     <div class="content">{@render children()}</div>
@@ -62,7 +63,9 @@
   }
   .handle { width: 40px; height: 4px; border-radius: 2px; background: var(--ink-3); margin: 0 auto 8px; flex: none; }
   .title { font-size: 18px; font-weight: 700; margin-bottom: 8px; flex: none; }
-  .content { --map-h: 32dvh; --map-min: 32dvh; --map-max: 32dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .content { overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .sheet.tall { height: 92dvh; }
+  .sheet.tall .content { flex: 1; overflow: hidden; }
   @keyframes up { from { transform: translateY(40px); } }
   @keyframes fade { from { opacity: 0; } }
 </style>
