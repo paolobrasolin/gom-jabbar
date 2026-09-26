@@ -6,6 +6,7 @@ import { addPreset, logPreset } from '../lib/presets'
 import { addEntry, endEpisode, type EntryInput } from '../lib/entries'
 import { intensityColor } from '../lib/color'
 import App from '../App.svelte'
+import { loadAppCss } from '../test/css'
 
 beforeEach(() => {
   resetDb()
@@ -136,6 +137,16 @@ describe('Trends tags and symptoms', () => {
     expect(bars).toEqual(['width: 80%;', 'width: 20%;'])
     expect(Array.from(card.querySelectorAll('.val')).map((v) => v.textContent)).toEqual(['8.0', '2.0'])
     expect(card).toHaveTextContent('Solo descrittivo')
+  })
+
+  it('keeps the global centred .row off the comparison rows, so the bars get the card\'s width', async () => {
+    loadAppCss()
+    for (let n = 0; n < 5; n++) await addEntry({ at: at(n), ...legs(8, { tags: ['rest'] }) })
+    for (let n = 5; n < 10; n++) await addEntry({ at: at(n), ...legs(2) })
+    await openTrends()
+    const card = (await screen.findByText('giorni con')).closest('.card')!
+    const row = card.querySelector('.bar')!.parentElement!.parentElement!
+    expect(getComputedStyle(row).alignItems).not.toBe('center')
   })
 
   it('shows the mean of every other symptom that was recorded', async () => {
