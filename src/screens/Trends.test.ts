@@ -89,6 +89,15 @@ describe('Trends heatmap and chart', () => {
     expect(screen.queryByRole('button', { name: 'Mente' })).not.toBeInTheDocument()
   })
 
+  it('keeps a region seen once legible: frequency fills from 0.7, not from nothing (#23)', async () => {
+    for (let n = 0; n < 4; n++) await addEntry({ at: at(n), ...legs(8) })
+    await addEntry({ at: at(4), layers: [{ regions: ['153'], readings: { pain: 3 }, tags: [] }] })
+    await openTrends()
+    await waitFor(() => expect(document.querySelector('[data-region="153"]')).toHaveClass('on'))
+    expect(document.querySelector('[data-region="153"]')!.getAttribute('style')).toContain('fill-opacity: 0.77')
+    expect(document.querySelector('[data-region="152"]')!.getAttribute('style')).toContain('fill-opacity: 1.00')
+  })
+
   it('colours the regions that appeared, read-only', async () => {
     await addEntry({ at: at(0), ...legs(8) })
     await openTrends()

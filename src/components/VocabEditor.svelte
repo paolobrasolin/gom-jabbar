@@ -90,10 +90,9 @@
   .item { display: flex; align-items: center; gap: 8px; min-height: 48px; }
   .item.off .name { color: var(--ink-2); text-decoration: line-through; }
   .lock { width: 46px; flex: none; }
-  .switch { min-height: 0; }
   .name { text-align: left; min-height: 44px; padding: 0 6px; border-radius: 8px; }
   .name:active { background: var(--surface-2); }
   .rename, .add input { min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); }
-  .arrow { width: 40px; min-height: 40px; border-radius: 8px; background: var(--surface-2); font-size: 16px; }
+  .arrow { width: 44px; min-height: 44px; border-radius: 8px; background: var(--surface-2); font-size: 16px; }
   .add { padding-top: 4px; }
 </style>

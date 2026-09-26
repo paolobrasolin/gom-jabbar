@@ -44,6 +44,7 @@
   "episode.active": "Ongoing episode",
   "episode.since": "for {d}",
   "episode.end": "End now",
+  "episode.endShort": "End",
   "episode.ended": "Episode ended",
   "diary.empty": "No entries yet.",
   "diary.emptyHint": "What you log will show up here.",

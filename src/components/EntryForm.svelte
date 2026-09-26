@@ -417,12 +417,12 @@
   .spine { display: flex; align-items: center; gap: 8px; flex: none; }
   .areas { flex: 1; min-height: 40px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -12px; padding: 2px 4px 2px 12px; }
   .areas::-webkit-scrollbar { display: none; }
-  .plus { flex: none; width: 36px; padding: 0; justify-content: center; font-size: 18px; }
+  .plus { flex: none; width: 40px; padding: 0; justify-content: center; font-size: 18px; }
   .handle { flex: none; padding-right: 8px; touch-action: none; }
   .placeholder { padding-left: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The kind switch: one pill, two halves, the pressed one filled. */
-  .seg { display: inline-flex; align-self: flex-start; border: 1.5px solid var(--border); border-radius: 999px; padding: 2px; gap: 2px; }
-  .seg .chip { background: transparent; border: 0; min-height: 30px; }
+  .seg { display: inline-flex; align-self: flex-start; border: 1.5px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; }
+  .seg .chip { background: transparent; border: 0; min-height: 38px; }
   .seg .chip[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }
   .suggest { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
   .suggest::-webkit-scrollbar { display: none; }

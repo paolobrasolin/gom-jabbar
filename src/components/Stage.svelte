@@ -22,7 +22,7 @@
   import type { Layer } from '../lib/layers'
   import { layerLevel } from '../lib/summary'
   import { BRUSH, regionNear, type RawStroke } from '../lib/strokes'
-  import { fitScale, lookAt, toFigure, zoomAt, MAX_ZOOM } from '../lib/camera'
+  import { fitScale, lookAt, toFigure, zoomAt, rails, MAX_ZOOM } from '../lib/camera'
   import { StageGesture } from '../lib/gesture.svelte'
   import { ICONS } from '../lib/icons'
   import { t } from '../i18n/index.svelte'
@@ -52,8 +52,6 @@
     extra?: Snippet
   } = $props()
 
-  /** A rail's width and its gutter: the fitted figure stays clear of one column on each side. The sided pairs make a second column in the lower rows, beside the legs, where the figure is narrow: it overlaps only air. */
-  const RAIL = 76
   /** How far off the skin a tap still lands on the nearest segment, in figure units. */
   const NEAR = 10
   const fig = $derived(prefs.figure)
@@ -65,8 +63,10 @@
   let cw = $state(0)
   let ch = $state(0)
   const size = $derived({ w: cw || 300, h: ch || 320 })
+  /** The fitted figure stays clear of one column on each side. The sided pairs make a second column in the lower rows, beside the legs, where the figure is narrow: it overlaps only air. A narrow stage (a zoomed page) folds the pairs into one column. */
+  const rail = $derived(rails(size.w))
   /** The air between the rails, where the figure is fitted and centred. */
-  const inner = $derived({ x: RAIL, w: Math.max(80, size.w - 2 * RAIL) })
+  const inner = $derived({ x: rail.width, w: Math.max(80, size.w - 2 * rail.width) })
   const fit = $derived(fitScale({ w: inner.w, h: size.h - 16 }, vb))
   const kRange = $derived<[number, number]>([fit, MAX_ZOOM * fit])
   const gesture = new StageGesture(() => ({ size, box, kRange }), { stroke: (points) => onStroke?.({ fig, view, points, w: BRUSH }), swipe: turn })
@@ -127,7 +127,7 @@
   }
 </script>
 
-<div class="stage" bind:clientWidth={cw} bind:clientHeight={ch}>
+<div class="stage" class:narrow={rail.narrow} bind:clientWidth={cw} bind:clientHeight={ch}>
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <svg
     class:paint
@@ -186,15 +186,20 @@
   svg.paint { cursor: crosshair; }
   /* The rails float over the figure: only their buttons take a finger, the air between them belongs to the figure. */
   .rail { position: absolute; top: 8px; bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; pointer-events: none; }
-  .rail > :global(*) { pointer-events: auto; }
+  /* Every button keeps its size: a short stage scrolls the rail rather than squeezing its buttons (#23). */
+  .rail > :global(*) { pointer-events: auto; flex: none; }
+  .rail > .grow { flex: 1; }
   .rail.right { align-items: flex-end; width: 84px; gap: 6px; overflow-y: auto; scrollbar-width: none; }
   .rail.right::-webkit-scrollbar { display: none; }
   .gap { height: 6px; flex: none; }
   .caption { position: absolute; top: 12px; left: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
   /* A row of the left rail: one button, or a left and a right one side by side. */
   .rail.left > :global(.row) { display: flex; gap: 4px; }
-  /* A short slot (a sheet) may not hold every button: the rail scrolls rather than losing its top. */
-  .rail.left { left: 8px; justify-content: flex-end; overflow-y: auto; scrollbar-width: none; }
+  .narrow .rail.left > :global(.row) { flex-direction: column; }
+  /* Sits at the bottom, starting under the caption. A short slot (a sheet, a zoomed page) may not hold every button: the rail
+     scrolls rather than losing its top, which is why the first button takes the slack and not justify-content (#23). */
+  .rail.left { left: 8px; top: 30px; overflow-y: auto; scrollbar-width: none; }
+  .rail.left > :global(:first-child) { margin-top: auto; }
   .rail.left::-webkit-scrollbar { display: none; }
   .rail.right { right: 8px; }
   .grow { flex: 1; }
@@ -202,5 +207,8 @@
   .mind { width: 84px; padding: 6px 4px 4px; border-radius: 12px; background: var(--bg); }
   .thumb { display: flex; flex-direction: column; align-items: center; width: 84px; padding: 6px 4px 4px; border-radius: 12px; background: var(--bg); flex: none; }
   .thumb svg { height: 92px; width: auto; touch-action: manipulation; }
+  .narrow .rail.right, .narrow .mind, .narrow .thumb { width: 60px; }
+  .narrow .thumb svg { height: 64px; }
+  .narrow .thumb .label { letter-spacing: 0.02em; }
   .thumb .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); line-height: 1.35; }
 </style>

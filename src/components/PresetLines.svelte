@@ -32,7 +32,7 @@
           <polyline class="line" points={r.points.map((p) => `${x(p.at).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')} />
         {/if}
         {#each r.points as p, i (i)}
-          <circle cx={x(p.at)} cy={y(p.value)} r="4" fill={intensityColor(p.value)} class="dot" />
+          <circle cx={x(p.at)} cy={y(p.value)} r="5" fill={intensityColor(p.value)} class="dot" />
         {/each}
       </svg>
     </div>
@@ -46,5 +46,6 @@
   .grid { stroke: var(--border); stroke-width: 1; }
   .tick { fill: var(--ink-2); font-size: 12px; }
   .line { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
-  .dot { stroke: var(--surface); stroke-width: 1.5; }
+  /* An ink edge, like the mean dots: the pale low levels would vanish on the card. */
+  .dot { stroke: var(--ink); stroke-width: 1; }
 </style>

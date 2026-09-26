@@ -20,6 +20,7 @@
 
 <style>
   .tool {
+    flex: none;
     width: 60px;
     height: 52px;
     border-radius: 12px;

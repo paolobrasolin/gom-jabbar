@@ -111,6 +111,11 @@ h1, h2, h3, p { margin: 0; }
 }
 .tab[aria-current='page'] { color: var(--accent); font-weight: 600; }
 .tab svg { width: 24px; height: 24px; }
+.tab span { max-width: 100%; text-align: center; line-height: 1.1; overflow-wrap: anywhere; }
+/* A page zoomed by a large system font leaves no room for four words: the icons speak, the words stay for screen readers (#23). */
+@media (max-width: 299px) {
+  .tab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+}
 
 /* Controls */
 .btn {
@@ -123,6 +128,9 @@ h1, h2, h3, p { margin: 0; }
   align-items: center;
   justify-content: center;
   gap: 8px;
+  /* A long label on a zoomed page wraps inside its button rather than spilling out of it (#23). */
+  text-align: center;
+  line-height: 1.15;
   transition: transform 0.08s;
 }
 .btn:active { transform: scale(0.97); }
@@ -134,6 +142,7 @@ h1, h2, h3, p { margin: 0; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
+  position: relative;
   min-height: 40px;
   padding: 0 14px;
   border-radius: 999px;
@@ -147,7 +156,9 @@ h1, h2, h3, p { margin: 0; }
 }
 .chip[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }
 .chip.outline { background: transparent; border-color: var(--border); }
-.chip.small { min-height: 34px; padding: 0 12px; font-size: 14px; }
+.chip.small { padding: 0 12px; font-size: 14px; }
+/* A chip looks 40px tall and takes a finger over 48 (§10): 4px more above and below, inside the 8px gap to its neighbours. */
+.chip::before { content: ''; position: absolute; inset: -4px 0; }
 
 .card {
   background: var(--surface);
