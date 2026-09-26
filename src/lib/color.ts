@@ -8,7 +8,7 @@ export function intensityColor(n: number): string {
   return `oklch(${light.toFixed(3)} ${chroma.toFixed(3)} ${hue.toFixed(1)})`
 }
 
-/** Text colour that reads on top of intensityColor(n). */
+/** Text colour that reads on top of intensityColor(n), at 4.5:1 or better: dark up to 8, white from 9 (#23). */
 export function intensityInk(n: number): string {
-  return n >= 6 ? 'white' : 'oklch(0.2 0.02 60)'
+  return n >= 9 ? 'white' : 'oklch(0.2 0.02 60)'
 }

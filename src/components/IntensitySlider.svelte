@@ -102,6 +102,8 @@
   .compact { --thumb: 36px; }
   .label { font-size: 13px; font-weight: 600; color: var(--ink-2); padding-left: 2px; }
   .track-wrap { position: relative; touch-action: pan-y; }
+  /* A compact slider looks 36px tall but takes a finger over 48 (§10), without taking more room. */
+  .compact .track-wrap { padding: 6px 0; margin: -6px 0; }
 
   input[type='range'] {
     -webkit-appearance: none;
@@ -121,9 +123,11 @@
   input[type='range']::-webkit-slider-runnable-track {
     height: 16px;
     border-radius: 999px;
-    background: linear-gradient(to right, var(--fill) calc(var(--pct) * 100%), var(--surface-2) calc(var(--pct) * 100%));
+    /* The unfilled part in the zero grey with an edge, so a slider at 0 still shows its track (#23). */
+    background: linear-gradient(to right, var(--fill) calc(var(--pct) * 100%), var(--c-zero) calc(var(--pct) * 100%));
+    box-shadow: inset 0 0 0 1px var(--border);
   }
-  input[type='range']::-moz-range-track { height: 16px; border-radius: 999px; background: var(--surface-2); }
+  input[type='range']::-moz-range-track { height: 16px; border-radius: 999px; background: var(--c-zero); box-shadow: inset 0 0 0 1px var(--border); }
   input[type='range']::-moz-range-progress { height: 16px; border-radius: 999px; background: var(--fill); }
 
   input[type='range']::-webkit-slider-thumb {

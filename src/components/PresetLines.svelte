@@ -44,7 +44,7 @@
   .head { display: flex; justify-content: space-between; margin-bottom: 2px; }
   svg { display: block; overflow: visible; }
   .grid { stroke: var(--border); stroke-width: 1; }
-  .tick { fill: var(--ink-3); font-size: 11px; }
+  .tick { fill: var(--ink-2); font-size: 12px; }
   .line { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
   .dot { stroke: var(--surface); stroke-width: 1.5; }
 </style>

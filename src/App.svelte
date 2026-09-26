@@ -54,4 +54,4 @@
   </nav>
 </div>
 
-<Toast raised={tab === "log"} />
+<Toast />

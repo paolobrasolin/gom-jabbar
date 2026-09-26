@@ -224,7 +224,7 @@
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .top { margin-top: 10px; }
   .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
-  .chip:disabled { opacity: 0.5; }
+  .chip:disabled { opacity: 0.55; }
   .center { text-align: center; }
   .plist { display: flex; flex-direction: column; gap: 4px; }
   .preset { min-height: 40px; }

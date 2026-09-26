@@ -70,8 +70,10 @@
     l.asks = now.includes(id) ? now.filter((x) => x !== id) : [...now, id]
   }
 
+  let nameInput: HTMLInputElement | undefined = $state()
   async function save() {
-    if (!ready) return
+    // Nothing to create yet: the name is what is missing, so that is where the cursor goes.
+    if (!ready) return nameInput?.focus()
     const shaped = { ...draft, layers: draft.layers.map((l) => ({ ...l, asks: asksFor(l) })) }
     const input = presetFromDraft(shaped, name, symptoms)
     haptic(20)
@@ -96,7 +98,7 @@
 </script>
 
 <Sheet bind:open title={editing ? t('preset.edit') : t('preset.new')} tall>
-  <input class="name" type="text" placeholder={t('preset.name')} aria-label={t('preset.name')} bind:value={name} onkeydown={(e) => e.key === 'Enter' && save()} />
+  <input bind:this={nameInput} class="name" type="text" placeholder={t('preset.name')} aria-label={t('preset.name')} bind:value={name} onkeydown={(e) => e.key === 'Enter' && save()} />
   <EntryForm bind:draft {symptoms} mode="preset">
     {#snippet reading()}
       <div role="group" aria-label={t('preset.asks')}>
@@ -109,7 +111,7 @@
       </div>
     {/snippet}
     {#snippet actions()}
-      <button class="btn primary block" disabled={!ready} onclick={save}>{editing ? t('common.save') : t('preset.create')}</button>
+      <button class="btn primary block" onclick={save}>{editing ? t('common.save') : t('preset.create')}</button>
     {/snippet}
   </EntryForm>
 </Sheet>

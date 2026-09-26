@@ -126,10 +126,10 @@
 
 <style>
   .paint, .strokes { pointer-events: none; }
-  /* Seams: thin, the CHOIR fingers are only a few units wide. */
+  /* Seams: thin, the CHOIR fingers are only a few units wide, but drawn in the border grey so each segment reads as a target (#23). */
   .region {
     fill: var(--surface-2);
-    stroke: var(--bg);
+    stroke: var(--border);
     stroke-width: 1;
     transition: fill 0.12s;
   }
