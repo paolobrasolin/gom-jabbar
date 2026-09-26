@@ -38,6 +38,7 @@ Manual, on a real phone, before telling anyone to update:
 - [ ] Andamento with data: heatmap, its symptom chips (the brain lights up under Nebbia mentale), chart tap shows a day, range chips.
 - [ ] Report → Stampa / PDF → Save as PDF. Report → Condividi file → open the HTML from Drive.
 - [ ] Dark and light theme, both readable. System theme switch updates the status bar colour.
+- [ ] Large text (#23): Android Settings → Display → Font size and Display size both at the largest, in light and in dark, and once outdoors in daylight. Log: Tutto reachable at the top of the left rail, rail captions whole, the zoom buttons full size, the tab icons alone, Salva reachable (the page scrolls), the toast readable above the drawer. Diario: times whole. Andamento: the tag comparison shows bars. Report: toolbar buttons wrap, none squeezed. Back to the default size: the tabs have their words again.
 - [ ] Backup nudge appears after 14 days (or set lastBackupAt back in devtools), "Più tardi" snoozes it.
 
 ## iOS (Safari)
