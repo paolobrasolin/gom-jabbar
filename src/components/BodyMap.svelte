@@ -45,5 +45,5 @@
   .figure { display: flex; flex-direction: column; align-items: center; gap: 2px; height: 100%; flex: 0 1 50%; min-width: 0; }
   svg { flex: 1; min-height: 0; width: 100%; display: block; -webkit-user-select: none; user-select: none; }
   .mind { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 20%; max-width: 80px; }
-  .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); flex: none; }
+  .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); flex: none; }
 </style>

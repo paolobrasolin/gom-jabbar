@@ -206,6 +206,28 @@ describe('The drawer', () => {
     await waitFor(async () => expect(mergedTags((await db.entries.toArray())[0].layers)).toEqual([]))
   })
 
+  it('shows the toast just above the drawer, over the stage, not over the slider (#23)', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    // jsdom measures the drawer at 0px: the lift is there, its value is the drawer's height.
+    expect((await screen.findByRole('status')).style.getPropertyValue('--lift')).toBe('0px')
+    await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Registra' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Azzera' }))
+    expect((await screen.findByRole('status')).style.getPropertyValue('--lift')).toBe('0px')
+  })
+
+  it('shows the toast at its usual height away from the log', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+    const { showToast } = await import('../lib/toast.svelte')
+    showToast('ciao')
+    expect((await screen.findByRole('status')).style.getPropertyValue('--lift')).toBe('')
+  })
+
   it('Azzera empties the form and the toast undoes it', async () => {
     render(App)
     const clear = screen.getByRole('button', { name: 'Azzera' })
@@ -508,8 +530,13 @@ describe('Presets', () => {
     await fireEvent.click(within(asks).getByRole('button', { name: 'Rigidità' }))
     await fireEvent.click(within(asks).getByRole('button', { name: 'Gonfiore' }))
     const create = within(form).getByRole('button', { name: 'Crea preset' })
-    expect(create).toBeDisabled()
-    await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Le gambe' } })
+    // Without a name the button stays readable and says what is missing by putting the cursor in the name (#23).
+    const name = within(form).getByRole('textbox', { name: 'Nome del preset' })
+    expect(create).toBeEnabled()
+    await fireEvent.click(create)
+    expect(name).toHaveFocus()
+    expect(await db.presets.count()).toBe(0)
+    await fireEvent.input(name, { target: { value: 'Le gambe' } })
     await fireEvent.click(create)
     expect(await screen.findByText('Preset creato')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuovo preset' })).not.toBeInTheDocument())

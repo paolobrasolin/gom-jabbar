@@ -88,7 +88,7 @@
   .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .list { display: flex; flex-direction: column; gap: 4px; }
   .item { display: flex; align-items: center; gap: 8px; min-height: 48px; }
-  .item.off .name { color: var(--ink-3); text-decoration: line-through; }
+  .item.off .name { color: var(--ink-2); text-decoration: line-through; }
   .lock { width: 46px; flex: none; }
   .switch { min-height: 0; }
   .name { text-align: left; min-height: 44px; padding: 0 6px; border-radius: 8px; }

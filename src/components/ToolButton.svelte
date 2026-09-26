@@ -37,7 +37,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   .tool[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }
-  .tool:disabled { opacity: 0.4; }
+  .tool:disabled { opacity: 0.55; }
   /* Icon only: the zoom, which needs no word. */
   .tool.compact { width: 60px; height: 44px; }
   svg { width: 22px; height: 22px; }

@@ -12,7 +12,7 @@
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
   import { addEntry, deleteEntry, endEpisode, reopenEpisode, durationMs, activeEpisodes, latest, type Episode } from '../lib/entries'
-  import { showToast, haptic } from '../lib/toast.svelte'
+  import { showToast, haptic, toastState } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration } from '../lib/time'
   import { PAIN, type Entry, type Preset } from '../lib/types'
@@ -71,6 +71,12 @@
       !!draft.presetId,
   )
   let saving = $state(false)
+  /** The toast rises to the drawer's edge while the log is on screen. */
+  let peek = $state(0)
+  $effect(() => {
+    toastState.lift = peek
+    return () => (toastState.lift = null)
+  })
   let editing = $state.raw<Entry | null>(null)
   let episode = $state.raw<Entry | null>(null)
 
@@ -177,7 +183,7 @@
   {/if}
 
   <!-- The slot over the frame (#22): the form draws the figure, the frame carries the fast path and the Salva bar. -->
-  <EntryForm bind:draft symptoms={symptoms.value} tags={tags.value}>
+  <EntryForm bind:draft bind:peek symptoms={symptoms.value} tags={tags.value}>
     {#snippet actions()}
       <div class="actions">
         <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>

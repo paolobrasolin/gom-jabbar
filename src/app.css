@@ -4,13 +4,15 @@
   --surface: #ffffff;
   --surface-2: #ebe9e3;
   --ink: #1b1b1f;
-  --ink-2: #6a6a72;
+  --ink-2: #62626a;
   --ink-3: #85858d;
-  --border: #dcdad3;
+  --border: #b9b7ae;
   --c-zero: #cfcdc6;
-  --accent: #2f6fed;
+  --accent: #2660d9;
   --accent-ink: #ffffff;
-  --danger: #d33f3f;
+  --danger: #c02f2f;
+  /* The undo toast is inverted (--ink under --bg): its action takes the other theme's accent. */
+  --toast-action: #6c9cff;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
   --radius: 14px;
   --radius-s: 10px;
@@ -26,11 +28,12 @@
     --ink: #f0f0f3;
     --ink-2: #a3a3ad;
     --ink-3: #6c6c76;
-    --border: #2f2f37;
+    --border: #44444d;
     --c-zero: #3a3a42;
     --accent: #6c9cff;
     --accent-ink: #0b1020;
     --danger: #ff6b6b;
+    --toast-action: #2660d9;
     --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
   }
 }
@@ -42,11 +45,12 @@
   --ink: #f0f0f3;
   --ink-2: #a3a3ad;
   --ink-3: #6c6c76;
-  --border: #2f2f37;
+  --border: #44444d;
   --c-zero: #3a3a42;
   --accent: #6c9cff;
   --accent-ink: #0b1020;
   --danger: #ff6b6b;
+  --toast-action: #2660d9;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -125,7 +129,8 @@ h1, h2, h3, p { margin: 0; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); }
 .btn.danger { color: var(--danger); }
 .btn.block { width: 100%; }
-.btn:disabled { opacity: 0.4; }
+/* Dimmed, not gone: a disabled button still says what it is (#23). */
+.btn:disabled { opacity: 0.55; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
@@ -163,7 +168,7 @@ h1, h2, h3, p { margin: 0; }
 .switch input { width: 0; height: 0; opacity: 0; position: absolute; }
 .switch .knob {
   width: 46px; height: 28px; border-radius: 999px;
-  background: var(--c-zero); position: relative; transition: background 0.15s;
+  background: var(--ink-3); position: relative; transition: background 0.15s;
   flex: none;
 }
 .switch .knob::after {

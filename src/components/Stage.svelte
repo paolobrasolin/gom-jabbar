@@ -190,7 +190,7 @@
   .rail.right { align-items: flex-end; width: 84px; gap: 6px; overflow-y: auto; scrollbar-width: none; }
   .rail.right::-webkit-scrollbar { display: none; }
   .gap { height: 6px; flex: none; }
-  .caption { position: absolute; top: 12px; left: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+  .caption { position: absolute; top: 12px; left: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
   /* A row of the left rail: one button, or a left and a right one side by side. */
   .rail.left > :global(.row) { display: flex; gap: 4px; }
   /* A short slot (a sheet) may not hold every button: the rail scrolls rather than losing its top. */

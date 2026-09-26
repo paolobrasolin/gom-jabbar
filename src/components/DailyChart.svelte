@@ -100,7 +100,7 @@
   .key.bar { background: var(--ink-3); }
   .key.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); box-sizing: content-box; }
   .grid { stroke: var(--border); stroke-width: 1; }
-  .tick { fill: var(--ink-3); font-size: 11px; }
+  .tick { fill: var(--ink-2); font-size: 12px; }
   .mean { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
   .hit { fill: transparent; cursor: pointer; }
   .cursor { stroke: var(--ink-2); stroke-width: 1; }

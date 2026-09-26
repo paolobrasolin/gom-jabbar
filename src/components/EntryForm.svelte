@@ -42,6 +42,7 @@
     actions,
     reading,
     more,
+    peek = $bindable(0),
   }: {
     draft: EntryDraft
     symptoms?: Symptom[]
@@ -51,6 +52,8 @@
     actions?: Snippet
     reading?: Snippet
     more?: Snippet
+    /** The drawer's collapsed height, measured, so the stage ends where it begins and never moves. */
+    peek?: number
   } = $props()
 
   // The strip: every enabled tag, the most used first (§6.1). Expanded, the same tags by group take its place.
@@ -62,10 +65,8 @@
   let view = $state<View>('front')
   /** The drawer pulled up over the stage. */
   let open = $state(false)
-  /** The drawer's collapsed height, measured, so the stage ends where it begins and never moves. */
   let stage: Stage | undefined = $state()
   let innerH = $state(0)
-  let peek = $state(0)
   $effect(() => {
     if (!open) peek = innerH
   })
