@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fitScale, clampCamera, lookAt, toFigure, pinchCamera, zoomAt, MARGIN } from './camera'
+import { fitScale, clampCamera, lookAt, toFigure, pinchCamera, zoomAt, rails, MARGIN } from './camera'
 
 const stage = { w: 300, h: 320 }
 const box = { w: 100, h: 200 }
@@ -54,5 +54,13 @@ describe('camera', () => {
     expect(out.k).toBe(1)
     expect(out.tx).toBeLessThanOrEqual(200 + MARGIN)
     expect(out.tx).toBeGreaterThanOrEqual(-MARGIN)
+  })
+
+  it('keeps two rails of paired buttons on a phone and folds them to one column when the stage is narrow (page zoom, #23)', () => {
+    expect(rails(388)).toEqual({ narrow: false, width: 76 })
+    // Android's larger font sizes zoom the page: a Pixel 7 at 1.3x leaves a stage about 290px wide, at 1.5x about 250.
+    expect(rails(280)).toEqual({ narrow: false, width: 76 })
+    expect(rails(279)).toEqual({ narrow: true, width: 68 })
+    expect(rails(182)).toEqual({ narrow: true, width: 68 })
   })
 })

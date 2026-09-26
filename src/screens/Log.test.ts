@@ -76,6 +76,8 @@ describe('Log fast path', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     const endBtn = await screen.findByRole('button', { name: 'Termina adesso' })
+    // On the card the word is short, so the summary keeps the width; the name says it in full (#23).
+    expect(endBtn).toHaveTextContent(/^Termina$/)
     expect(screen.getByText('tutto il corpo')).toBeInTheDocument()
     await fireEvent.click(endBtn)
     await waitFor(async () => {
@@ -443,6 +445,17 @@ describe('Mind and mind symptoms', () => {
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toEqual([{ regions: ['152', '153'], readings: { pain: 8 }, tags: [] }])
+  })
+
+  it('outlines what the one layer holds, so a pale low level still shows where the tap landed (#23)', async () => {
+    render(App)
+    const thigh = () => document.querySelector('.region[data-region="152"]')
+    expect(thigh()).not.toHaveClass('hi')
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    expect(thigh()).toHaveClass('hi')
+    // The whole body is plain enough without a line round every segment.
+    await fireEvent.click(screen.getByRole('button', { name: 'Tutto il corpo' }))
+    expect(thigh()).not.toHaveClass('hi')
   })
 
   it('a second layer over the same legs keeps its own readings and tags, and the map fades the other layer', async () => {

@@ -147,7 +147,7 @@
               <span class="muted">{t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })}</span>
             </span>
           </button>
-          <button class="btn" onclick={() => end(ep.head.id)}>{t('episode.end')}</button>
+          <button class="btn" aria-label={t('episode.end')} onclick={() => end(ep.head.id)}>{t('episode.endShort')}</button>
         </div>
       {/each}
     </div>
@@ -204,7 +204,7 @@
 <style>
   /* Nothing scrolls here (§6.1): the slot takes what the frame leaves. Only when the banners crowd it does the page give, so Salva is always reachable. */
   .log { padding-bottom: 0; }
-  .log > :global(.form) { min-height: 520px; }
+  .log > :global(.form) { min-height: 440px; }
   .episodes { display: flex; flex-direction: column; gap: 8px; }
   .nudge { padding: 8px 8px 8px 12px; }
   .episode { padding: 8px 8px 8px 12px; }

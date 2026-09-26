@@ -140,7 +140,7 @@
           </div>
         </div>
       {/each}
-      <div class="row">
+      <div class="row actions">
         <button class="btn" onclick={end}>{t('episode.end')}</button>
         <button class="btn primary grow" onclick={update}>{t('episode.update')}</button>
       </div>
@@ -151,9 +151,10 @@
 
 <style>
   .history { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 6px; font-variant-numeric: tabular-nums; }
-  .point { background: none; padding: 4px 4px; min-height: 32px; color: var(--ink-2); border-radius: 6px; }
+  .point { background: none; padding: 4px 6px; min-height: 44px; color: var(--ink-2); border-radius: 6px; }
   .group-title { margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .now { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; margin-bottom: -6px; }
+  .actions { flex-wrap: wrap; }
   .link { background: none; color: var(--accent); min-height: 40px; }
   .layers { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
   .layers::-webkit-scrollbar { display: none; }

@@ -155,11 +155,11 @@
     --bg: #ffffff; --surface: #ffffff; --surface-2: #ececea; --ink: #141416; --ink-2: #5c5c64; --ink-3: #9a9aa2; --border: #dcdcd8; --c-zero: #d5d5d1;
     background: var(--bg); color: var(--ink); color-scheme: light;
   }
-  .toolbar { position: sticky; top: 0; display: flex; gap: 10px; padding: max(10px, env(safe-area-inset-top)) 12px 10px; background: var(--bg); border-bottom: 1px solid var(--border); z-index: 1; }
-  .page { max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 18px; font-size: 13px; }
+  .toolbar { position: sticky; top: 0; display: flex; flex-wrap: wrap; gap: 10px; padding: max(10px, env(safe-area-inset-top)) 12px 10px; background: var(--bg); border-bottom: 1px solid var(--border); z-index: 1; }
+  .page { max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 18px; font-size: 15px; }
   h1 { font-size: 22px; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); margin: 10px 0 6px; }
-  .k { font-size: 11px; color: var(--ink-2); display: block; }
+  .k { font-size: 13px; color: var(--ink-2); display: block; }
   .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .grid4 > div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
   .grid4 b { font-size: 22px; display: block; line-height: 1.2; }
@@ -167,7 +167,7 @@
   .map { height: 260px; }
   table { width: 100%; border-collapse: collapse; }
   td, th { padding: 4px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-  th { font-weight: 600; color: var(--ink-2); font-size: 11px; }
+  th { font-weight: 600; color: var(--ink-2); font-size: 13px; }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .when { white-space: nowrap; color: var(--ink-2); }
   .pill { min-width: 26px; height: 22px; font-size: 12px; }
@@ -179,7 +179,9 @@
   @media print {
     .report { position: static; overflow: visible; }
     .no-print { display: none; }
-    .page { max-width: none; padding: 0; }
+    /* Sizes for A4 paper; the screen gets larger ones, since the shared file is also read on a phone (#23). */
+    .page { max-width: none; padding: 0; font-size: 13px; }
+    .k, th { font-size: 11px; }
     .two { grid-template-columns: 1fr 1.3fr; }
     .grid4 { grid-template-columns: repeat(4, 1fr); }
     section { break-inside: avoid; }

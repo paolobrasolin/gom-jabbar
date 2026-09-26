@@ -44,6 +44,7 @@
   "episode.active": "Episodio in corso",
   "episode.since": "da {d}",
   "episode.end": "Termina adesso",
+  "episode.endShort": "Termina",
   "episode.ended": "Episodio terminato",
   "diary.empty": "Ancora nessuna voce.",
   "diary.emptyHint": "Quello che registri comparirà qui.",

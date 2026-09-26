@@ -93,7 +93,7 @@
   .day { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-2); margin: 6px 0 8px; }
   .list { display: flex; flex-direction: column; gap: 8px; }
   .entry { width: 100%; text-align: left; padding: 10px 12px; }
-  .time { width: 44px; flex: none; font-variant-numeric: tabular-nums; }
+  .time { min-width: 44px; flex: none; font-variant-numeric: tabular-nums; }
   .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -11,6 +11,14 @@ export const MAX_ZOOM = 6
 /** Pixels of stage the figure may be dragged past its edge. */
 export const MARGIN = 40
 
+/** Below this stage width the rails fold to one column (#23): Android's larger font sizes zoom the page, and a zoomed phone is a narrow one. */
+export const NARROW_STAGE = 280
+/** A rail's width with its gutter, the figure fitted between two of them: paired buttons in the lower rows, or one 60px column when narrow. */
+export function rails(w: number): { narrow: boolean; width: number } {
+  const narrow = w < NARROW_STAGE
+  return { narrow, width: narrow ? 68 : 76 }
+}
+
 /** The scale at which the whole figure fits the stage. */
 export function fitScale(stage: Size, box: Size): number {
   return Math.min(stage.w / box.w, stage.h / box.h)

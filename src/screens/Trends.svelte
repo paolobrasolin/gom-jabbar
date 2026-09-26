@@ -123,10 +123,9 @@
   .tile { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
   .tile b { font-size: 28px; line-height: 1.1; }
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
+  /* The theme's own ground: a cream panel in the dark theme glared in a dark room, and with fills from 0.7 the ramp reads on either (#23). */
   .map {
     height: 300px;
-    /* Paper panel: heat opacity blends with a light ground in both themes. */
-    --bg: #f6f4ef; --surface-2: #e4e1da; --ink-3: #8a8a92;
     background: var(--bg); border-radius: 12px; padding: 8px 8px 4px;
   }
   .top { margin-top: 10px; }

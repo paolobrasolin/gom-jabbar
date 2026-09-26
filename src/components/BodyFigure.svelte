@@ -28,9 +28,9 @@
   }: {
     view: View
     layers?: Layer[]
-    /** Index of the layer being edited; its regions get an outline, and the other layers fade, when there is more than one. */
+    /** Index of the layer being edited: its regions get an outline (all of them only when other layers are there to tell apart), and the other layers fade. */
     cur?: number
-    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity. Overrides `layers`. */
+    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity from 0.7, so a region seen once still reads. Overrides `layers`. */
     heat?: Map<string, { mean: number; weight: number }>
     /** Heatmap mode: strokes to shade over the figure, each with its level. Otherwise the layers' own are drawn. */
     strokes?: HeatStroke[]
@@ -56,7 +56,8 @@
     }
     return m
   })
-  const outlined = $derived(new Set(layers.length > 1 && current ? (isFull(current) ? regions.map((r) => r.id) : current.regions) : []))
+  /** A pale low level alone does not show where a tap landed: the current layer's regions are outlined (#23). The whole body alone needs no line round every segment. */
+  const outlined = $derived(new Set(!current ? [] : isFull(current) ? (layers.length > 1 ? regions.map((r) => r.id) : []) : current.regions))
   /** Shading: the heatmap's strokes, or the layers' own in their colour. Only strokes drawn on this figure fit its coordinates. */
   const shading = $derived(
     (heat ? strokes : layers.flatMap((l) => (l.strokes ?? []).map((s) => ({ ...s, intensity: layerLevel(l), ghost: layers.length > 1 && l !== current })))).filter(
@@ -86,7 +87,7 @@
 {#each painted as g (g.id)}
   <clipPath id="{uid}-{g.id}"><path d={pathFor(g.shape)} /></clipPath>
 {/each}
-<g class="paint">
+<g class="paint" class:heat={!!heat}>
   {#each regions as r (r.id)}
     {@const h = heat?.get(r.id)}
     {@const own = fill.get(r.id)}
@@ -95,7 +96,7 @@
       class="region{color ? ' on' : ''}{outlined.has(r.id) ? ' hi' : ''}{!heat && own?.ghost ? ' ghost' : ''}"
       data-region={r.id}
       d={pathFor(shapeOf(fig, r))}
-      style={color ? `fill:${color}${h ? `;fill-opacity:${(0.35 + 0.65 * h.weight).toFixed(2)}` : ''}` : undefined} />
+      style={color ? `fill:${color}${h ? `;fill-opacity:${(0.7 + 0.3 * h.weight).toFixed(2)}` : ''}` : undefined} />
   {/each}
 </g>
 <g class="strokes" class:heat={!!heat}>
@@ -135,10 +136,12 @@
   }
   .region.hi { stroke: var(--ink); stroke-width: 2; }
   /* Another layer's selection and paint: visible, but not what a tap edits. */
-  .region.ghost { fill-opacity: 0.4; }
-  .stroke.ghost { opacity: 0.4; }
-  /* Strokes sit on their region's colour: a darker edge keeps them legible on it. */
-  .stroke { fill: none; stroke-linecap: round; stroke-linejoin: round; filter: brightness(0.8); }
+  .region.ghost { fill-opacity: 0.6; }
+  .stroke.ghost { opacity: 0.6; }
+  /* On the heatmap every region with data has an edge: frequency is fill opacity, and a pale one must still stand off the empty ones. */
+  .heat .region.on { stroke: var(--ink-3); }
+  /* Strokes sit on their region's colour: darker, so they read on it. */
+  .stroke { fill: none; stroke-linecap: round; stroke-linejoin: round; filter: brightness(0.65); }
   /* On the heatmap, overlap builds density. */
   .strokes.heat .stroke { opacity: 0.35; filter: none; }
   .hit {
