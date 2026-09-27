@@ -35,6 +35,7 @@
 | Charts and body map | Hand-written SVG | No chart lib, full control, small |
 | Tests | Vitest, `fake-indexeddb`, `@testing-library/svelte` | Paolo's pick |
 | Hosting | GitHub Pages via Actions | Static, free, no infra |
+| Google sign-in (cloud backup) | Two Google Cloud projects: `gom-jabbar` for Pages, `gom-jabbar-dev` (Testing, one test user) for `npm run dev`; client ids in `.env.production` and `.env.development` | Configuration, not infrastructure; set up by hand, no API exists (#32). Production stays in Testing until the privacy page is live (#35) |
 | Package manager | npm | Default, no assumptions |
 
 Browser targets: Chrome on Android (primary), Safari on iOS 16.4+ (secondary). Desktop browsers should work but are not designed for.
