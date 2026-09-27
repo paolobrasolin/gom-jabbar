@@ -49,7 +49,7 @@ describe('stats', () => {
     ])
     expect(h.get('152')).toEqual({ mean: 14 / 3, count: 3, weight: 1 })
     expect(h.get('110')?.count).toBe(2)
-    expect(h.get('261')).toEqual({ mean: 2, count: 1, weight: 1 / 3 })
+    expect(h.get('261')).toEqual({ mean: 2, count: 1, weight: Math.log(2) / Math.log(4) })
     // The mind is one more region; full body does not cover it.
     expect(h.get('mind')).toBeUndefined()
     // Overlapping layers: the max wins, the entry counts once. A layer without the symptom contributes nothing.
@@ -62,11 +62,22 @@ describe('stats', () => {
     )
     expect(b.get('152')).toEqual({ mean: 4.5, count: 2, weight: 1 })
     expect(b.get('110')).toEqual({ mean: 4.5, count: 2, weight: 1 })
-    expect(b.get('mind')).toEqual({ mean: 2, count: 1, weight: 0.5 })
+    expect(b.get('mind')).toEqual({ mean: 2, count: 1, weight: Math.log(2) / Math.log(3) })
     const f = regionHeat([e('4', 0, { layers: [L(['mind'], { fog: 6 })] }), e('6', 0, { layers: [L(['*', 'mind'], { pain: 2, fog: 4 })] })], 'fog')
     expect(f.get('mind')).toEqual({ mean: 5, count: 2, weight: 1 })
-    expect(f.get('152')).toEqual({ mean: 4, count: 1, weight: 0.5 })
+    expect(f.get('152')).toEqual({ mean: 4, count: 1, weight: Math.log(2) / Math.log(3) })
     expect(regionHeat([e('4', 0, { layers: [L(['mind'], { fog: 6 })] })], 'swelling').size).toBe(0)
+  })
+
+  it('weighs frequency on a log scale, so the rare end keeps its steps (#23)', () => {
+    const entries = Array.from({ length: 20 }, (_, i) => e(String(i), 5, { layers: [L(i < 1 ? ['152', '110', '261'] : i < 2 ? ['152', '110'] : ['152'], { pain: 5 })] }))
+    const h = regionHeat(entries)
+    const w = (id: string) => h.get(id)!.weight
+    expect(w('152')).toBe(1)
+    expect(w('261')).toBeCloseTo(0.228, 3)
+    expect(w('110')).toBeCloseTo(0.361, 3)
+    // Twice is a clear step up from once; the linear scale made both near nothing (0.05, 0.1).
+    expect(w('110') - w('261')).toBeGreaterThan(0.1)
   })
 
   it('compares tags on days with vs without, with a minimum', () => {
