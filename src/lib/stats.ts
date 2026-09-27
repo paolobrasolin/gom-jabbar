@@ -87,7 +87,8 @@ export function summarize(entries: Entry[], days: number, now = Date.now()): Sum
 export type Heat = { mean: number; count: number; weight: number }
 
 /**
- * Per-region mean level of one symptom and how often it appeared, weight = count / max count (§6.3). An entry
+ * Per-region mean level of one symptom and how often it appeared, weight = ln(1 + count) / ln(1 + max count) (§6.3):
+ * frequency is read in ratios, once against twice more than 18 against 20, and a diary's counts have a long tail. An entry
  * counts once per region, at the max over its layers that carry the symptom; layers without it contribute
  * nothing. Full body counts for every body region; the mind is one more region.
  */
@@ -109,7 +110,8 @@ export function regionHeat(entries: Entry[], symptom = PAIN): Map<string, Heat> 
     }
   }
   const maxCount = Math.max(1, ...[...acc.values()].map((c) => c.count))
-  return new Map([...acc].map(([id, c]) => [id, { mean: c.sum / c.count, count: c.count, weight: c.count / maxCount }]))
+  const scale = Math.log(1 + maxCount)
+  return new Map([...acc].map(([id, c]) => [id, { mean: c.sum / c.count, count: c.count, weight: Math.log(1 + c.count) / scale }]))
 }
 
 export type TagComparison = { tag: Tag; withN: number; withoutN: number; withMean: number; withoutMean: number }

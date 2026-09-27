@@ -30,7 +30,7 @@
     layers?: Layer[]
     /** Index of the layer being edited: its regions get an outline (all of them only when other layers are there to tell apart), and the other layers fade. */
     cur?: number
-    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity from 0.7, so a region seen once still reads. Overrides `layers`. */
+    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity from 0.4; the weight is already on a log scale (§6.3). Overrides `layers`. */
     heat?: Map<string, { mean: number; weight: number }>
     /** Heatmap mode: strokes to shade over the figure, each with its level. Otherwise the layers' own are drawn. */
     strokes?: HeatStroke[]
@@ -96,7 +96,7 @@
       class="region{color ? ' on' : ''}{outlined.has(r.id) ? ' hi' : ''}{!heat && own?.ghost ? ' ghost' : ''}"
       data-region={r.id}
       d={pathFor(shapeOf(fig, r))}
-      style={color ? `fill:${color}${h ? `;fill-opacity:${(0.7 + 0.3 * h.weight).toFixed(2)}` : ''}` : undefined} />
+      style={color ? `fill:${color}${h ? `;fill-opacity:${(0.4 + 0.6 * h.weight).toFixed(2)}` : ''}` : undefined} />
   {/each}
 </g>
 <g class="strokes" class:heat={!!heat}>

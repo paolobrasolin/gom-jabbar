@@ -20,7 +20,7 @@
   }: {
     layers?: Layer[]
     cur?: number
-    /** Heatmap mode: mean intensity and weight (0..1) driving opacity from 0.7. Overrides `layers`. */
+    /** Heatmap mode: mean intensity and weight (0..1) driving opacity from 0.4. Overrides `layers`. */
     heat?: Map<string, { mean: number; weight: number }>
     readonly?: boolean
     label?: string
@@ -42,7 +42,7 @@
         class="region{color ? ' on' : ''}{outlined ? ' hi' : ''}{ghost ? ' ghost' : ''}"
         data-region={MIND}
         d={MIND_SHAPE.outline}
-        style={color ? `fill:${color}${mindHeat ? `;fill-opacity:${(0.7 + 0.3 * mindHeat.weight).toFixed(2)}` : ''}` : undefined} />
+        style={color ? `fill:${color}${mindHeat ? `;fill-opacity:${(0.4 + 0.6 * mindHeat.weight).toFixed(2)}` : ''}` : undefined} />
       <path class="seam" d={MIND_SHAPE.seams} />
     </g>
     {#if !readonly}
