@@ -1,4 +1,5 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -18,9 +19,12 @@ function gitRev(): string {
   }
 }
 
-export default defineConfig({
+// Per-mode values live in .env.production (`vite build`), .env.development (`vite`)
+// and .env.test (Vitest). Nothing is defaulted here: an empty
+// VITE_GOOGLE_CLIENT_ID means no Drive backup, never the wrong Google project.
+export default defineConfig(({ mode }) => ({
   define: { __APP_VERSION__: JSON.stringify(`${pkg.version}+${gitRev()}`) },
-  base: process.env.BASE_PATH ?? '/',
+  base: loadEnv(mode, process.cwd(), '').BASE_PATH,
   plugins: [
     svelte(),
     VitePWA({
@@ -70,4 +74,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))
