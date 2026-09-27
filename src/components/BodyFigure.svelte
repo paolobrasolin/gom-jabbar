@@ -9,6 +9,7 @@
   import { regionsFor, shapeArea, shapeOf, pathFor, REGION_BY_ID, type View, type RegionDef } from '../lib/regions'
   import { prefs } from '../lib/prefs.svelte'
   import { intensityColor } from '../lib/color'
+  import { ringStyle } from '../lib/stats'
   import { isFull, type Layer } from '../lib/layers'
   import { layerLevel } from '../lib/summary'
   import { regionLabel } from '../lib/regionLabel'
@@ -30,7 +31,7 @@
     layers?: Layer[]
     /** Index of the layer being edited: its regions get an outline (all of them only when other layers are there to tell apart), and the other layers fade. */
     cur?: number
-    /** Heatmap mode: per-region mean intensity and weight (0..1) driving opacity from 0.4; the weight is already on a log scale (§6.3). Overrides `layers`. */
+    /** Heatmap mode: per-region mean intensity, the fill, and weight (0..1, on a log scale, §6.3), the width of a ring inside the region. Overrides `layers`. */
     heat?: Map<string, { mean: number; weight: number }>
     /** Heatmap mode: strokes to shade over the figure, each with its level. Otherwise the layers' own are drawn. */
     strokes?: HeatStroke[]
@@ -71,6 +72,14 @@
     // A piece whose segment this build does not know (a hand-edited file) is not drawn rather than breaking the map.
     return [...m].filter(([id]) => REGION_BY_ID[id]).map(([id, pieces]) => ({ id, shape: shapeOf(fig, REGION_BY_ID[id]), pieces }))
   })
+  /** Heatmap: frequency is the width of a ring inside the region, in screen px whatever the map's size. */
+  const rings = $derived(
+    heat
+      ? regions
+          .filter((r) => heat.has(r.id))
+          .map((r) => ({ id: r.id, d: pathFor(shapeOf(fig, r)), clip: `${uid}-ring-${r.id}`, style: ringStyle(heat.get(r.id)!.weight) }))
+      : [],
+  )
   /** Hit layer: smallest regions drawn last so they win over big neighbours. */
   const hits = $derived([...regions].sort((a, b) => shapeArea(shapeOf(fig, b)) - shapeArea(shapeOf(fig, a))))
 
@@ -87,6 +96,9 @@
 {#each painted as g (g.id)}
   <clipPath id="{uid}-{g.id}"><path d={pathFor(g.shape)} /></clipPath>
 {/each}
+{#each rings as r (r.id)}
+  <clipPath id={r.clip}><path d={r.d} /></clipPath>
+{/each}
 <g class="paint" class:heat={!!heat}>
   {#each regions as r (r.id)}
     {@const h = heat?.get(r.id)}
@@ -96,7 +108,7 @@
       class="region{color ? ' on' : ''}{outlined.has(r.id) ? ' hi' : ''}{!heat && own?.ghost ? ' ghost' : ''}"
       data-region={r.id}
       d={pathFor(shapeOf(fig, r))}
-      style={color ? `fill:${color}${h ? `;fill-opacity:${(0.4 + 0.6 * h.weight).toFixed(2)}` : ''}` : undefined} />
+      style={color ? `fill:${color}` : undefined} />
   {/each}
 </g>
 <g class="strokes" class:heat={!!heat}>
@@ -111,6 +123,14 @@
     <path class="stroke live" d={strokePath({ points: live })} stroke={liveColor} stroke-width={BRUSH} clip-path="url(#{uid}-clip)" />
   {/if}
 </g>
+{#if rings.length}
+  <!-- Twice the width, clipped to the region: only the inner half shows, so a ring never spills onto a neighbour. -->
+  <g class="rings">
+    {#each rings as r (r.id)}
+      <path class="ring" data-ring={r.id} d={r.d} clip-path={`url(#${r.clip})`} style={r.style} />
+    {/each}
+  </g>
+{/if}
 {#if !readonly}
   <g class="hits">
     {#each hits as r (r.id)}
@@ -138,8 +158,8 @@
   /* Another layer's selection and paint: visible, but not what a tap edits. */
   .region.ghost { fill-opacity: 0.6; }
   .stroke.ghost { opacity: 0.6; }
-  /* On the heatmap every region with data has an edge: frequency is fill opacity, and a pale one must still stand off the empty ones. */
-  .heat .region.on { stroke: var(--ink-3); }
+  .rings { pointer-events: none; }
+  .ring { fill: none; stroke: var(--ink); vector-effect: non-scaling-stroke; }
   /* Strokes sit on their region's colour: darker, so they read on it. */
   .stroke { fill: none; stroke-linecap: round; stroke-linejoin: round; filter: brightness(0.65); }
   /* On the heatmap, overlap builds density. */

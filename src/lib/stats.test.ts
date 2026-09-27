@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
-import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, rangeStart, inRange, tagCounts } from './stats'
+import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, rangeStart, inRange, tagCounts, ringWidth, ringStyle } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
 import { presetSeries } from './stats'
 import type { Preset } from './types'
@@ -78,6 +78,12 @@ describe('stats', () => {
     expect(w('110')).toBeCloseTo(0.361, 3)
     // Twice is a clear step up from once; the linear scale made both near nothing (0.05, 0.1).
     expect(w('110') - w('261')).toBeGreaterThan(0.1)
+  })
+
+  it('draws frequency as a ring from a hairline to 2.5px, twice as wide since only the inner half shows (#23)', () => {
+    expect(ringWidth(0)).toBe(0.75)
+    expect(ringWidth(1)).toBe(2.5)
+    expect(ringStyle(1)).toBe('stroke-width:5.00px')
   })
 
   it('compares tags on days with vs without, with a minimum', () => {

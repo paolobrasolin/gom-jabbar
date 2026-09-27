@@ -158,7 +158,7 @@
   "trends.episodeMean": "durata media {d}",
   "trends.heatSymptom": "Sintomo della mappa",
   "trends.heatmap": "Dove",
-  "trends.heatmapHint": "Colore: intensità media. Più pieno: più frequente.",
+  "trends.heatmapHint": "Colore: intensità media. Bordo: frequenza.",
   "trends.overTime": "Nel tempo",
   "trends.legendMax": "max del giorno",
   "trends.legendMean": "media",
