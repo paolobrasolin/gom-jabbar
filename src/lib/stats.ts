@@ -114,6 +114,11 @@ export function regionHeat(entries: Entry[], symptom = PAIN): Map<string, Heat> 
   return new Map([...acc].map(([id, c]) => [id, { mean: c.sum / c.count, count: c.count, weight: Math.log(1 + c.count) / scale }]))
 }
 
+/** The heatmap's frequency ring (§6.3), in screen px inside the region: a hairline for once, 2.5px for the most frequent. */
+export const ringWidth = (weight: number) => 0.75 + 1.75 * weight
+/** The ring as drawn: twice the width, clipped to the region, so only the inner half shows. */
+export const ringStyle = (weight: number) => `stroke-width:${(2 * ringWidth(weight)).toFixed(2)}px`
+
 export type TagComparison = { tag: Tag; withN: number; withoutN: number; withMean: number; withoutMean: number }
 
 export const MIN_DAYS_PER_SIDE = 5

@@ -158,7 +158,7 @@
   "trends.episodeMean": "mean length {d}",
   "trends.heatSymptom": "Map symptom",
   "trends.heatmap": "Where",
-  "trends.heatmapHint": "Colour: mean intensity. Fuller: more frequent.",
+  "trends.heatmapHint": "Colour: mean intensity. Outline: frequency.",
   "trends.overTime": "Over time",
   "trends.legendMax": "daily max",
   "trends.legendMean": "mean",

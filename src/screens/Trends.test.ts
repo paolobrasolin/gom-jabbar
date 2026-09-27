@@ -84,18 +84,23 @@ describe('Trends heatmap and chart', () => {
     await fireEvent.click(within(picker).getByRole('button', { name: 'Nebbia mentale' }))
     await waitFor(() => expect(mind().getAttribute('style')).toContain(`fill: ${intensityColor(6)}`))
     expect(mind()).toHaveClass('on')
-    expect(mind().getAttribute('style')).toContain('fill-opacity: 1.00')
+    expect(mind().getAttribute('style')).not.toContain('fill-opacity')
+    expect(document.querySelector('[data-ring="mind"]')!.getAttribute('style')).toContain('stroke-width: 5.00px')
     expect(document.querySelector('[data-region="152"]')).not.toHaveClass('on')
     expect(screen.queryByRole('button', { name: 'Mente' })).not.toBeInTheDocument()
   })
 
-  it('keeps a region seen once legible: frequency on a log scale fills from 0.4 (#23)', async () => {
+  it('keeps colour for the mean and draws frequency as a ring inside the region, on a log scale (#23)', async () => {
     for (let n = 0; n < 4; n++) await addEntry({ at: at(n), ...legs(8) })
     await addEntry({ at: at(4), layers: [{ regions: ['153'], readings: { pain: 3 }, tags: [] }] })
     await openTrends()
     await waitFor(() => expect(document.querySelector('[data-region="153"]')).toHaveClass('on'))
-    expect(document.querySelector('[data-region="153"]')!.getAttribute('style')).toContain('fill-opacity: 0.66')
-    expect(document.querySelector('[data-region="152"]')!.getAttribute('style')).toContain('fill-opacity: 1.00')
+    // Fading would shift how intense the colour looks (lighter on a light ground, darker on a dark one): the fill is always whole.
+    for (const id of ['152', '153']) expect(document.querySelector(`[data-region="${id}"]`)!.getAttribute('style')).not.toContain('fill-opacity')
+    // Seen once of at most four: 0.75 + 1.75 × ln 2 / ln 5 = 1.50px inside, drawn twice as wide and clipped to the region.
+    expect(document.querySelector('[data-ring="153"]')!.getAttribute('style')).toContain('stroke-width: 3.01px')
+    expect(document.querySelector('[data-ring="152"]')!.getAttribute('style')).toContain('stroke-width: 5.00px')
+    expect(document.querySelector('[data-ring="154"]')).toBeNull()
   })
 
   it('colours the regions that appeared, read-only', async () => {
@@ -104,7 +109,7 @@ describe('Trends heatmap and chart', () => {
     await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
     const thigh = document.querySelector('[data-region="152"]') as SVGPathElement
     expect(thigh.getAttribute('style')).toContain(`fill: ${intensityColor(8)}`)
-    expect(thigh.getAttribute('style')).toContain('fill-opacity: 1.00')
+    expect(thigh.getAttribute('style')).not.toContain('fill-opacity')
     expect(document.querySelector('[data-region="153"]')).not.toHaveClass('on')
     expect(document.querySelector('[data-region="mind"]')).not.toHaveClass('on')
     expect(document.querySelectorAll('path.hit')).toHaveLength(0)

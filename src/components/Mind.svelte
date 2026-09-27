@@ -4,6 +4,7 @@
 -->
 <script lang="ts">
   import { MIND, MIND_SHAPE } from '../lib/regions'
+  import { ringStyle } from '../lib/stats'
   import { intensityColor } from '../lib/color'
   import type { Layer } from '../lib/layers'
   import { layerLevel } from '../lib/summary'
@@ -20,7 +21,7 @@
   }: {
     layers?: Layer[]
     cur?: number
-    /** Heatmap mode: mean intensity and weight (0..1) driving opacity from 0.4. Overrides `layers`. */
+    /** Heatmap mode: mean intensity, the fill, and weight (0..1), the width of the ring inside (§6.3). Overrides `layers`. */
     heat?: Map<string, { mean: number; weight: number }>
     readonly?: boolean
     label?: string
@@ -29,6 +30,9 @@
 
   const mindCur = $derived(cur >= 0 && !!layers[cur]?.regions.includes(MIND))
   const mindLayer = $derived(mindCur ? layers[cur] : layers.find((l) => l.regions.includes(MIND)))
+  // Clip ids must be unique: Trends keeps its map mounted under the report's.
+  const uid = $props.id()
+  const ringClip = `${uid}-ring`
   const mindHeat = $derived(heat?.get(MIND))
   const color = $derived(heat ? (mindHeat ? intensityColor(mindHeat.mean) : undefined) : mindLayer ? intensityColor(layerLevel(mindLayer)) : undefined)
   const outlined = $derived(mindCur)
@@ -42,8 +46,12 @@
         class="region{color ? ' on' : ''}{outlined ? ' hi' : ''}{ghost ? ' ghost' : ''}"
         data-region={MIND}
         d={MIND_SHAPE.outline}
-        style={color ? `fill:${color}${mindHeat ? `;fill-opacity:${(0.4 + 0.6 * mindHeat.weight).toFixed(2)}` : ''}` : undefined} />
+        style={color ? `fill:${color}` : undefined} />
       <path class="seam" d={MIND_SHAPE.seams} />
+      {#if mindHeat}
+        <clipPath id={ringClip}><path d={MIND_SHAPE.outline} /></clipPath>
+        <path class="ring" data-ring={MIND} d={MIND_SHAPE.outline} clip-path={`url(#${ringClip})`} style={ringStyle(mindHeat.weight)} />
+      {/if}
     </g>
     {#if !readonly}
       <g class="hits">
@@ -65,6 +73,7 @@
 <style>
   .figure { display: flex; flex-direction: column; align-items: center; gap: 0; }
   svg { width: 100%; display: block; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .ring { fill: none; stroke: var(--ink); vector-effect: non-scaling-stroke; }
   .seam { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-linecap: round; }
   .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); flex: none; }
   .paint { pointer-events: none; }
