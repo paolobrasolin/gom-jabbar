@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
+import { install } from '../lib/install.svelte'
 import { addEntry } from '../lib/entries'
 import { dismissToast } from '../lib/toast.svelte'
 import { fakeGoogle } from '../test/fakeDrive'
@@ -18,6 +19,9 @@ beforeEach(() => {
   prefs.lang = 'it'
   prefs.lastBackupAt = null
   prefs.backupSnoozedUntil = null
+  // Installed: the install nudge would stand in front of the backup banner.
+  prefs.installedAt = '2026-01-01T00:00:00.000Z'
+  install.dismissed = false
   history.replaceState(null, '', '/')
   dismissToast()
   clock = Date.now()
@@ -126,5 +130,20 @@ describe('Backup banner with Drive', () => {
     expect(Date.parse(prefs.backupSnoozedUntil!) - Date.now()).toBeGreaterThan(3 * DAY - 60_000)
     expect(Date.parse(prefs.backupSnoozedUntil!) - Date.now()).toBeLessThanOrEqual(3 * DAY)
     expect(screen.queryByText('Nessun backup su Drive da questo telefono.')).not.toBeInTheDocument()
+  })
+})
+
+describe('One banner at a time (#37)', () => {
+  it('the install nudge goes first; the backup banner waits until it is dismissed', async () => {
+    prefs.installedAt = null
+    await diarySince(15)
+    render(App, { props: { cloud: g.provider } })
+    expect(screen.getByText(/Aggiungi alla schermata Home per/)).toBeInTheDocument()
+    // Give the live query time to find the old diary: the backup banner still does not show.
+    await waitFor(() => expect(document.querySelectorAll('.nudge')).toHaveLength(1))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText("È da un po' che non fai un backup.")).not.toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Non ora' }))
+    expect(await screen.findByText("È da un po' che non fai un backup.")).toBeInTheDocument()
   })
 })

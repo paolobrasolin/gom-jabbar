@@ -5,6 +5,7 @@ import { prefs } from '../lib/prefs.svelte'
 import { addPreset, logPreset } from '../lib/presets'
 import { addEntry, endEpisode, type EntryInput } from '../lib/entries'
 import { intensityColor } from '../lib/color'
+import { go } from '../test/nav'
 import App from '../App.svelte'
 import { loadAppCss } from '../test/css'
 
@@ -26,7 +27,7 @@ const fmtFull = (d: Date) => new Intl.DateTimeFormat('it-IT', { weekday: 'short'
 
 async function openTrends() {
   render(App)
-  await fireEvent.click(screen.getByRole('button', { name: 'Andamento' }))
+  await go('Andamento')
 }
 const tile = (label: string) => screen.getByText(label).closest('.tile')!
 
@@ -182,7 +183,7 @@ describe('Trends report', () => {
     await fireEvent.click(await screen.findByRole('button', { name: 'Report per il medico' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Diario del dolore' })).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }))
-    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Diario del dolore' })).not.toBeInTheDocument()
   })
 })
 
@@ -192,7 +193,7 @@ describe('Trends presets', () => {
     await logPreset(p, [{ pain: 4 }])
     await logPreset(p, [{ pain: 6 }])
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'Andamento' }))
+    await go('Andamento')
     const card = (await screen.findByText('Per preset')).closest('.card')!
     expect(card).toHaveTextContent('Schiena')
     expect(card.querySelectorAll('circle')).toHaveLength(2)

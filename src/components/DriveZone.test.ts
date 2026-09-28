@@ -7,6 +7,7 @@ import { buildExport } from '../lib/backup'
 import type { Resumed } from '../lib/cloud'
 import { fakeGoogle } from '../test/fakeDrive'
 import { dismissToast } from '../lib/toast.svelte'
+import { go, back } from '../test/nav'
 import App from '../App.svelte'
 
 const MIN = 60_000
@@ -35,7 +36,7 @@ function start(resumed: Resumed = null) {
 }
 async function openSettings() {
   start()
-  await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+  await go('Impostazioni')
 }
 /** The Drive zone of the Backup card. */
 const card = () => screen.getByRole('group', { name: 'Google Drive' })
@@ -44,7 +45,7 @@ const head = () => [...g.drive.files.values()][0].revs.at(-1)!.content
 describe('Drive zone', () => {
   it('is not offered in a build without Drive: the Backup card has the file zone only', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+    await go('Impostazioni')
     const backup = screen.getByRole('region', { name: 'Backup' })
     expect(within(backup).queryByRole('group', { name: 'Google Drive' })).not.toBeInTheDocument()
     expect(within(backup).getByRole('group', { name: 'File' })).toBeInTheDocument()
@@ -79,7 +80,7 @@ describe('Drive zone', () => {
   it('comes back from Google on Settings and finishes the backup it left for', async () => {
     await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }], note: 'ciao' })
     start(g.signIn('backup'))
-    expect(screen.getByRole('button', { name: 'Impostazioni' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('heading', { level: 1, name: 'Impostazioni' })).toBeInTheDocument()
     expect(await screen.findByText('Backup su Drive fatto')).toBeInTheDocument()
     const file = JSON.parse(head())
     expect(file.app).toBe('gom-jabbar')
@@ -89,6 +90,13 @@ describe('Drive zone', () => {
     expect(within(card()).getByText(/^Ultimo backup su Drive: /)).toBeInTheDocument()
     expect(prefs.lastBackupAt).not.toBeNull()
     expect(screen.getByText(/^Ultimo backup: /)).toBeInTheDocument()
+  })
+
+  it('back from Settings, reached from Google, goes to the log, not back to Google (#37)', async () => {
+    start(g.signIn('backup'))
+    expect(await screen.findByText('Backup su Drive fatto')).toBeInTheDocument()
+    await back()
+    expect(screen.getByRole('button', { name: 'Salva' })).toBeInTheDocument()
   })
 
   it('backs up again in place while the token lives, without leaving the app', async () => {

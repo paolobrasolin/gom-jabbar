@@ -219,8 +219,8 @@
   }
 </script>
 
-{#snippet compact(s: Symptom)}
-  <IntensitySlider compact label={tl(s.label)} value={cur.readings[s.id] ?? 0} onchange={(v) => onReading(s.id, v)} />
+{#snippet slider(s: Symptom)}
+  <IntensitySlider label={tl(s.label)} value={cur.readings[s.id] ?? 0} onchange={(v) => onReading(s.id, v)} />
 {/snippet}
 
 <!-- The kind (§5.1): one switch with two halves, since an entry is one or the other. -->
@@ -245,7 +245,8 @@
 {/snippet}
 
 <div class="form">
-  <div class="slot" style="bottom: {peek}px">
+  <!-- The stage ends a little above the collapsed drawer, so the two never read as one surface (#37). -->
+  <div class="slot" style="bottom: {peek ? peek + 12 : 0}px">
     <Stage bind:this={stage} bind:view {paint} layers={shown} cur={draft.cur} onToggle={onRegion} {onStroke} labels={{ front: t('log.front'), back: t('log.back'), mind: t('log.mind') }}>
       {#snippet tools()}
           <ToolButton icon={ICONS.body} label={t('log.fullBody')} caption={t('log.fullShort')} pressed={full} onclick={onFull} />
@@ -327,12 +328,12 @@
             {/if}
             <div class="rest" inert={!open} aria-hidden={!open}>
               {#if showBody}
-                {#each bodySymptoms as s (s.id)}{@render compact(s)}{/each}
+                {#each bodySymptoms as s (s.id)}{@render slider(s)}{/each}
                 {#if showMind}
-                  {#each mindSymptoms as s (s.id)}{@render compact(s)}{/each}
+                  {#each mindSymptoms as s (s.id)}{@render slider(s)}{/each}
                 {/if}
               {:else}
-                {#each restMind as s (s.id)}{@render compact(s)}{/each}
+                {#each restMind as s (s.id)}{@render slider(s)}{/each}
               {/if}
               {#if !allTags}
                 <div class="chips suggest" aria-label={t('log.suggestions')}>
@@ -415,7 +416,8 @@
   .panel > :global(*) { min-width: 0; }
   .entry { flex: none; }
   .spine { display: flex; align-items: center; gap: 8px; flex: none; }
-  .areas { flex: 1; min-height: 40px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -12px; padding: 2px 4px 2px 12px; }
+  /* As tall with the hint as with a chip in it (a 40px chip and its 2px above and below), so the stage never moves when the first layer appears (#37). */
+  .areas { flex: 1; min-height: 44px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -12px; padding: 2px 4px 2px 12px; }
   .areas::-webkit-scrollbar { display: none; }
   .plus { flex: none; width: 40px; padding: 0; justify-content: center; font-size: 18px; }
   .handle { flex: none; padding-right: 8px; touch-action: none; }

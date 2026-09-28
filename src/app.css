@@ -76,46 +76,35 @@ h1, h2, h3, p { margin: 0; }
 .app {
   height: 100dvh;
   width: 100%;
-  display: grid;
-  grid-template-rows: 1fr auto;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 .screen {
+  flex: 1;
+  min-height: 0;
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  padding: max(10px, env(safe-area-inset-top)) 12px 12px;
+  padding: max(10px, env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.tabs {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.tab {
-  min-height: 56px;
+.bar {
+  flex: none;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 12px;
-  color: var(--ink-2);
+  gap: 4px;
+  padding: max(4px, env(safe-area-inset-top)) 12px 0 4px;
 }
-.tab[aria-current='page'] { color: var(--accent); font-weight: 600; }
-.tab svg { width: 24px; height: 24px; }
-.tab span { max-width: 100%; text-align: center; line-height: 1.1; overflow-wrap: anywhere; }
-/* A page zoomed by a large system font leaves no room for four words: the icons speak, the words stay for screen readers (#23). */
-@media (max-width: 299px) {
-  .tab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-}
+.bar .back { flex: none; width: var(--tap); height: var(--tap); display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+.bar .back:active { background: var(--surface-2); }
+.bar .back svg { width: 24px; height: 24px; }
+.bar h1 { font-size: 20px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+/* Under the bar, the screen needs no room for the status bar of its own. */
+.bar + .screen { padding-top: 4px; }
 
 /* Controls */
 .btn {
@@ -218,7 +207,7 @@ textarea { resize: vertical; }
 @media print {
   @page { size: A4; margin: 14mm; }
   /* The report lives inside the current screen: hide everything around it, unclip the containers. */
-  body.printing .tabs, body.printing .toast, body.printing .screen > :not(.report) { display: none !important; }
+  body.printing .bar, body.printing .toast, body.printing .screen > :not(.report) { display: none !important; }
   body.printing .app, body.printing .screen { display: block; height: auto; overflow: visible; padding: 0; }
   body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

@@ -5,6 +5,7 @@ import { prefs } from '../lib/prefs.svelte'
 import { addEntry } from '../lib/entries'
 import { dismissToast } from '../lib/toast.svelte'
 import { fakeGoogle } from '../test/fakeDrive'
+import { go } from '../test/nav'
 import App from '../App.svelte'
 
 let g: ReturnType<typeof fakeGoogle>
@@ -23,7 +24,7 @@ beforeEach(() => {
 
 async function openReset() {
   render(App, { props: { cloud: g.provider, reload } })
-  await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+  await go('Impostazioni')
   await fireEvent.click(screen.getByRole('button', { name: 'Cancella tutto' }))
   return screen.findByRole('dialog', { name: 'Cancella tutto' })
 }
