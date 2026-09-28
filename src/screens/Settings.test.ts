@@ -51,10 +51,10 @@ async function pickFile(text: string) {
 }
 
 describe('Settings about', () => {
-  it('links the privacy page next to the version, inside the app', async () => {
+  it('links the privacy and terms pages next to the version, inside the app', async () => {
     await openSettings()
-    const link = screen.getByRole('link', { name: 'Privacy e licenze' })
-    expect(link).toHaveAttribute('href', '/privacy.html')
+    const link = screen.getByRole('link', { name: 'Privacy e termini' })
+    expect(link).toHaveAttribute('href', '/privacy-policy.html')
     expect(link).not.toHaveAttribute('target')
   })
 })
