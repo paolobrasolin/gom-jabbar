@@ -18,8 +18,12 @@
   import { PAIN, type Entry, type Preset } from '../lib/types'
   import { lastByPreset, presetEntries } from '../lib/presets'
   import { entryHeadline, symptomName } from '../lib/summary'
-  import { backupDue, buildExport, shareOrDownload, exportFilename } from '../lib/backup'
+  import { backupReminder, buildExport, shareOrDownload, exportFilename, REMIND } from '../lib/backup'
+  import { cloudBackup, driveInUse, failureText } from '../lib/cloudBackup'
+  import type { CloudProvider } from '../lib/cloud'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
+
+  let { cloud }: { cloud: CloudProvider } = $props()
 
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
@@ -40,8 +44,17 @@
       if ((err as Error).name !== 'AbortError') showToast(t('backup.failed'))
     }
   }
+  /** The banner's button once Drive is in use: the same step as Backup su Drive in Settings. */
+  async function driveNow() {
+    const res = await cloudBackup(cloud)
+    tick = Date.now()
+    if (res === 'left') return
+    if (!res.ok) return showToast(failureText(res))
+    haptic(20)
+    showToast(t('drive.done'))
+  }
   function snooze() {
-    prefs.backupSnoozedUntil = new Date(Date.now() + 7 * 86_400_000).toISOString()
+    prefs.backupSnoozedUntil = new Date(Date.now() + REMIND[nudge?.drive ? 'drive' : 'file'].snooze * 86_400_000).toISOString()
     savePrefs()
   }
 
@@ -60,7 +73,19 @@
     const id = setInterval(() => (tick = Date.now()), 30_000)
     return () => clearInterval(id)
   })
-  const nudge = $derived(backupDue(prefs.lastBackupAt, oldest.value, prefs.backupSnoozedUntil, tick))
+  // The Drive state lives outside Svelte (localStorage); `tick` re-reads it every 30 s and after a banner backup.
+  const nudge = $derived.by(() => {
+    void tick
+    const drive = driveInUse(cloud)
+    return backupReminder({
+      lastBackupAt: prefs.lastBackupAt,
+      lastDriveAt: drive ? cloud.status().lastWriteAt : null,
+      drive,
+      oldestEntryAt: oldest.value,
+      snoozedUntil: prefs.backupSnoozedUntil,
+      now: tick,
+    })
+  })
   let draft = $state(emptyDraft({ kind: prefs.ongoing ? 'episode' : 'chronic' }))
   /** Anything worth clearing: a region, a tag or a reading other than pain on any layer, a time, a note, a preset just named. The pain level alone is not. */
   const dirty = $derived(
@@ -168,8 +193,13 @@
 
   {#if nudge}
     <div class="card row nudge small">
-      <span class="grow">{t('backup.nudge')}</span>
-      <button class="chip small" onclick={backupNow}>{t('backup.now')}</button>
+      {#if nudge.drive}
+        <span class="grow">{nudge.days === null ? t('drive.never') : t('backup.nudgeDrive', { n: nudge.days })}</span>
+        <button class="chip small" onclick={driveNow}>{t('drive.backup')}</button>
+      {:else}
+        <span class="grow">{t('backup.nudge')}</span>
+        <button class="chip small" onclick={backupNow}>{t('backup.now')}</button>
+      {/if}
       <button class="chip small outline" onclick={snooze} aria-label={t('backup.later')}>✕</button>
     </div>
   {/if}

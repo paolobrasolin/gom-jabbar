@@ -18,7 +18,7 @@ Installable pain diary PWA (Svelte 5, Vite, Dexie), Italian first, for one Andro
 - jsdom lacks `scrollTo` and `matchMedia`: guard or avoid them in code that runs under tests. `ResizeObserver` (behind `bind:clientWidth`) and `PointerEvent` are stubbed in `src/test/setup.ts`.
 
 ## Verifying UI
-Screenshot in Pixel 7 emulation with `playwright-core` using the installed Chrome (`chromium.launch({ channel: 'chrome' })`) against `npm run preview`. Block service workers in the context. Seed data through the app's own Settings → Importa with the output of `node scripts/seed.mjs`. Do not use Chrome's `--screenshot` flag: it hangs and its minimum window width fakes overflow bugs. Playwright download paths have no extension; `saveAs` before opening a downloaded file.
+Screenshot in Pixel 7 emulation with `playwright-core` using the installed Chrome (`chromium.launch({ channel: 'chrome' })`) against `npm run preview`. Block service workers in the context. Seed data through the app's own Settings → Ripristina da file with the output of `node scripts/seed.mjs`. Do not use Chrome's `--screenshot` flag: it hangs and its minimum window width fakes overflow bugs. Playwright download paths have no extension; `saveAs` before opening a downloaded file.
 
 ## Tests come first
 - Write the failing test before the code: every change in `lib/`, every user-visible behaviour in a screen or component, and every bug fix starts with a test that reproduces it. Red, green, then tidy.

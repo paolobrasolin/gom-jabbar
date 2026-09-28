@@ -165,6 +165,9 @@ h1, h2, h3, p { margin: 0; }
   border-radius: var(--radius);
   padding: 14px 16px;
 }
+/* A zone inside a card: a titled part divided from what comes before it (the Backup card, §6.4). */
+.zone { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.zlabel { margin-bottom: 8px; font-weight: 600; }
 .muted { color: var(--ink-2); }
 .small { font-size: 14px; }
 .row { display: flex; align-items: center; gap: 10px; }

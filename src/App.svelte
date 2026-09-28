@@ -47,7 +47,7 @@
 </script>
 
 <div class="app">
-  {#if tab === 'log'}<Log />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} />{/if}
+  {#if tab === 'log'}<Log {cloud} />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} />{/if}
 
   <nav class="tabs" aria-label="tabs">
     {#each tabs as it (it.id)}

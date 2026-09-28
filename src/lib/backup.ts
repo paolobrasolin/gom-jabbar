@@ -1,7 +1,6 @@
 import { db } from './db'
-import { PAIN, type Entry, type Preset, type Symptom, type Tag, type Lang } from './types'
-import { regionText } from './summary'
-import { mergedReadings, mergedTags, type Layer } from './layers'
+import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
+import type { Layer } from './layers'
 import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7, type PresetV8 } from './legacy'
 import { upgradeRegions } from './regions'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
@@ -28,7 +27,7 @@ export async function buildExport(): Promise<ExportFile> {
   return { app: 'gom-jabbar', version: EXPORT_VERSION, exportedAt: new Date().toISOString(), vocabulary: { symptoms, tags }, entries, presets }
 }
 
-export function exportFilename(kind: 'json' | 'csv' | 'html', d = new Date()): string {
+export function exportFilename(kind: 'json' | 'html', d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `gom-jabbar-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.${kind}`
 }
@@ -202,34 +201,6 @@ export async function applyImport(file: ExportFile, mode: ImportMode): Promise<I
   return preview
 }
 
-/** Flat CSV for spreadsheets. Not meant for reimport. */
-export function toCsv(entries: Entry[], symptoms: Symptom[], tags: Tag[], lang: Lang, t: (k: string) => string): string {
-  const symIds = [PAIN, ...symptoms.filter((s) => s.id !== PAIN).map((s) => s.id)]
-  const tagLabel = new Map(tags.map((x) => [x.id, x.label[lang] || x.label.it]))
-  const levels = (r: Record<string, number>) => symIds.filter((id) => r[id] !== undefined).map((id) => `${id}=${r[id]}`).join(';')
-  const head = ['id', 'kind', 'at', 'episodeId', 'endedAt', 'presetId', ...symIds, 'layers', 'layers_text', 'tags', 'tags_text', 'note']
-  const rows = entries.map((e) => {
-    const readings = mergedReadings(e.layers)
-    const tags = mergedTags(e.layers)
-    return [
-      e.id,
-      e.kind,
-      e.at,
-      e.episodeId ?? '',
-      e.endedAt ?? '',
-      e.presetId ?? '',
-      ...symIds.map((id) => (readings[id] ?? '').toString()),
-      e.layers.map((l) => `${l.regions.join('+')}:${levels(l.readings)}${l.tags.length ? ':' + l.tags.join('+') : ''}`).join('|'),
-      e.layers.map((l) => `${regionText(l.regions, t)}:${levels(l.readings)}`).join('|'),
-      tags.join('|'),
-      tags.map((id) => tagLabel.get(id) ?? id).join('|'),
-      e.note,
-    ]
-  })
-  const esc = (v: string) => (/[",\n\r]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v)
-  return [head, ...rows].map((r) => r.map(esc).join(',')).join('\r\n') + '\r\n'
-}
-
 /**
  * Hand a text file to the OS share sheet, or download it when sharing files is not supported.
  * Chrome only shares an allowlist of types (.txt and .csv among them, not .json), so a JSON
@@ -263,12 +234,28 @@ export async function shareOrDownload(filename: string, text: string, mime: stri
   return 'downloaded'
 }
 
-export const BACKUP_NUDGE_DAYS = 14
+const DAY = 86_400_000
 
-/** True when there is data and no backup for a while. `oldestEntryAt` covers the never-backed-up case. */
-export function backupDue(lastBackupAt: string | null, oldestEntryAt: string | null, snoozedUntil: string | null, now = Date.now()): boolean {
-  if (!oldestEntryAt) return false
-  if (snoozedUntil && Date.parse(snoozedUntil) > now) return false
-  const ref = lastBackupAt ?? oldestEntryAt
-  return now - Date.parse(ref) > BACKUP_NUDGE_DAYS * 86_400_000
+/** How often the banner asks (§6.1), in days. Drive is one tap, so it asks more often. */
+export const REMIND = { file: { every: 14, snooze: 7 }, drive: { every: 7, snooze: 3 } }
+
+/**
+ * Whether the log screen's banner asks for a backup, and in which words. Once Drive is in use on this device the
+ * reminder is about Drive: a share-sheet backup does not stand in for it. `days` is how long since the last Drive
+ * backup, when there was one. The oldest entry covers the never-backed-up case; no data, no banner.
+ */
+export function backupReminder(o: {
+  lastBackupAt: string | null
+  lastDriveAt: string | null
+  drive: boolean
+  oldestEntryAt: string | null
+  snoozedUntil: string | null
+  now: number
+}): { drive: boolean; days: number | null } | null {
+  if (!o.oldestEntryAt) return null
+  if (o.snoozedUntil && Date.parse(o.snoozedUntil) > o.now) return null
+  const last = o.drive ? o.lastDriveAt : o.lastBackupAt
+  const since = o.now - Date.parse(last ?? o.oldestEntryAt)
+  if (since <= REMIND[o.drive ? 'drive' : 'file'].every * DAY) return null
+  return { drive: o.drive, days: o.drive && last ? Math.floor(since / DAY) : null }
 }

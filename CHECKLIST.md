@@ -29,8 +29,8 @@ Manual, on a real phone, before telling anyone to update:
 - [ ] Time chips: "Ieri sera" lands on yesterday in the diary. Same from a preset sheet.
 - [ ] Details inline: scroll down past the slider, set another symptom, Tutti i tag → pick a context tag (it joins the strip, pressed), type a note (field grows, keyboard does not cover Salva). Salva. Diary row shows the tag and the note.
 - [ ] Azzera: fill the form, Azzera empties it, Annulla from the toast brings everything back.
-- [ ] Settings → Esporta backup: share sheet opens, file lands in Drive or Files. Toast "Backup esportato".
-- [ ] Settings → Importa the same file: preview counts, Unisci. Then Sostituisci tutto and Undo.
+- [ ] Settings → Backup su file: share sheet opens, file lands in Drive or Files. Toast "Backup su file fatto".
+- [ ] Settings → Ripristina da file, the same file: the Ripristina sheet shows the counts, Unisci. Then Sostituisci tutto and Undo.
 - [ ] Preset: on Registra pick zones and move a second slider, tap "+ Nuovo preset"; the form shows the zones, Chiede has Dolore and the second symptom pressed; unpress one, press another, name it, Crea preset; the chip appears pressed and the form is still filled; Salva; the chip shows the level and "0m" and is no longer pressed; the diary row is named after the preset; Andamento has a Per preset line. Undo on "Preset creato" removes the chip and the next Salva has no name. From a Diario entry, Crea preset da questa voce opens the form over the sheet; Escape closes only the form. In Impostazioni tap Modifica, rename, toggle a Chiede chip, Salva, undo; delete it and undo.
 - [ ] Preset with two zones: on Registra pick the legs, "+ Altra zona", a shoulder, "+ Nuovo preset"; Chiede changes when you tap the other layer chip; Crea preset; tap the chip: the sheet has two layer chips, every slider at 0, the sliders follow the chips, Salva; the log form is empty afterwards; the diary row shows both levels ("Nome · gambe 5 · spalla 3").
 - [ ] Update from 0.5.0 with data: every old episode is one diary row with its trail, Andamento's counts include the updates, every old preset still opens its sheet with the same sliders, Settings → Esporta gives a version 9 file.
@@ -39,7 +39,9 @@ Manual, on a real phone, before telling anyone to update:
 - [ ] Report → Stampa / PDF → Save as PDF. Report → Condividi file → open the HTML from Drive.
 - [ ] Dark and light theme, both readable. System theme switch updates the status bar colour.
 - [ ] Large text (#23): Android Settings → Display → Font size and Display size both at the largest, in light and in dark, and once outdoors in daylight. Log: Tutto reachable at the top of the left rail, rail captions whole, the zoom buttons full size, the tab icons alone, Salva reachable (the page scrolls), the toast readable above the drawer. Diario: times whole. Andamento: the tag comparison shows bars. Report: toolbar buttons wrap, none squeezed. Back to the default size: the tabs have their words again.
-- [ ] Backup nudge appears after 14 days (or set lastBackupAt back in devtools), "Più tardi" snoozes it.
+- [ ] Backup nudge without Drive appears after 14 days (or set lastBackupAt back in devtools), "Più tardi" snoozes it.
+- [ ] Settings → Backup → Google Drive, from the installed app: Backup su Drive goes to Google and comes back into the app, the backup lands ("Backup su Drive fatto"); a second tap within the hour uploads without leaving; Ripristina da Drive lists it and opens the import preview; Scollega, then Backup su Drive asks Google again.
+- [ ] Banner with Drive: in `gj.drive` in devtools set `lastWriteAt` 8 days back, relaunch: "Ultimo backup su Drive 8 giorni fa.", its button backs up to Drive, "Più tardi" snoozes it.
 
 ## iOS (Safari)
 - [ ] Share → Add to Home Screen. Launch from the icon.
