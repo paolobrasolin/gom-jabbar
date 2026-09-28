@@ -222,7 +222,6 @@
   "reg.foot.back": "Foot (back)",
   "reg.mind": "Mind",
   "diary.more": "Show more",
-  "settings.version": "Version {v}",
   "app.dbError": "Cannot open the data store in this browser. Try opening the app in Chrome or Safari, not in a private window.",
   "report.share": "Share file",
   "report.shared": "Report shared",
@@ -269,6 +268,9 @@
   "reset.drive": "The Drive file stays where it is; Drive gets disconnected.",
   "reset.type": "Type “{w}” to confirm",
   "reset.word": "delete",
-  "settings.privacy": "Privacy and terms",
-  "report.disclaimer": "Personal diary: entered by the person, not clinically validated. Gom Jabbar is not a medical device."
+  "report.disclaimer": "Personal diary: entered by the person, not clinically validated. Gom Jabbar is not a medical device.",
+  "about.privacy": "Privacy policy",
+  "about.terms": "Terms of service",
+  "about.licences": "Open source licences",
+  "about.source": "Source code"
 }

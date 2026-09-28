@@ -30,6 +30,8 @@
 
             # The sandbox has no git; the flake knows the commit it was built from.
             GIT_REV = self.shortRev or self.dirtyShortRev or "unknown";
+            # The commit's day, YYYY-MM-DD, next to the version in Settings.
+            GIT_DATE = let d = self.lastModifiedDate or "19700101000000"; in "${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}";
 
             doCheck = true;
             checkPhase = ''

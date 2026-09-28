@@ -13,4 +13,4 @@ Cramer E et al., PLOS Computational Biology 2022.
 
 `node scripts/choir.mjs` reads them and writes `src/lib/figures.ts`.
 
-Licences: the package, and so these polygons, are MIT, © 2021 Eric Cramer (`LICENSE.md` here, fetched from the package's repository). The validation paper that presents the map is open access under CC BY-NC-ND 4.0 (Europe PMC, PMC7813550). The app credits both in `licenses.txt`.
+Licences: the package, and so these polygons, are MIT, © 2021 Eric Cramer (`LICENSE.md` here, fetched from the package's repository). The validation paper that presents the map is open access under CC BY-NC-ND 4.0 (Europe PMC, PMC7813550). The app credits both in `open-source-licences.html`.

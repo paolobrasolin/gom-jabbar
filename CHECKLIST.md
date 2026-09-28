@@ -10,7 +10,7 @@ npm version patch      # refuses if check or tests fail; commits and tags vX.Y.Z
 git push               # tags follow (push.followTags is set)
 ```
 
-Settings shows `Versione X.Y.Z+<short commit>`; `-dirty` after the hash means a local build, never a deploy.
+The Settings footer shows `Gom Jabbar X.Y.Z · <commit day> · <short commit>`; `-dirty` after the hash means a local build, never a deploy.
 
 Manual, on a real phone, before telling anyone to update:
 
@@ -38,7 +38,7 @@ Manual, on a real phone, before telling anyone to update:
 - [ ] Andamento with data: heatmap, its symptom chips (the brain lights up under Nebbia mentale), chart tap shows a day, range chips.
 - [ ] Report ends with the line "Diario personale: … non è un dispositivo medico.", in the app, in the PDF and in the shared file.
 - [ ] Report → Stampa / PDF → Save as PDF. Report → Condividi file → open the HTML from Drive.
-- [ ] Settings → Privacy e termini, in airplane mode: the page opens; its top line reaches Termini and Licenze (© readable) and Gom Jabbar opens the app.
+- [ ] Settings footer: the version, the release day and the hash. In airplane mode, Privacy policy opens at its Italian part; its header reaches Termini d'uso and Licenze open source in Italian, English jumps to the English part, Gom Jabbar opens the app.
 - [ ] Dark and light theme, both readable. System theme switch updates the status bar colour.
 - [ ] Large text (#23): Android Settings → Display → Font size and Display size both at the largest, in light and in dark, and once outdoors in daylight. Log: Tutto reachable at the top of the left rail, rail captions whole, the zoom buttons full size, the tab icons alone, Salva reachable (the page scrolls), the toast readable above the drawer. Diario: times whole. Andamento: the tag comparison shows bars. Report: toolbar buttons wrap, none squeezed. Back to the default size: the tabs have their words again.
 - [ ] Backup nudge without Drive appears after 14 days (or set lastBackupAt back in devtools), "Più tardi" snoozes it.

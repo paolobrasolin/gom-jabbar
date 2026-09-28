@@ -20,12 +20,23 @@ function gitRev(): string {
   }
 }
 
+// The day of the commit being built, YYYY-MM-DD, shown next to the version in Settings: the same commit always shows the
+// same date. Nix sets GIT_DATE from the flake; locally we ask git; otherwise today.
+function gitDate(): string {
+  if (process.env.GIT_DATE) return process.env.GIT_DATE
+  try {
+    return execSync('git log -1 --format=%cs', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return new Date().toISOString().slice(0, 10)
+  }
+}
+
 // The service worker's runtime, which the PWA plugin bundles after this build: generateSW with a precache and a
 // navigation fallback ships these (`npm run notices` fails if dist/workbox-*.js ever names another), plus
 // registerSW.js from the plugin itself.
 const SW_PACKAGES = ['workbox-core', 'workbox-precaching', 'workbox-routing', 'workbox-strategies', 'vite-plugin-pwa']
 
-/** licenses.txt next to the app (#35): every package bundled into it, the service worker's runtime, the body map. */
+/** open-source-licences.html next to the app (#35): every package bundled into it, the service worker's runtime, the body map. */
 function notices(): Plugin {
   const read = (dir: string) => (file: string) => {
     try {
@@ -40,9 +51,9 @@ function notices(): Plugin {
     // The list comes from what the bundle contains, so the dev server has none: say so instead of serving the app.
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url?.split('?')[0] !== `${server.config.base}licenses.txt`) return next()
+        if (req.url?.split('?')[0] !== `${server.config.base}open-source-licences.html`) return next()
         res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-        res.end('licenses.txt is written by the build, from what the bundle contains.\nRun `npm run build && npm run preview` to see it.\n')
+        res.end('open-source-licences.html is written by the build, from what the bundle contains.\nRun `npm run build && npm run preview` to see it.\n')
       })
     },
     generateBundle(_, bundle) {
@@ -61,9 +72,8 @@ function notices(): Plugin {
         license: 'MIT',
         text: `${readFileSync('scripts/choir/LICENSE.md', 'utf8').trim()}\n\nThe CHOIR body map itself: Scherrer KH et al., "Development and validation of the Collaborative Health Outcomes Information Registry body map", PAIN Reports 2021;6(1):e880, open access under CC BY-NC-ND 4.0.`,
       }
-      // A byte-order mark: a .txt served without a charset would otherwise read as Latin-1 (© as Â©).
-      const source = '\uFEFF' + renderNotices([...[...dirs].map(([n, d]) => notice(n, d)), choir])
-      this.emitFile({ type: 'asset', fileName: 'licenses.txt', source })
+      const source = renderNotices([...[...dirs].map(([n, d]) => notice(n, d)), choir])
+      this.emitFile({ type: 'asset', fileName: 'open-source-licences.html', source })
     },
   }
 }
@@ -72,7 +82,7 @@ function notices(): Plugin {
 // and .env.test (Vitest). Nothing is defaulted here: an empty
 // VITE_GOOGLE_CLIENT_ID means no Drive backup, never the wrong Google project.
 export default defineConfig(({ mode }) => ({
-  define: { __APP_VERSION__: JSON.stringify(`${pkg.version}+${gitRev()}`) },
+  define: { __APP_VERSION__: JSON.stringify(`${pkg.version}+${gitRev()}`), __APP_DATE__: JSON.stringify(gitDate()) },
   base: loadEnv(mode, process.cwd(), '').BASE_PATH,
   plugins: [
     svelte(),
@@ -98,7 +108,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2,txt}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: 'index.html',
       },
     }),

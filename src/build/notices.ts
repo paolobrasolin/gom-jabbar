@@ -1,5 +1,5 @@
 /**
- * Third-party notices for `licenses.txt` (#35): every package whose code ends up in the app, with its licence text,
+ * Third-party notices for `open-source-licences.html` (#35): every package whose code ends up in the app, with its licence text,
  * because MIT and Apache ask for their notices to travel with copies. Pure: `vite.config.ts` does the file reading.
  */
 
@@ -27,17 +27,38 @@ export function noticeOf(name: string, read: (file: string) => string | null, fi
   return { name, version: pkg.version ?? '?', license, text: notice ? `${text}\n\nNOTICE\n\n${notice}` : text }
 }
 
-const RULE = '='.repeat(72)
+const escape = (t: string) => t.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+const anchor = (name: string) => name.replace(/^@/, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()
 
+/** A plain page like `privacy-policy.html` and `terms-of-service.html`: the same top line, each licence as written. */
 export function renderNotices(notices: Notice[]): string {
   const unique = [...new Map(notices.map((n) => [n.name, n])).values()].sort((a, b) => a.name.localeCompare(b.name))
-  const head = [
-    'Gom Jabbar',
-    'Copyright © 2026 Paolo Brasolin. Licensed under the EUPL-1.2: no warranty and, as far as the law allows, no liability.',
-    'Source and licence text: https://github.com/paolobrasolin/gom-jabbar',
-    '',
-    'Third-party software and data shipped with the app, each under its own licence:',
-  ]
-  const sections = unique.map((n) => [RULE, `${n.name} ${n.version} — ${n.license}`, '-'.repeat(72), n.text].join('\n'))
-  return [head.join('\n'), ...sections].join('\n\n') + '\n'
+  const sections = unique.map((n) => `<h2 id="${anchor(n.name)}">${escape(`${n.name} ${n.version} — ${n.license}`)}</h2>\n<pre>${escape(n.text)}</pre>`)
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gom Jabbar · Open source licences</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  :root { color-scheme: light dark; }
+  body { max-width: 40rem; margin: 0 auto; padding: 16px; font: 17px/1.55 system-ui, sans-serif; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+</style>
+</head>
+<body>
+<p id="en"><a href="./">Gom Jabbar</a> · <a href="privacy-policy.html">Privacy policy</a> · <a href="terms-of-service.html">Terms of service</a> · <strong>Open source licences</strong> · <a href="#it">Italiano</a></p>
+<h1>Open source licences</h1>
+<p>Gom Jabbar: © 2026 Paolo Brasolin, under the <a href="https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12">EUPL-1.2</a> (<a href="https://github.com/paolobrasolin/gom-jabbar">source code</a>). Below, the third-party code and data shipped in the app, each under its own licence.</p>
+<div lang="it" id="it">
+<p><a href="./">Gom Jabbar</a> · <a href="privacy-policy.html#it">Privacy policy</a> · <a href="terms-of-service.html#it">Termini d'uso</a> · <strong>Licenze open source</strong> · <a href="#en">English</a></p>
+<h1>Licenze open source</h1>
+<p>Gom Jabbar: © 2026 Paolo Brasolin, sotto la <a href="https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12">EUPL-1.2</a> (<a href="https://github.com/paolobrasolin/gom-jabbar">codice sorgente</a>). Qui sotto il codice e i dati di terzi inclusi nell'app, ciascuno con la sua licenza; i testi delle licenze sono in inglese.</p>
+</div>
+${sections.join('\n')}
+</body>
+</html>
+`
 }
+
