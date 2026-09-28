@@ -17,7 +17,22 @@
 
   // Read once: the tap comes back only at startup.
   let resume = $state.raw(untrack(() => resumed))
-  let tab = $state<Tab>(untrack(() => resumed) ? 'settings' : 'log')
+  let tab = $state<Tab>('log')
+
+  /** Log is home (#37): every other screen sits one history entry above it, so the arrow and Android's back gesture both return. */
+  function go(to: Tab) {
+    history.pushState({ screen: to }, '')
+    tab = to
+    dismissToast()
+  }
+  function onPop(e: PopStateEvent) {
+    tab = (e.state as { screen?: Tab } | null)?.screen ?? 'log'
+    dismissToast()
+  }
+  // The app always starts on the log: a reload on another screen must not leave that screen's state under it.
+  history.replaceState(null, '')
+  // Back from Google's consent screen: land on Settings, with the log under it rather than Google.
+  if (untrack(() => resumed)) go('settings')
 
   $effect(() => {
     const root = document.documentElement
@@ -38,29 +53,20 @@
     mq.addEventListener('change', h)
     return () => mq.removeEventListener('change', h)
   })
-
-  const tabs: { id: Tab; icon: string }[] = [
-    { id: 'log', icon: 'M12 5v14M5 12h14' },
-    { id: 'diary', icon: 'M4 5h16v14H4zM8 3v4M16 3v4M4 10h16' },
-    { id: 'trends', icon: 'M4 18l5-6 4 3 7-8' },
-    { id: 'settings', icon: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM3 12h2M19 12h2M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4' },
-  ]
 </script>
 
-<div class="app">
-  {#if tab === 'log'}<Log {cloud} />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} {reload} />{/if}
+<svelte:window onpopstate={onPop} />
 
-  <nav class="tabs" aria-label="tabs">
-    {#each tabs as it (it.id)}
-      <button class="tab" aria-current={tab === it.id ? 'page' : undefined} onclick={() => {
-          tab = it.id
-          dismissToast()
-        }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={it.icon} /></svg>
-        <span>{t(`tab.${it.id}`)}</span>
+<div class="app">
+  {#if tab !== 'log'}
+    <header class="bar">
+      <button class="back" aria-label={t('nav.back')} onclick={() => history.back()}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
       </button>
-    {/each}
-  </nav>
+      <h1>{t(`tab.${tab}`)}</h1>
+    </header>
+  {/if}
+  {#if tab === 'log'}<Log {cloud} navigate={go} />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} {reload} />{/if}
 </div>
 
 <Toast />

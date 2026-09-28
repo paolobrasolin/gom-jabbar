@@ -127,8 +127,8 @@
         </div>
       {/if}
       <p class="small muted now">{t('episode.levelNow')}</p>
-      {#each tracked as s, i (s.id)}
-        <IntensitySlider compact={i > 0} label={s.id === PAIN ? s.label : s.label.charAt(0).toUpperCase() + s.label.slice(1)} value={levels[cur][s.id]} onchange={(v) => (levels[cur][s.id] = v)} />
+      {#each tracked as s (s.id)}
+        <IntensitySlider label={s.id === PAIN ? s.label : s.label.charAt(0).toUpperCase() + s.label.slice(1)} value={levels[cur][s.id]} onchange={(v) => (levels[cur][s.id] = v)} />
       {/each}
       {#each remedies as { g, items } (g)}
         <div>

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/sve
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { addEntry, logUpdate, isHead, isUpdate } from '../lib/entries'
+import { go, openEpisode, episodesButton } from '../test/nav'
 import App from '../App.svelte'
 import { mergedTags } from '../lib/layers'
 
@@ -23,8 +24,7 @@ async function seedEpisode() {
 }
 async function openSheet() {
   render(App)
-  await fireEvent.click(await screen.findByRole('button', { name: 'Episodio in corso' }))
-  return screen.findByRole('dialog', { name: 'Episodio in corso' })
+  return openEpisode()
 }
 
 describe('Episode sheet', () => {
@@ -75,7 +75,7 @@ describe('Episode sheet', () => {
       expect((await db.entries.get(id))?.endedAt).toBeNull()
       expect(await updates()).toHaveLength(1)
     })
-    expect(await screen.findByRole('button', { name: 'Episodio in corso' })).toBeInTheDocument()
+    await waitFor(() => expect(episodesButton()).toBeInTheDocument())
   })
 
   it('Termina with nothing changed only sets the end', async () => {
@@ -85,7 +85,7 @@ describe('Episode sheet', () => {
     await waitFor(async () => expect((await db.entries.get(id))?.endedAt).not.toBeNull())
     expect(await updates()).toHaveLength(1)
     // The ended episode's sheet, from the diary, has the readings and the edit link but no sliders.
-    await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+    await go('Diario')
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
     const ended = await screen.findByRole('dialog', { name: 'Episodio terminato' })
     expect(within(ended).getByLabelText('Letture')).toBeInTheDocument()

@@ -6,6 +6,7 @@ import { LEG_IDS, REGION_BY_ID, pathFor, shapeOf } from '../lib/regions'
 import { addPreset } from '../lib/presets'
 import { addEntry } from '../lib/entries'
 import { buildExport } from '../lib/backup'
+import { go, back } from '../test/nav'
 import App from '../App.svelte'
 
 let db: ReturnType<typeof resetDb>
@@ -24,7 +25,7 @@ afterEach(() => {
 
 async function openSettings() {
   render(App)
-  await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+  await go('Impostazioni')
 }
 const readFile = (f: Blob) =>
   new Promise<string>((resolve, reject) => {
@@ -73,7 +74,8 @@ describe('Settings about', () => {
   it('opens the pages at the top, in English, when the app is in English', async () => {
     prefs.lang = 'en'
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+    await fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
     const about = screen.getByRole('contentinfo')
     expect(about).toHaveTextContent(`Gom Jabbar ${version} · ${day('en-GB')} · ${build}`)
     expect(within(about).getByRole('link', { name: 'Terms of service' })).toHaveAttribute('href', '/terms-of-service.html')
@@ -95,7 +97,8 @@ describe('Settings presets', () => {
 
   it('explains how to create the first preset', async () => {
     await openSettings()
-    expect(await screen.findByText(/Nessun preset.*Nuovo preset/)).toBeInTheDocument()
+    // It names what is on screen now (#37): the Preset dropdown on the log, not a screen called Registra or a + chip.
+    expect(await screen.findByText('Nessun preset. Sulla schermata iniziale apri «Preset» e tocca «Nuovo preset».')).toBeInTheDocument()
   })
 
   it('edits a preset in place: same id, new name and shape, undo restores', async () => {
@@ -174,7 +177,8 @@ describe('Settings preferences', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'English' }))
     expect(prefs.lang).toBe('en')
     expect(localStorage.getItem('gj.prefs')).toContain('"lang":"en"')
-    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
     expect(screen.getByText('Language')).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('en')
     await fireEvent.click(screen.getByRole('button', { name: 'Italiano' }))
@@ -199,19 +203,19 @@ describe('Settings preferences', () => {
 
   it('switches the figure the body map draws and remembers it', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+    await go('Impostazioni')
     const male = await screen.findByRole('button', { name: 'Maschile' })
     expect(screen.getByRole('button', { name: 'Femminile' })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(male)
     expect(prefs.figure).toBe('male')
     expect(JSON.parse(localStorage.getItem('gj.prefs')!).figure).toBe('male')
-    await fireEvent.click(screen.getByRole('button', { name: 'Registra' }))
+    await back()
     await screen.findByRole('group', { name: 'Davanti' })
     // The stage draws the male polygons now.
     expect(document.querySelector('.region[data-region="152"]')!.getAttribute('d')).toBe(pathFor(shapeOf('male', REGION_BY_ID['152'])))
     // Same regions on either figure: the thigh is still there to tap.
     expect(screen.getByRole('button', { name: 'Coscia sx' })).toBeInTheDocument()
-    await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+    await go('Impostazioni')
     await fireEvent.click(await screen.findByRole('button', { name: 'Femminile' }))
     expect(prefs.figure).toBe('female')
   })

@@ -73,8 +73,8 @@
         {/each}
       </div>
     {/if}
-    {#each current.layers[cur]?.asks ?? [] as id, i (`${cur}:${id}`)}
-      <IntensitySlider compact={i > 0} label={label(id)} value={levels[cur]?.[id] ?? 0} onchange={(v) => (levels[cur][id] = v)} />
+    {#each current.layers[cur]?.asks ?? [] as id (`${cur}:${id}`)}
+      <IntensitySlider label={label(id)} value={levels[cur]?.[id] ?? 0} onchange={(v) => (levels[cur][id] = v)} />
     {/each}
     <button class="btn primary block" onclick={save}>{t('common.save')}</button>
   {/if}

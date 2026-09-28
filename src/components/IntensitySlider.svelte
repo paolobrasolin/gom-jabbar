@@ -5,13 +5,13 @@
   let {
     value = $bindable(5),
     label = '',
-    compact = false,
     onchange,
-  }: { value?: number; label?: string; compact?: boolean; onchange?: (v: number) => void } = $props()
+  }: { value?: number; label?: string; onchange?: (v: number) => void } = $props()
 
   const color = $derived(intensityColor(value))
   const ink = $derived(intensityInk(value))
-  const thumb = $derived(compact ? 36 : 48)
+  /** One size for every symptom, pain included (#37). */
+  const thumb = 36
 
   let input = $state<HTMLInputElement | undefined>()
 
@@ -79,7 +79,7 @@
   }
 </script>
 
-<div class="slider" class:compact style="--fill: {color}; --ink-on: {ink}; --pct: {value / 10}">
+<div class="slider" style="--fill: {color}; --ink-on: {ink}; --pct: {value / 10}">
   {#if label}<span class="label">{label}</span>{/if}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="track-wrap" onpointerdown={down}>
@@ -98,12 +98,10 @@
 </div>
 
 <style>
-  .slider { display: flex; flex-direction: column; gap: 2px; --thumb: 48px; }
-  .compact { --thumb: 36px; }
+  .slider { display: flex; flex-direction: column; gap: 2px; --thumb: 36px; }
   .label { font-size: 13px; font-weight: 600; color: var(--ink-2); padding-left: 2px; }
-  .track-wrap { position: relative; touch-action: pan-y; }
-  /* A compact slider looks 36px tall but takes a finger over 48 (§10), without taking more room. */
-  .compact .track-wrap { padding: 6px 0; margin: -6px 0; }
+  /* The slider looks 36px tall but takes a finger over 48 (§10), without taking more room. */
+  .track-wrap { position: relative; touch-action: pan-y; padding: 6px 0; margin: -6px 0; }
 
   input[type='range'] {
     -webkit-appearance: none;
@@ -156,9 +154,8 @@
     transform: translate(-50%, -50%);
     pointer-events: none;
     font-weight: 800;
-    font-size: 20px;
+    font-size: 15px;
     color: var(--ink-on);
     font-variant-numeric: tabular-nums;
   }
-  .compact .bubble { font-size: 15px; }
 </style>

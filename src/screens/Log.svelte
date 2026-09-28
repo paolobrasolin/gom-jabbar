@@ -6,12 +6,14 @@
   import PresetSheet from '../components/PresetSheet.svelte'
   import PresetForm, { type PresetSeed } from '../components/PresetForm.svelte'
   import Sheet from '../components/Sheet.svelte'
+  import NavMenu from '../components/NavMenu.svelte'
+  import Dropdown from '../components/Dropdown.svelte'
   import { t, tl } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
-  import { prefs, savePrefs } from '../lib/prefs.svelte'
+  import { prefs, savePrefs, type Tab } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
-  import { addEntry, deleteEntry, endEpisode, reopenEpisode, durationMs, activeEpisodes, latest, type Episode } from '../lib/entries'
+  import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, type Episode } from '../lib/entries'
   import { showToast, haptic, toastState } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration } from '../lib/time'
@@ -23,7 +25,7 @@
   import type { CloudProvider } from '../lib/cloud'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
 
-  let { cloud }: { cloud: CloudProvider } = $props()
+  let { cloud, navigate }: { cloud: CloudProvider; navigate: (to: Tab) => void } = $props()
 
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
@@ -136,62 +138,89 @@
     }
   }
 
+  /** The preset the form carries: the presets' dropdown shows it pressed and names it to screen readers. */
+  const linked = $derived(presets.value.find((p) => p.id === draft.presetId))
   let presetOpen = $state.raw<Preset | null>(null)
   let presetSeed = $state.raw<PresetSeed | null>(null)
 
-  /** "+" in the strip (§5.6): name what is on the form, as it stands, empty included. */
+  /** Nuovo preset, last in the presets' dropdown (§5.6): name what is on the form, as it stands, empty included. */
   function newPreset() {
     presetSeed = { draft: $state.snapshot(draft) as EntryDraft }
   }
-  /** The form now carries the name: the ordinary Salva logs the first reading under it, and so does the chip's sheet, which then empties the form. Undo on the toast unlinks it. */
+  /** The form now carries the name: the ordinary Salva logs the first reading under it, and so does its sheet, which then empties the form. Undo on the toast unlinks it. */
   function linkPreset(p: Preset) {
     draft.presetId = p.id
   }
   function unlinkPreset(p: Preset) {
     if (draft.presetId === p.id) draft.presetId = undefined
   }
-
-  async function end(id: string) {
-    await endEpisode(id)
-    haptic(20)
-    showToast(t('episode.ended'), { label: t('log.undo'), run: () => void reopenEpisode(id) })
-  }
 </script>
 
 <div class="screen log">
-  {#if active.value.length}
-    <div class="episodes">
-      {#each active.value as ep (ep.head.id)}
-        {@const cur = latest(ep)}
-        {@const hl = entryHeadline(cur)}
-        <div class="card episode row">
-          <button class="row grow open" onclick={() => (episode = ep.head)} aria-label={t('episode.active')}>
-            <span class="pill" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
-            <span class="grow small text">
-              <span class="line"><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={cur.layers} tagDefs={tags.value} /></span>
-              <span class="muted">{t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })}</span>
-            </span>
+  <!-- One row of dropdowns (#37): the screens, what is going on (only while something is), the presets (§5.6). Episodes and presets used to share a strip of chips and read as one kind of thing. -->
+  <div class="top">
+    <NavMenu onpick={navigate} />
+    {#if active.value.length}
+      {@const top = Math.max(...active.value.map((ep) => entryHeadline(latest(ep)).value))}
+      <Dropdown label={t('episode.count', { n: active.value.length })} cls="episodes" style="background: {intensityColor(top)}; color: {intensityInk(top)}">
+        {#snippet trigger()}
+          <span class="name">{t('episode.count', { n: active.value.length })}</span>
+          {@render chevron()}
+        {/snippet}
+        {#snippet items(close)}
+          {#each active.value as ep (ep.head.id)}
+            {@const cur = latest(ep)}
+            {@const hl = entryHeadline(cur)}
+            <button role="menuitem" onclick={() => {
+                close()
+                episode = ep.head
+              }}>
+              <span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
+              <span><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={cur.layers} tagDefs={tags.value} /> · {t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })}</span>
+            </button>
+          {/each}
+        {/snippet}
+      </Dropdown>
+    {/if}
+    <Dropdown label={linked ? `${t('preset.strip')}: ${linked.name}` : t('preset.strip')} cls={linked ? 'presets linked' : 'presets'} end>
+      {#snippet trigger()}
+        <span class="name">{t('preset.strip')}</span>
+        {@render chevron()}
+      {/snippet}
+      {#snippet items(close)}
+        {#each presets.value as p (p.id)}
+          {@const last = lastBy.value[p.id]}
+          {@const hl = last ? entryHeadline(last) : null}
+          <button role="menuitem" aria-current={draft.presetId === p.id ? 'true' : undefined} onclick={() => {
+              close()
+              presetOpen = p
+            }}>
+            {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>{:else}<span class="dot empty"></span>{/if}
+            <span class="grow">{p.name} · {last ? formatDuration(Math.max(0, tick - Date.parse(last.at)), units) : t('preset.never')}</span>
+            {#if draft.presetId === p.id}
+              <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>
+            {/if}
           </button>
-          <button class="btn" aria-label={t('episode.end')} onclick={() => end(ep.head.id)}>{t('episode.endShort')}</button>
-        </div>
-      {/each}
-    </div>
-  {/if}
-
-  <!-- Always there (§5.6): "+" first so it never scrolls away, and, before the first preset, its name. -->
-  <div class="chips presets" aria-label={t('preset.strip')}>
-    <button class="chip small outline" aria-label={t('preset.new')} onclick={newPreset}>+{#if !presets.value.length}&nbsp;{t('preset.new')}{/if}</button>
-    {#each presets.value as p (p.id)}
-      {@const last = lastBy.value[p.id]}
-      {@const hl = last ? entryHeadline(last) : null}
-      <button class="chip small tchip" aria-pressed={draft.presetId === p.id} onclick={() => (presetOpen = p)}>
-        {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>{/if}
-        {p.name} · {last ? formatDuration(Math.max(0, tick - Date.parse(last.at)), units) : t('preset.never')}
-      </button>
-    {/each}
+        {/each}
+        <button role="menuitem" class="new" onclick={() => {
+            close()
+            newPreset()
+          }}>
+          <span class="dot plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 6v12M6 12h12" /></svg></span>
+          {t('preset.new')}
+        </button>
+      {/snippet}
+    </Dropdown>
   </div>
 
-  {#if nudge}
+  <!-- One banner at a time (#37): installing is what keeps the data safe, so it goes first; the backup waits its turn. -->
+  {#if installNudge}
+    <div class="card row nudge small">
+      <span class="grow">{t('install.nudge')}</span>
+      <button class="chip small" onclick={installNow}>{t('install.now')}</button>
+      <button class="chip small outline" onclick={() => (install.dismissed = true)} aria-label={t('install.later')}>✕</button>
+    </div>
+  {:else if nudge}
     <div class="card row nudge small">
       {#if nudge.drive}
         <span class="grow">{nudge.days === null ? t('drive.never') : t('backup.nudgeDrive', { n: nudge.days })}</span>
@@ -201,14 +230,6 @@
         <button class="chip small" onclick={backupNow}>{t('backup.now')}</button>
       {/if}
       <button class="chip small outline" onclick={snooze} aria-label={t('backup.later')}>✕</button>
-    </div>
-  {/if}
-
-  {#if installNudge}
-    <div class="card row nudge small">
-      <span class="grow">{t('install.nudge')}</span>
-      <button class="chip small" onclick={installNow}>{t('install.now')}</button>
-      <button class="chip small outline" onclick={() => (install.dismissed = true)} aria-label={t('install.later')}>✕</button>
     </div>
   {/if}
 
@@ -222,6 +243,10 @@
     {/snippet}
   </EntryForm>
 </div>
+{#snippet chevron()}
+  <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+{/snippet}
+
 <PresetForm bind:seed={presetSeed} symptoms={symptoms.value} oncreate={linkPreset} onundo={unlinkPreset} />
 <PresetSheet bind:preset={presetOpen} symptoms={symptoms.value} onsaved={(p) => draft.presetId === p.id && reset()} />
 <EpisodeSheet bind:entry={episode} tagDefs={tags.value} symptoms={symptoms.value} onedit={(e) => (editing = e)} />
@@ -235,16 +260,27 @@
   /* Nothing scrolls here (§6.1): the slot takes what the frame leaves. Only when the banners crowd it does the page give, so Salva is always reachable. */
   .log { padding-bottom: 0; }
   .log > :global(.form) { min-height: 440px; }
-  .episodes { display: flex; flex-direction: column; gap: 8px; }
-  .nudge { padding: 8px 8px 8px 12px; }
-  .episode { padding: 8px 8px 8px 12px; }
-  .open { text-align: left; min-height: 44px; min-width: 0; }
-  .text { display: flex; flex-direction: column; min-width: 0; }
-  .line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .presets::-webkit-scrollbar { display: none; }
-  .presets { flex: none; min-height: 38px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
-  .tchip { padding-left: 6px; gap: 6px; font-variant-numeric: tabular-nums; }
-  .dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-weight: 700; font-size: 12px; }
+  /* The text keeps a readable measure: on a narrow (zoomed) page it takes its own line and the buttons wrap under it. */
+  .nudge { padding: 6px 6px 6px 12px; flex-wrap: wrap; row-gap: 6px; }
+  .nudge > .grow { flex: 1 1 9em; }
+  /* The row of dropdowns: the screens and what is going on at the left, the presets at the right edge. */
+  /* On a narrow (zoomed) page the row wraps rather than squeezing a label to a letter. */
+  .top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: none; min-width: 0; }
+  .top :global(.chev) { flex: none; width: 16px; height: 16px; }
+  .top .name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  /* Something is going on: filled with the colour of the highest level; the menu has the numbers. */
+  .top :global(.episodes) { font-weight: 600; max-width: 100%; }
+  /* Pressed while the form carries a preset; the menu ticks which one. */
+  .top :global(.presets) { max-width: 100%; }
+  .top :global(.presets.linked) { background: var(--accent); color: var(--accent-ink); }
+  .dot { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .dot.empty { background: var(--surface-2); }
+  .dot.plus { background: transparent; border: 1.5px solid var(--border); }
+  .dot.plus svg { width: 14px; height: 14px; }
+  [aria-current='true'] { font-weight: 700; }
+  .tick { flex: none; width: 20px; height: 20px; color: var(--accent); }
+  /* No tab bar under the drawer any more: it keeps clear of the gesture bar itself. */
+  .log :global(.drawer .inner) { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   .actions { display: flex; gap: 10px; flex: none; }
   .actions .btn.primary { min-height: 56px; font-size: 18px; }
   .actions .btn:not(.primary) { min-height: 56px; padding: 0 18px; }

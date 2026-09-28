@@ -4,6 +4,7 @@ import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { addEntry, logUpdate, endEpisode, isHead } from '../lib/entries'
 import { addPreset, deletePreset, logPreset } from '../lib/presets'
+import { go } from '../test/nav'
 import App from '../App.svelte'
 import { mergedReadings, mergedTags } from '../lib/layers'
 
@@ -20,7 +21,7 @@ const DAY = 24 * 60
 
 async function openDiary() {
   render(App)
-  await fireEvent.click(screen.getByRole('button', { name: 'Diario' }))
+  await go('Diario')
 }
 const dayHeadings = () => Array.from(document.querySelectorAll('h2.day')).map((h) => h.textContent)
 const rows = () => screen.getAllByRole('button', { name: /\d\d:\d\d/ })

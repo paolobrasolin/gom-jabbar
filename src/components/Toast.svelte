@@ -23,7 +23,7 @@
     position: fixed;
     left: 12px;
     right: 12px;
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: calc(16px + env(safe-area-inset-bottom));
     z-index: 50;
     display: flex;
     align-items: center;
@@ -36,7 +36,7 @@
     animation: up 0.15s ease-out;
   }
   /* On the log: over the bottom of the stage, just above the drawer, clear of Salva and the slider. */
-  .toast.lifted { bottom: calc(56px + env(safe-area-inset-bottom) + var(--lift) + 8px); }
+  .toast.lifted { bottom: calc(var(--lift) + 8px); }
   .action {
     min-height: var(--tap);
     padding: 0 14px;
