@@ -50,6 +50,15 @@ async function pickFile(text: string) {
   await fireEvent.change(input, { target: { files: [file] } })
 }
 
+describe('Settings about', () => {
+  it('links the privacy page next to the version, inside the app', async () => {
+    await openSettings()
+    const link = screen.getByRole('link', { name: 'Privacy e licenze' })
+    expect(link).toHaveAttribute('href', '/privacy.html')
+    expect(link).not.toHaveAttribute('target')
+  })
+})
+
 describe('Settings presets', () => {
   it('lists presets and deletes with undo', async () => {
     await addPreset({ name: 'Schiena', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic' })

@@ -88,6 +88,13 @@ describe('Report page', () => {
     expect(rows[1]).toHaveTextContent('nota uno')
   })
 
+  it('ends with what it is: a personal diary, not clinically validated, not a medical device', () => {
+    open()
+    const foot = screen.getByText('Diario personale: dati inseriti dalla persona, non validati clinicamente. Gom Jabbar non è un dispositivo medico.')
+    expect(foot.closest('article')).not.toBeNull()
+    expect(foot.compareDocumentPosition(screen.getByText('nota uno')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
+  })
+
   it('marks the body as printing while open, and closes', async () => {
     const { onclose, unmount } = open()
     expect(document.body).toHaveClass('printing')
@@ -120,6 +127,7 @@ describe('Report page', () => {
     expect(html).toContain('<body class="printing">')
     expect(html).toContain('<article')
     expect(html).toContain('nota uno')
+    expect(html).toContain('Diario personale: dati inseriti dalla persona, non validati clinicamente. Gom Jabbar non è un dispositivo medico.')
     expect(html).not.toContain('Condividi file')
     await waitFor(() => expect(toastState.current?.message).toBe('Report condiviso'))
   })

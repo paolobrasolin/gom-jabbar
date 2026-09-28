@@ -1,12 +1,14 @@
 {
   "name": "gom-jabbar",
   "private": true,
+  "license": "EUPL-1.2",
   "version": "0.7.3",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
     "size": "node scripts/check-size.mjs",
+    "notices": "node scripts/check-notices.mjs",
     "preview": "vite preview --host",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run --coverage",
