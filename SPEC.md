@@ -54,14 +54,14 @@ Browser targets: Chrome on Android (primary), Safari on iOS 16.4+ (secondary). D
 - Settings shows "last backup: N days ago". After 14 days a small inline banner appears on the log screen (dismissable, never modal).
 - Backup is one tap: produce the JSON export and hand it to the native share sheet (Web Share API with files, supported on Android Chrome and iOS 15+). Chrome only shares an allowlist of file types that excludes `.json`, so the backup is offered as `.txt` when needed; import accepts both. Fallback: download.
 - Dismissing the nudge snoozes it for 7 days.
-- **Google Drive, on trial** (#24, #25). A card in Settings backs up to one file, `gom-jabbar.json`, in the person's own Drive, and restores from it. Nothing runs on its own yet (#26 decides whether it will). Behind `CloudProvider` (`lib/cloud.ts`); the Google implementation is `lib/drive.ts`:
+- **Google Drive, on trial** (#24, #25). A card in Settings backs up to one file, `gom-jabbar.json`, in the person's own Drive, and restores from it (`gom-jabbar-dev.json` from `npm run dev`: the dev Cloud project cannot see the production file anyway, the name tells them apart in the Drive UI). Nothing runs on its own yet (#26 decides whether it will). Behind `CloudProvider` (`lib/cloud.ts`); the Google implementation is `lib/drive.ts`:
   - **Token.** Google gives a browser-only app a one-hour token and no way to renew it without a tap. A tap without a live token leaves for Google's consent screen (implicit redirect flow, `drive.file` scope, `login_hint` from the known account, a random `state` stored with what the tap was for). At startup, before anything renders, `main.ts` takes the token out of the fragment, strips it from the URL and opens Settings, where the card finishes the backup or opens the restore list. A token within a minute of its end counts as dead; a 401 drops it.
   - **File.** Found by its remembered id, else by name (the file scope sees only our files), else created, tagged `appProperties.app = 'gom-jabbar'`. Every backup overwrites it in place and Drive keeps the old contents as revisions. Only pinned revisions can be downloaded, so the head is pinned when the newest pinned revision is a week old, twelve at most, oldest unpinned first; pinning is best effort and never fails a backup.
   - **Look before writing.** A backup stops with a notice when the file changed since this device last wrote it, or this device never wrote it (a new phone). **Sovrascrivi** writes anyway, pinning the version it replaces first, so it stays restorable: no confirmation needed.
   - **Restore** lists the current file and the pinned versions, newest first; a tap downloads one into the import preview (merge or replace, undo on replace), the same path as a picked file.
   - A Drive backup also sets the date the backup nudge counts from.
   - **Scollega** revokes the grant and forgets token, file id, account and last write on this device; the file stays in Drive.
-  - Provider state lives under `gj.drive` in `localStorage`, apart from the preferences. A build without a client id has no card.
+  - Provider state lives under `gj.drive` in `localStorage`, apart from the preferences. A build without a client id or a file name has no card.
 
 ## 5. Data model
 

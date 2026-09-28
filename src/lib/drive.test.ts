@@ -17,6 +17,7 @@ let states: number
 function make(...args: [clientId?: string]) {
   return createDrive({
     clientId: args.length ? args[0] : CLIENT,
+    fileName: 'gom-jabbar.json',
     redirectUri: REDIRECT,
     fetch: drive.fetch,
     storage: () => storage,
@@ -77,6 +78,7 @@ describe('connect', () => {
     expect(await p.get('head')).toEqual({ ok: false, reason: 'unavailable' })
     expect(await p.whoami()).toEqual({ ok: false, reason: 'unavailable' })
     expect(make('').available).toBe(false)
+    expect(createDrive({ ...defaults, clientId: CLIENT, fileName: '', redirectUri: REDIRECT, storage: () => localStorage }).available).toBe(false)
   })
 })
 
@@ -167,6 +169,32 @@ describe('put', () => {
     expect(f.revs.at(-1)!.content).toBe('{"a":1}')
     expect(drive.pinned().map((r) => r.content)).toEqual(['{"a":1}'])
     expect(p.status().lastWriteAt).toBe(new Date(T0).toISOString())
+  })
+  it('uses the file name of the build, and never sees a file of another name', async () => {
+    const p = make()
+    signIn(p)
+    await p.put('real')
+    const dev = createDrive({
+      clientId: CLIENT,
+      fileName: 'gom-jabbar-dev.json',
+      redirectUri: REDIRECT,
+      fetch: drive.fetch,
+      storage: () => sessionStorage,
+      now: () => now,
+      navigate: (u) => void navigated.push(u),
+      random: () => `state${++states}`,
+    })
+    dev.connect('backup')
+    history.replaceState(null, '', `/#access_token=${TOKEN}&expires_in=3599&state=state${states}`)
+    dev.resume()
+    now += MIN
+    expect(await dev.list()).toEqual({ ok: true, value: [] })
+    expect((await dev.put('dev')).ok).toBe(true)
+    expect([...drive.files.values()].map((f) => [f.name, f.revs.at(-1)!.content])).toEqual([
+      ['gom-jabbar.json', 'real'],
+      ['gom-jabbar-dev.json', 'dev'],
+    ])
+    sessionStorage.clear()
   })
   it('overwrites the same file in place and pins at most one version a week', async () => {
     const p = make()
