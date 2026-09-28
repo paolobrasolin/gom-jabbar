@@ -1,15 +1,14 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte'
   import Sheet from './Sheet.svelte'
-  import { t, locale } from '../i18n/index.svelte'
+  import { t } from '../i18n/index.svelte'
   import type { CloudProvider, Failure, RestorePoint, Resumed } from '../lib/cloud'
-  import { buildExport } from '../lib/backup'
-  import { prefs, savePrefs } from '../lib/prefs.svelte'
+  import { cloudBackup, driveTime, failureText } from '../lib/cloudBackup'
   import { showToast, haptic } from '../lib/toast.svelte'
 
   /**
-   * The Drive backup on trial (§4.2): one tap backs up, leaving for Google's consent screen first when there is no
-   * live token; `resumed` is that tap coming back, finished once on mount.
+   * The Drive zone of the Backup card (§4.2, §6.4): one tap backs up, leaving for Google's consent screen first when
+   * there is no live token; `resumed` is that tap coming back, finished once on mount.
    */
   let {
     cloud,
@@ -29,25 +28,13 @@
     status = cloud.status()
     now = Date.now()
   }
-  const when = (iso: string) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
-  const problemText = $derived(
-    !problem
-      ? ''
-      : problem.reason === 'http'
-        ? t('drive.error.http', { s: problem.status ?? '?' })
-        : problem.reason === 'conflict'
-          ? t('drive.error.conflict', { d: when(problem.remoteAt!) })
-          : t(`drive.error.${problem.reason}`),
-  )
 
-  /** Runs one provider step with the card busy; without a live token the tap leaves for Google instead. */
-  async function step(intent: 'backup' | 'restore', body: () => Promise<void>) {
+  /** One provider step with the zone busy; the problem line shows what it left behind. */
+  async function step(body: () => Promise<void>) {
     if (busy) return
-    if (!cloud.status().expiresAt) return cloud.connect(intent)
     busy = true
     problem = null
     try {
-      if (!cloud.status().account) await cloud.whoami()
       await body()
     } finally {
       busy = false
@@ -56,38 +43,32 @@
   }
 
   const backup = (force = false) =>
-    step('backup', async () => {
-      const res = await cloud.put(JSON.stringify(await buildExport(), null, 1), { force })
+    step(async () => {
+      const res = await cloudBackup(cloud, { force })
+      if (res === 'left') return
       if (!res.ok) return void (problem = res)
-      prefs.lastBackupAt = new Date().toISOString()
-      prefs.backupSnoozedUntil = null
-      savePrefs()
       haptic(20)
       showToast(t('drive.done'))
     })
 
-  const restore = () =>
-    step('restore', async () => {
+  const restore = () => {
+    if (!cloud.status().expiresAt) return cloud.connect('restore')
+    return step(async () => {
+      if (!cloud.status().account) await cloud.whoami()
       const res = await cloud.list()
       if (!res.ok) return void (problem = res)
       points = res.value
       pointsOpen = true
     })
+  }
 
-  async function pick(p: RestorePoint) {
-    if (busy) return
-    busy = true
-    problem = null
-    try {
+  const pick = (p: RestorePoint) =>
+    step(async () => {
       const res = await cloud.get(p.id)
       if (!res.ok) return void (problem = res)
       pointsOpen = false
       onrestore(res.value)
-    } finally {
-      busy = false
-      refresh()
-    }
-  }
+    })
 
   async function disconnect() {
     await cloud.disconnect()
@@ -109,13 +90,13 @@
   })
 </script>
 
-<section class="card" aria-labelledby="drive-title">
-  <p class="small muted label" id="drive-title">{t('drive.title')}</p>
+<div class="zone" role="group" aria-labelledby="backup-drive">
+  <p class="small zlabel" id="backup-drive">{t('drive.title')}</p>
   {#if status.account}<p class="small">{t('drive.account', { a: status.account.email })}</p>{/if}
   <p class="small muted">
     {status.expiresAt ? t('drive.connected', { n: Math.max(1, Math.round((status.expiresAt - now) / 60_000)) }) : t('drive.notConnected')}
   </p>
-  <p class="small muted">{status.lastWriteAt ? t('drive.last', { d: when(status.lastWriteAt) }) : t('drive.never')}</p>
+  <p class="small muted">{status.lastWriteAt ? t('drive.last', { d: driveTime(status.lastWriteAt) }) : t('drive.never')}</p>
   <div class="chips top">
     <button class="chip" onclick={() => backup()} disabled={busy}>{t('drive.backup')}</button>
     <button class="chip outline" onclick={restore} disabled={busy}>{t('drive.restore')}</button>
@@ -124,7 +105,7 @@
     {/if}
   </div>
   {#if problem}
-    <p class="small problem top" role="alert">{problemText}</p>
+    <p class="small problem top" role="alert">{failureText(problem)}</p>
     {#if problem.reason === 'conflict'}
       <div class="chips top">
         <button class="chip outline" onclick={restore} disabled={busy}>{t('drive.restore')}</button>
@@ -132,14 +113,14 @@
       </div>
     {/if}
   {/if}
-</section>
+</div>
 
 <Sheet bind:open={pointsOpen} title={t('drive.restore')}>
   {#if points.length}
     <div class="points">
       {#each points as p (p.id)}
         <button class="btn block" onclick={() => pick(p)} disabled={busy}>
-          {when(p.at)} · {t('drive.size', { n: Math.max(1, Math.round(p.size / 1024)) })}{p.id === 'head' ? ` · ${t('drive.current')}` : ''}
+          {driveTime(p.at)} · {t('drive.size', { n: Math.max(1, Math.round(p.size / 1024)) })}{p.id === 'head' ? ` · ${t('drive.current')}` : ''}
         </button>
       {/each}
     </div>
@@ -149,7 +130,6 @@
 </Sheet>
 
 <style>
-  .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .top { margin-top: 10px; }
   .chip:disabled { opacity: 0.55; }
   .problem { color: var(--danger); }

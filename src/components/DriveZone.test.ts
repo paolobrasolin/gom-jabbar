@@ -37,14 +37,33 @@ async function openSettings() {
   start()
   await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
 }
-const card = () => screen.getByRole('region', { name: 'Google Drive (prova)' })
+/** The Drive zone of the Backup card. */
+const card = () => screen.getByRole('group', { name: 'Google Drive' })
 const head = () => [...g.drive.files.values()][0].revs.at(-1)!.content
 
-describe('Drive card', () => {
-  it('is not offered in a build without a client id', async () => {
+describe('Drive zone', () => {
+  it('is not offered in a build without Drive: the Backup card has the file zone only', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
-    expect(screen.queryByText('Google Drive (prova)')).not.toBeInTheDocument()
+    const backup = screen.getByRole('region', { name: 'Backup' })
+    expect(within(backup).queryByRole('group', { name: 'Google Drive' })).not.toBeInTheDocument()
+    expect(within(backup).getByRole('group', { name: 'File' })).toBeInTheDocument()
+  })
+
+  it('sits in one Backup card, before the file zone, under the shared last-backup line, with no CSV', async () => {
+    await openSettings()
+    const backup = screen.getByRole('region', { name: 'Backup' })
+    const [drive, file] = within(backup).getAllByRole('group')
+    expect(drive).toHaveAccessibleName('Google Drive')
+    expect(file).toHaveAccessibleName('File')
+    expect(within(file).getAllByRole('button').map((b) => b.textContent)).toEqual(['Backup su file', 'Ripristina da file'])
+    // The header frames both zones: where the data lives, how much, when it was last backed up.
+    const note = within(backup).getByText(/^Il diario sta su questo telefono · \d+ voci$/)
+    const last = within(backup).getByText('Nessun backup ancora fatto.')
+    expect(note.compareDocumentPosition(last) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(last.compareDocumentPosition(drive) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Esporta CSV' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/prova/)).not.toBeInTheDocument()
   })
 
   it('leaves for Google on the first tap, and does nothing else', async () => {
@@ -119,7 +138,7 @@ describe('Drive card', () => {
     expect(points).toHaveLength(1)
     expect(points[0]).toHaveTextContent('attuale')
     await fireEvent.click(points[0])
-    const preview = await screen.findByRole('dialog', { name: 'Importa' })
+    const preview = await screen.findByRole('dialog', { name: 'Ripristina' })
     expect(preview).toHaveTextContent('1 voci nel file')
     await fireEvent.click(within(preview).getByRole('button', { name: 'Unisci ai dati attuali' }))
     await waitFor(async () => expect((await db.entries.get(entry.id))?.note).toBe('da Drive'))
@@ -145,7 +164,7 @@ describe('Drive card', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Ripristina da Drive' })
     await fireEvent.click(within(sheet).getAllByRole('button', { name: /kB/ })[0])
     expect(await screen.findByText('File non valido')).toBeInTheDocument()
-    expect(screen.queryByRole('dialog', { name: 'Importa' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Ripristina' })).not.toBeInTheDocument()
   })
 
   it('disconnects: forgets the token and the account here, revokes the grant, leaves the file', async () => {

@@ -2,7 +2,7 @@
   import Sheet from '../components/Sheet.svelte'
   import VocabEditor from '../components/VocabEditor.svelte'
   import PresetForm, { type PresetSeed } from '../components/PresetForm.svelte'
-  import DriveCard from '../components/DriveCard.svelte'
+  import DriveZone from '../components/DriveZone.svelte'
   import type { CloudProvider, Resumed } from '../lib/cloud'
   import { t, locale } from '../i18n/index.svelte'
   import { prefs, savePrefs, type Theme } from '../lib/prefs.svelte'
@@ -10,7 +10,7 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import type { Lang } from '../lib/types'
-  import { buildExport, parseImport, previewImport, applyImport, toCsv, shareOrDownload, exportFilename, type ExportFile, type ImportPreview } from '../lib/backup'
+  import { buildExport, parseImport, previewImport, applyImport, shareOrDownload, exportFilename, type ExportFile, type ImportPreview } from '../lib/backup'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { deletePreset, restorePreset } from '../lib/presets'
 
@@ -70,21 +70,6 @@
     }
   }
 
-  async function exportCsv() {
-    if (busy) return
-    busy = true
-    try {
-      const file = await buildExport()
-      const csv = toCsv(file.entries, file.vocabulary.symptoms, file.vocabulary.tags, prefs.lang, t)
-      await shareOrDownload(exportFilename('csv'), csv, 'text/csv')
-      haptic(20)
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') showToast(t('backup.failed'))
-    } finally {
-      busy = false
-    }
-  }
-
   let fileInput: HTMLInputElement | undefined = $state()
   let pending = $state.raw<{ file: ExportFile; preview: ImportPreview } | null>(null)
   let importOpen = $state(false)
@@ -137,21 +122,23 @@
     <div class="card small">{t('settings.install')}</div>
   {/if}
 
-  <div class="card">
-    <p class="small muted label">{t('settings.backup')}</p>
+  <!-- One card, two zones (§6.4): Drive first, the one-tap path the banner uses; then the file on the share sheet. -->
+  <section class="card" aria-labelledby="backup-title">
+    <p class="small muted label" id="backup-title">{t('settings.backup')}</p>
+    <p class="small muted">{t('settings.dataNote')} · {t('settings.entriesCount', { n: count.value })}</p>
     <p class="small muted">{lastBackup ? t('settings.lastBackup', { d: lastBackup }) : t('settings.neverBackedUp')}</p>
-    <div class="chips top">
-      <button class="chip" onclick={exportJson} disabled={busy}>{t('settings.exportJson')}</button>
-      <button class="chip outline" onclick={exportCsv} disabled={busy}>{t('settings.exportCsv')}</button>
-      <button class="chip outline" onclick={() => fileInput?.click()} disabled={busy}>{t('settings.import')}</button>
-      <input class="sr-only" type="file" accept="application/json,.json,text/plain,.txt" bind:this={fileInput} onchange={onFile} tabindex="-1" aria-hidden="true" />
+    {#if cloud.available}
+      <DriveZone {cloud} resumed={resume} {onresumed} onrestore={openImport} />
+    {/if}
+    <div class="zone" role="group" aria-labelledby="backup-file">
+      <p class="small zlabel" id="backup-file">{t('settings.backup.file')}</p>
+      <div class="chips">
+        <button class="chip" onclick={exportJson} disabled={busy}>{t('settings.exportJson')}</button>
+        <button class="chip outline" onclick={() => fileInput?.click()} disabled={busy}>{t('settings.import')}</button>
+        <input class="sr-only" type="file" accept="application/json,.json,text/plain,.txt" bind:this={fileInput} onchange={onFile} tabindex="-1" aria-hidden="true" />
+      </div>
     </div>
-    <p class="small muted top">{t('settings.dataNote')} · {t('settings.entriesCount', { n: count.value })}</p>
-  </div>
-
-  {#if cloud.available}
-    <DriveCard {cloud} resumed={resume} {onresumed} onrestore={openImport} />
-  {/if}
+  </section>
 
   <div class="card">
     <p class="small muted label">{t('settings.vocabulary')}</p>
@@ -220,7 +207,7 @@
   {#if vocab}<VocabEditor table={vocab} />{/if}
 </Sheet>
 
-<Sheet bind:open={importOpen} title={t('settings.import')}>
+<Sheet bind:open={importOpen} title={t('import.title')}>
   {#if pending}
     <div class="card small">
       <p>{t('import.summary', { n: pending.preview.entries, d: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(new Date(pending.file.exportedAt)) })}</p>
@@ -235,7 +222,6 @@
 
 <style>
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
-  .top { margin-top: 10px; }
   .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
   .chip:disabled { opacity: 0.55; }
   .center { text-align: center; }

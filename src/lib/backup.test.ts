@@ -1,7 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { resetDb } from './db'
 import { addEntry, updateEntry } from './entries'
-import { buildExport, parseImport, previewImport, applyImport, toCsv, backupDue, exportFilename } from './backup'
+import { buildExport, parseImport, previewImport, applyImport, backupReminder, exportFilename, shareOrDownload, REMIND } from './backup'
+import { addPreset } from './presets'
+
+const DAY = 86_400_000
 import { addSymptom, addTag, rename, setEnabled, move } from './vocab'
 
 let db: ReturnType<typeof resetDb>
@@ -9,7 +12,6 @@ beforeEach(() => {
   db = resetDb()
 })
 
-const t = (k: string) => k
 
 describe('backup', () => {
   it('round-trips export → parse → replace', async () => {
@@ -106,29 +108,68 @@ describe('backup', () => {
     expect(() => parseImport('{"app":"gom-jabbar","entries":[{"id":1}]}')).toThrow('invalid-entry')
   })
 
-  it('writes csv with one row per entry and escaped notes', async () => {
-    await addEntry({ layers: [{ regions: ['152', '153'], readings: { pain: 6, swelling: 3 }, tags: ['rest'] }, { regions: ['mind'], readings: { fog: 2 } }], note: 'he said "ow", twice' })
-    const file = await buildExport()
-    const csv = toCsv(file.entries, file.vocabulary.symptoms, file.vocabulary.tags, 'it', t)
-    const lines = csv.trim().split('\r\n')
-    expect(lines).toHaveLength(2)
-    expect(lines[0].startsWith('id,kind,at,episodeId,endedAt,presetId,pain,swelling')).toBe(true)
-    expect(lines[1]).toContain('152+153:pain=6;swelling=3:rest|mind:fog=2')
-    expect(lines[1]).toContain('Riposo')
-    expect(lines[1]).toContain('"he said ""ow"", twice"')
+  it('reminds 14 days after the last backup when Drive is not in use, snoozing 7', () => {
+    const now = Date.parse('2026-03-01T00:00:00Z')
+    const at = (days: number) => new Date(now - days * DAY).toISOString()
+    const base = { lastBackupAt: null, lastDriveAt: null, drive: false, oldestEntryAt: null, snoozedUntil: null, now }
+    expect(backupReminder(base)).toBeNull()
+    expect(backupReminder({ ...base, oldestEntryAt: at(15) })).toEqual({ drive: false, days: null })
+    expect(backupReminder({ ...base, oldestEntryAt: at(13) })).toBeNull()
+    expect(backupReminder({ ...base, oldestEntryAt: at(60), lastBackupAt: at(13) })).toBeNull()
+    expect(backupReminder({ ...base, oldestEntryAt: at(60), lastBackupAt: at(15) })).toEqual({ drive: false, days: null })
+    expect(backupReminder({ ...base, oldestEntryAt: at(60), lastBackupAt: at(15), snoozedUntil: at(-1) })).toBeNull()
+    expect(REMIND.file).toEqual({ every: 14, snooze: 7 })
   })
 
-  it('decides when a backup is due', () => {
+  it('reminds 7 days after the last Drive backup when Drive is in use, snoozing 3', () => {
     const now = Date.parse('2026-03-01T00:00:00Z')
-    const old = '2026-01-01T00:00:00Z'
-    const recent = '2026-02-25T00:00:00Z'
-    expect(backupDue(null, null, null, now)).toBe(false)
-    expect(backupDue(null, old, null, now)).toBe(true)
-    expect(backupDue(null, recent, null, now)).toBe(false)
-    expect(backupDue(recent, old, null, now)).toBe(false)
-    expect(backupDue(old, old, null, now)).toBe(true)
-    expect(backupDue(old, old, '2026-03-05T00:00:00Z', now)).toBe(false)
+    const at = (days: number) => new Date(now - days * DAY).toISOString()
+    const base = { lastBackupAt: null, lastDriveAt: null, drive: true, oldestEntryAt: at(60), snoozedUntil: null, now }
+    expect(backupReminder({ ...base, lastDriveAt: at(6) })).toBeNull()
+    expect(backupReminder({ ...base, lastDriveAt: at(9) })).toEqual({ drive: true, days: 9 })
+    // A share-sheet backup yesterday does not stand in for Drive once Drive is the route.
+    expect(backupReminder({ ...base, lastDriveAt: at(9), lastBackupAt: at(1) })).toEqual({ drive: true, days: 9 })
+    // Connected but never written from this phone: counted from the oldest entry, no number to show.
+    expect(backupReminder(base)).toEqual({ drive: true, days: null })
+    expect(backupReminder({ ...base, oldestEntryAt: at(5) })).toBeNull()
+    expect(backupReminder({ ...base, lastDriveAt: at(9), snoozedUntil: at(-1) })).toBeNull()
+    expect(backupReminder({ ...base, oldestEntryAt: null })).toBeNull()
+    expect(REMIND.drive).toEqual({ every: 7, snooze: 3 })
+  })
+
+  it('merge adds the presets it lacks and keeps its own', async () => {
+    const theirs = await addPreset({ name: 'Schiena', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic' })
+    const file = await buildExport()
+    await db.presets.clear()
+    const mine = await addPreset({ name: 'Gambe', layers: [{ regions: ['152'], asks: ['pain'] }], kind: 'chronic' })
+    await applyImport(file, 'merge')
+    expect((await db.presets.toArray()).map((p) => p.name).sort()).toEqual(['Gambe', 'Schiena'])
+    // A preset already here is not overwritten by another file's copy of it.
+    await applyImport({ ...file, presets: [{ ...file.presets[0], name: 'Schiena da un altro file' }] }, 'merge')
+    expect((await db.presets.get(theirs.id))?.name).toBe('Schiena')
+    expect(await db.presets.get(mine.id)).toBeDefined()
+  })
+
+  it('names export files by date', () => {
     expect(exportFilename('json', new Date(2026, 0, 5))).toBe('gom-jabbar-20260105.json')
+  })
+})
+
+describe('shareOrDownload', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+  it('downloads when the browser cannot share, and frees the blob afterwards', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:x')
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    expect(await shareOrDownload('gom-jabbar-20260105.json', '{}', 'application/json')).toBe('downloaded')
+    expect(click).toHaveBeenCalledTimes(1)
+    expect(revoke).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(10_000)
+    expect(revoke).toHaveBeenCalledWith('blob:x')
   })
 })
 
