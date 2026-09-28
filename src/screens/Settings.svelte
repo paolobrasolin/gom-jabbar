@@ -2,6 +2,8 @@
   import Sheet from '../components/Sheet.svelte'
   import VocabEditor from '../components/VocabEditor.svelte'
   import PresetForm, { type PresetSeed } from '../components/PresetForm.svelte'
+  import DriveCard from '../components/DriveCard.svelte'
+  import type { CloudProvider, Resumed } from '../lib/cloud'
   import { t, locale } from '../i18n/index.svelte'
   import { prefs, savePrefs, type Theme } from '../lib/prefs.svelte'
   import type { FigureId } from '../lib/figures'
@@ -11,6 +13,8 @@
   import { buildExport, parseImport, previewImport, applyImport, toCsv, shareOrDownload, exportFilename, type ExportFile, type ImportPreview } from '../lib/backup'
   import { showToast, haptic } from '../lib/toast.svelte'
   import { deletePreset, restorePreset } from '../lib/presets'
+
+  let { cloud, resume = null, onresumed = () => {} }: { cloud: CloudProvider; resume?: Resumed; onresumed?: () => void } = $props()
 
   const count = live(() => null, () => db.entries.count(), 0)
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
@@ -93,8 +97,13 @@
     const f = input.files?.[0]
     input.value = ''
     if (!f) return
+    await openImport(await f.text())
+  }
+
+  /** A backup's text, from the file picker or from Drive, into the preview (merge or replace). */
+  async function openImport(text: string) {
     try {
-      const file = parseImport(await f.text())
+      const file = parseImport(text)
       pending = { file, preview: await previewImport(file) }
       importOpen = true
     } catch {
@@ -139,6 +148,10 @@
     </div>
     <p class="small muted top">{t('settings.dataNote')} · {t('settings.entriesCount', { n: count.value })}</p>
   </div>
+
+  {#if cloud.available}
+    <DriveCard {cloud} resumed={resume} {onresumed} onrestore={openImport} />
+  {/if}
 
   <div class="card">
     <p class="small muted label">{t('settings.vocabulary')}</p>

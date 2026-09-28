@@ -1,0 +1,186 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
+import { resetDb } from '../lib/db'
+import { prefs } from '../lib/prefs.svelte'
+import { addEntry } from '../lib/entries'
+import { buildExport } from '../lib/backup'
+import type { Resumed } from '../lib/cloud'
+import { fakeGoogle } from '../test/fakeDrive'
+import { dismissToast } from '../lib/toast.svelte'
+import App from '../App.svelte'
+
+const MIN = 60_000
+let db: ReturnType<typeof resetDb>
+let clock: number
+let g: ReturnType<typeof fakeGoogle>
+
+beforeEach(() => {
+  db = resetDb()
+  localStorage.clear()
+  prefs.lang = 'it'
+  prefs.lastBackupAt = null
+  prefs.backupSnoozedUntil = null
+  history.replaceState(null, '', '/')
+  dismissToast()
+  clock = Date.now()
+  g = fakeGoogle(() => clock)
+})
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+/** The app as it starts: straight after Google's consent screen when `resumed` is given, else from the icon. */
+function start(resumed: Resumed = null) {
+  render(App, { props: { cloud: g.provider, resumed } })
+}
+async function openSettings() {
+  start()
+  await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+}
+const card = () => screen.getByRole('region', { name: 'Google Drive (prova)' })
+const head = () => [...g.drive.files.values()][0].revs.at(-1)!.content
+
+describe('Drive card', () => {
+  it('is not offered in a build without a client id', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }))
+    expect(screen.queryByText('Google Drive (prova)')).not.toBeInTheDocument()
+  })
+
+  it('leaves for Google on the first tap, and does nothing else', async () => {
+    await openSettings()
+    expect(within(card()).getByText(/^Non collegato/)).toBeInTheDocument()
+    expect(within(card()).getByText('Nessun backup su Drive da questo telefono.')).toBeInTheDocument()
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Backup su Drive' }))
+    expect(g.navigated).toHaveLength(1)
+    expect(new URL(g.navigated[0]).host).toBe('accounts.google.com')
+    expect(g.drive.calls).toEqual([])
+  })
+
+  it('comes back from Google on Settings and finishes the backup it left for', async () => {
+    await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }], note: 'ciao' })
+    start(g.signIn('backup'))
+    expect(screen.getByRole('button', { name: 'Impostazioni' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByText('Backup su Drive fatto')).toBeInTheDocument()
+    const file = JSON.parse(head())
+    expect(file.app).toBe('gom-jabbar')
+    expect(file.entries.map((e: { note: string }) => e.note)).toEqual(['ciao'])
+    expect(within(card()).getByText('Account: paolo@example.test')).toBeInTheDocument()
+    expect(within(card()).getByText(/^Collegato ancora \d+ min/)).toBeInTheDocument()
+    expect(within(card()).getByText(/^Ultimo backup su Drive: /)).toBeInTheDocument()
+    expect(prefs.lastBackupAt).not.toBeNull()
+    expect(screen.getByText(/^Ultimo backup: /)).toBeInTheDocument()
+  })
+
+  it('backs up again in place while the token lives, without leaving the app', async () => {
+    start(g.signIn('backup'))
+    await screen.findByText('Backup su Drive fatto')
+    await addEntry({ layers: [{ regions: ['152'], readings: { pain: 7 } }] })
+    clock += MIN
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Backup su Drive' }))
+    await waitFor(() => expect(JSON.parse(head()).entries).toHaveLength(1))
+    expect(g.navigated).toHaveLength(1)
+    expect(g.drive.files.size).toBe(1)
+  })
+
+  it('says so when the person refuses on the consent screen', async () => {
+    g.provider.connect('backup')
+    history.replaceState(null, '', '/#error=access_denied&state=state1')
+    start(g.provider.resume())
+    expect(await within(card()).findByText('Accesso a Drive negato.')).toBeInTheDocument()
+    expect(g.drive.calls).toEqual([])
+  })
+
+  it('stops on a newer backup in Drive and overwrites it only when asked, keeping it restorable', async () => {
+    start(g.signIn('backup'))
+    await screen.findByText('Backup su Drive fatto')
+    clock += MIN
+    const id = [...g.drive.files.keys()][0]
+    g.drive.write(id, 'from the other phone')
+    clock += MIN
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Backup su Drive' }))
+    expect(await within(card()).findByText(/^Su Drive c'è un backup più recente di questo telefono/)).toBeInTheDocument()
+    expect(head()).toBe('from the other phone')
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Sovrascrivi' }))
+    await waitFor(() => expect(JSON.parse(head()).app).toBe('gom-jabbar'))
+    expect(g.drive.pinned().map((r) => r.content)).toContain('from the other phone')
+    expect(within(card()).queryByText(/^Su Drive c'è/)).not.toBeInTheDocument()
+  })
+
+  it('restores a version from Drive through the import preview', async () => {
+    const entry = await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }], note: 'da Drive' })
+    g.signIn()
+    expect((await g.provider.put(JSON.stringify(await buildExport()))).ok).toBe(true)
+    await db.entries.delete(entry.id)
+    clock += MIN
+    start(g.signIn('restore'))
+    const sheet = await screen.findByRole('dialog', { name: 'Ripristina da Drive' })
+    const points = within(sheet).getAllByRole('button', { name: /kB/ })
+    expect(points).toHaveLength(1)
+    expect(points[0]).toHaveTextContent('attuale')
+    await fireEvent.click(points[0])
+    const preview = await screen.findByRole('dialog', { name: 'Importa' })
+    expect(preview).toHaveTextContent('1 voci nel file')
+    await fireEvent.click(within(preview).getByRole('button', { name: 'Unisci ai dati attuali' }))
+    await waitFor(async () => expect((await db.entries.get(entry.id))?.note).toBe('da Drive'))
+  })
+
+  it('says when Drive holds nothing to restore', async () => {
+    start(g.signIn('restore'))
+    const sheet = await screen.findByRole('dialog', { name: 'Ripristina da Drive' })
+    expect(within(sheet).getByText('Nessun backup su Drive.')).toBeInTheDocument()
+  })
+
+  it('leaves for Google when restoring without a token', async () => {
+    await openSettings()
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Ripristina da Drive' }))
+    expect(g.navigated).toHaveLength(1)
+    expect(localStorage.getItem('gj.drive')).toContain('"intent":"restore"')
+  })
+
+  it('rejects a restore point that is not a backup like any bad file', async () => {
+    g.signIn()
+    await g.provider.put('not a backup')
+    start(g.signIn('restore'))
+    const sheet = await screen.findByRole('dialog', { name: 'Ripristina da Drive' })
+    await fireEvent.click(within(sheet).getAllByRole('button', { name: /kB/ })[0])
+    expect(await screen.findByText('File non valido')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Importa' })).not.toBeInTheDocument()
+  })
+
+  it('disconnects: forgets the token and the account here, revokes the grant, leaves the file', async () => {
+    start(g.signIn('backup'))
+    await screen.findByText('Backup su Drive fatto')
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Scollega' }))
+    expect(await screen.findByText('Drive scollegato')).toBeInTheDocument()
+    expect(within(card()).getByText(/^Non collegato/)).toBeInTheDocument()
+    expect(within(card()).queryByText(/^Account:/)).not.toBeInTheDocument()
+    expect(within(card()).queryByRole('button', { name: 'Scollega' })).not.toBeInTheDocument()
+    expect(g.drive.revoked).toEqual(['tok'])
+    expect(g.drive.files.size).toBe(1)
+  })
+
+  it('names what went wrong in one line', async () => {
+    g.drive.failures.push({ match: /GET .*files/, network: true })
+    start(g.signIn('backup'))
+    expect(await within(card()).findByText('Rete assente o instabile.')).toBeInTheDocument()
+    g.drive.failures.push({ match: /POST .*files/, status: 500 })
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Backup su Drive' }))
+    expect(await within(card()).findByText('Drive ha risposto con un errore (500).')).toBeInTheDocument()
+    g.drive.failures.push({ match: /GET .*files/, status: 401 })
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Ripristina da Drive' }))
+    expect(await within(card()).findByText('Accesso scaduto: tocca di nuovo.')).toBeInTheDocument()
+    expect(within(card()).getByText(/^Non collegato/)).toBeInTheDocument()
+  })
+
+  it('names a failed download too, and keeps the list open', async () => {
+    g.signIn()
+    await g.provider.put('{}')
+    start(g.signIn('restore'))
+    const sheet = await screen.findByRole('dialog', { name: 'Ripristina da Drive' })
+    g.drive.failures.push({ match: /GET .*files\/f/, network: true })
+    await fireEvent.click(within(sheet).getAllByRole('button', { name: /kB/ })[0])
+    expect(await within(card()).findByText('Rete assente o instabile.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Ripristina da Drive' })).toBeInTheDocument()
+  })
+})

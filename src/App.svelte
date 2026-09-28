@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import Log from './screens/Log.svelte'
   import Diary from './screens/Diary.svelte'
   import Trends from './screens/Trends.svelte'
@@ -7,8 +8,15 @@
   import { t } from './i18n/index.svelte'
   import { prefs, type Tab } from './lib/prefs.svelte'
   import { dismissToast } from './lib/toast.svelte'
+  import { googleDrive } from './lib/drive'
+  import type { CloudProvider, Resumed } from './lib/cloud'
 
-  let tab = $state<Tab>('log')
+  /** `resumed`: the tap that left for Google's consent screen, back at startup (main.ts); it is finished in Settings. */
+  let { cloud = googleDrive, resumed = null }: { cloud?: CloudProvider; resumed?: Resumed } = $props()
+
+  // Read once: the tap comes back only at startup.
+  let resume = $state.raw(untrack(() => resumed))
+  let tab = $state<Tab>(untrack(() => resumed) ? 'settings' : 'log')
 
   $effect(() => {
     const root = document.documentElement
@@ -39,7 +47,7 @@
 </script>
 
 <div class="app">
-  {#if tab === 'log'}<Log />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings />{/if}
+  {#if tab === 'log'}<Log />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} />{/if}
 
   <nav class="tabs" aria-label="tabs">
     {#each tabs as it (it.id)}
