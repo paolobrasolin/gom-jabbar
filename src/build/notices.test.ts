@@ -49,12 +49,38 @@ describe('noticeOf', () => {
 describe('renderNotices', () => {
   const n = (name: string, license = 'MIT'): Notice => ({ name, version: '1.0.0', license, text: `${name} licence text` })
 
-  it('opens with the app and its licence, then one section per package, sorted and without repeats', () => {
+  it('is a plain page like the privacy and terms pages, with the same top line', () => {
+    const out = renderNotices([n('svelte')])
+    expect(out.startsWith('<!doctype html>\n<html lang="en">')).toBe(true)
+    expect(out).toContain('<meta charset="utf-8">')
+    expect(out).toContain('<title>Gom Jabbar · Open source licences</title>')
+    // English first, then Italian, each with its own header line.
+    const en = out.indexOf('<a href="./">Gom Jabbar</a> · <a href="privacy-policy.html">Privacy policy</a> · <a href="terms-of-service.html">Terms of service</a> · <strong>Open source licences</strong> · <a href="#it">Italiano</a>')
+    const it = out.indexOf('<a href="./">Gom Jabbar</a> · <a href="privacy-policy.html#it">Privacy policy</a> · <a href="terms-of-service.html#it">Termini d\'uso</a> · <strong>Licenze open source</strong> · <a href="#en">English</a>')
+    expect(en).toBeGreaterThan(0)
+    expect(it).toBeGreaterThan(en)
+    expect(out.indexOf('<div lang="it" id="it">')).toBeLessThan(it)
+    // Each language's jump link lands on that language's header line, not below it.
+    expect(out).toContain('<p id="en"><a href="./">Gom Jabbar</a>')
+    expect(out).not.toContain('<h1 id="en">')
+    expect(out).toContain('<h1>Open source licences</h1>')
+    expect(out).toContain('<h1>Licenze open source</h1>')
+    expect(out).toContain('EUPL-1.2')
+    expect(out.endsWith('</html>\n')).toBe(true)
+  })
+
+  it('has one section per package, sorted and without repeats, its licence text kept as written', () => {
     const out = renderNotices([n('svelte'), n('dexie', 'Apache-2.0'), n('svelte')])
-    expect(out.startsWith('Gom Jabbar\nCopyright © 2026 Paolo Brasolin. Licensed under the EUPL-1.2')).toBe(true)
-    const heads = out.split('\n').filter((l) => / — /.test(l))
-    expect(heads).toEqual(['dexie 1.0.0 — Apache-2.0', 'svelte 1.0.0 — MIT'])
-    expect(out).toContain('dexie licence text')
-    expect(out.endsWith('\n')).toBe(true)
+    expect([...out.matchAll(/<h2 id="([^"]+)">([^<]+)<\/h2>/g)].map((m) => [m[1], m[2]])).toEqual([
+      ['dexie', 'dexie 1.0.0 — Apache-2.0'],
+      ['svelte', 'svelte 1.0.0 — MIT'],
+    ])
+    expect(out).toContain('<pre>dexie licence text</pre>')
+  })
+
+  it('escapes what the licence texts contain, so a text cannot become markup', () => {
+    const out = renderNotices([{ name: '@scope/pkg', version: '1.0.0', license: 'MIT', text: 'See <https://x.test/?a=1&b=2> "quoted"' }])
+    expect(out).toContain('<h2 id="scope-pkg">@scope/pkg 1.0.0 — MIT</h2>')
+    expect(out).toContain('<pre>See &lt;https://x.test/?a=1&amp;b=2&gt; "quoted"</pre>')
   })
 })

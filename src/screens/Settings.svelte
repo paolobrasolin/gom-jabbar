@@ -132,6 +132,11 @@
     await resetAll(cloud)
     reload()
   }
+
+  /** The footer (§6.4): the version, the day of its commit, the build; the pages open at the part in the app's language. */
+  const [version, build = ''] = __APP_VERSION__.split('+')
+  const released = $derived(new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${__APP_DATE__}T12:00:00`)))
+  const page = (name: string) => `${import.meta.env.BASE_URL}${name}.html${prefs.lang === 'it' ? '#it' : ''}`
 </script>
 
 <div class="screen">
@@ -225,7 +230,14 @@
     </div>
   </div>
 
-  <p class="small muted center">{t('settings.version', { v: __APP_VERSION__ })} · <a href="{import.meta.env.BASE_URL}privacy-policy.html">{t('settings.privacy')}</a></p>
+  <footer class="small muted center about">
+    <p>Gom Jabbar {version} · {released} · {build}</p>
+    <p><a href="mailto:paolo.brasolin@gmail.com">paolo.brasolin@gmail.com</a> · <a href="https://github.com/paolobrasolin/gom-jabbar">{t('about.source')}</a></p>
+    <p>
+      <a href={page('privacy-policy')}>{t('about.privacy')}</a> · <a href={page('terms-of-service')}>{t('about.terms')}</a> ·
+      <a href={page('open-source-licences')}>{t('about.licences')}</a>
+    </p>
+  </footer>
 </div>
 
 <Sheet bind:open={vocabOpen} title={vocab === 'tags' ? t('settings.vocab.tags') : t('settings.vocab.symptoms')}>
@@ -263,6 +275,10 @@
   .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
   .chip:disabled { opacity: 0.55; }
   .center { text-align: center; }
+  .about { margin: 8px 0 16px; }
+  .about p { margin: 0; line-height: 48px; }
+  /* The app's only links: the theme's accent (contrast in both themes) and a 48px target like every control (§10). */
+  .about a { color: var(--accent); display: inline-block; padding: 0 2px; }
   .top { margin-top: 10px; }
   .chip.danger { color: var(--danger); }
   .word { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }

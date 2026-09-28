@@ -22,4 +22,4 @@ Work happens on `development`, where CI runs `nix build` (`.github/workflows/ci.
 
 ## Licence
 
-Copyright © 2026 Paolo Brasolin. Licensed under the [European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), available in every official EU language at <https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12>. It comes with no warranty and, as far as the law allows, no liability (articles 7 and 8). Third-party code and data shipped in the app keep their own licences, listed in `licenses.txt` next to the app.
+Copyright © 2026 Paolo Brasolin. Licensed under the [European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), available in every official EU language at <https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12>. It comes with no warranty and, as far as the law allows, no liability (articles 7 and 8). Third-party code and data shipped in the app keep their own licences, listed in `open-source-licences.html` next to the app.

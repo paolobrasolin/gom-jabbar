@@ -51,11 +51,34 @@ async function pickFile(text: string) {
 }
 
 describe('Settings about', () => {
-  it('links the privacy and terms pages next to the version, inside the app', async () => {
+  const [version, build] = __APP_VERSION__.split('+')
+  const day = (lang: string) => new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${__APP_DATE__}T12:00:00`))
+
+  it('ends with the version, its release date and the build, then the three pages and a way to reach the author', async () => {
     await openSettings()
-    const link = screen.getByRole('link', { name: 'Privacy e termini' })
-    expect(link).toHaveAttribute('href', '/privacy-policy.html')
-    expect(link).not.toHaveAttribute('target')
+    const about = screen.getByRole('contentinfo')
+    expect(about).toHaveTextContent(`Gom Jabbar ${version} · ${day('it-IT')} · ${build}`)
+    const link = (name: string) => within(about).getByRole('link', { name })
+    // In Italian each page opens at its Italian part.
+    expect(link('Privacy policy')).toHaveAttribute('href', '/privacy-policy.html#it')
+    expect(link("Termini d'uso")).toHaveAttribute('href', '/terms-of-service.html#it')
+    expect(link('Licenze open source')).toHaveAttribute('href', '/open-source-licences.html#it')
+    expect(link('paolo.brasolin@gmail.com')).toHaveAttribute('href', 'mailto:paolo.brasolin@gmail.com')
+    expect(link('Codice sorgente')).toHaveAttribute('href', 'https://github.com/paolobrasolin/gom-jabbar')
+    for (const a of within(about).getAllByRole('link')) expect(a).not.toHaveAttribute('target')
+    // Who and where first, then the three pages.
+    expect([...about.querySelectorAll('p')].map((p) => p.textContent!.split(' · ')[0].trim())).toEqual([`Gom Jabbar ${version}`, 'paolo.brasolin@gmail.com', 'Privacy policy'])
+  })
+
+  it('opens the pages at the top, in English, when the app is in English', async () => {
+    prefs.lang = 'en'
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+    const about = screen.getByRole('contentinfo')
+    expect(about).toHaveTextContent(`Gom Jabbar ${version} · ${day('en-GB')} · ${build}`)
+    expect(within(about).getByRole('link', { name: 'Terms of service' })).toHaveAttribute('href', '/terms-of-service.html')
+    expect(within(about).getByRole('link', { name: 'Open source licences' })).toHaveAttribute('href', '/open-source-licences.html')
+    expect(within(about).getByRole('link', { name: 'Source code' })).toBeInTheDocument()
   })
 })
 
@@ -197,7 +220,6 @@ describe('Settings preferences', () => {
     await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }] })
     await openSettings()
     expect(await screen.findByText(/1 voci/)).toBeInTheDocument()
-    expect(screen.getByText(/^Versione \d+\.\d+\.\d+\+/)).toBeInTheDocument()
   })
 })
 

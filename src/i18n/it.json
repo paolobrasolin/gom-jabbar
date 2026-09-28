@@ -222,7 +222,6 @@
   "reg.foot.back": "Piede (dietro)",
   "reg.mind": "Mente",
   "diary.more": "Mostra altre",
-  "settings.version": "Versione {v}",
   "app.dbError": "Non riesco ad aprire l'archivio dei dati su questo browser. Prova ad aprire l'app in Chrome o Safari, non in una finestra privata.",
   "report.share": "Condividi file",
   "report.shared": "Report condiviso",
@@ -269,6 +268,9 @@
   "reset.drive": "Il file su Drive resta dov'è; Drive viene scollegato.",
   "reset.type": "Scrivi «{w}» per confermare",
   "reset.word": "cancella",
-  "settings.privacy": "Privacy e termini",
-  "report.disclaimer": "Diario personale: dati inseriti dalla persona, non validati clinicamente. Gom Jabbar non è un dispositivo medico."
+  "report.disclaimer": "Diario personale: dati inseriti dalla persona, non validati clinicamente. Gom Jabbar non è un dispositivo medico.",
+  "about.privacy": "Privacy policy",
+  "about.terms": "Termini d'uso",
+  "about.licences": "Licenze open source",
+  "about.source": "Codice sorgente"
 }
