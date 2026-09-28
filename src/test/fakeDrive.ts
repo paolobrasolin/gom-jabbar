@@ -56,9 +56,9 @@ export class FakeDrive {
     if (path === '/drive/v3/about') return json({ user: { displayName: 'Paolo', emailAddress: 'paolo@example.test' } })
     if (path === '/drive/v3/files' && method === 'GET') {
       const q = url.searchParams.get('q')!
-      expect(q).toContain("name = 'gom-jabbar.json'")
+      const name = q.match(/name = '([^']+)'/)![1]
       expect(q).toContain('trashed = false')
-      const found = [...this.files.values()].filter((f) => f.name === 'gom-jabbar.json' && !f.trashed).map((f) => this.meta(f))
+      const found = [...this.files.values()].filter((f) => f.name === name && !f.trashed).map((f) => this.meta(f))
       found.sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime))
       return json({ files: found })
     }
@@ -110,6 +110,7 @@ export function fakeGoogle(now: () => number = () => Date.now()) {
   const navigated: string[] = []
   const provider = createDrive({
     clientId: 'client-id',
+    fileName: 'gom-jabbar.json',
     redirectUri: 'http://localhost:3000/',
     fetch: drive.fetch,
     storage: () => localStorage,

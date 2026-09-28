@@ -5,7 +5,7 @@ import type { Account, CloudProvider, CloudStatus, Failure, Intent, RestorePoint
  * a tap leaves for Google's consent screen, Google sends the browser back with a one-hour token in the fragment, and
  * nothing renews it without another tap. A browser-only app gets no refresh token from Google (#24).
  *
- * One file, `gom-jabbar.json`, overwritten in place. Drive keeps every upload as a revision but purges unpinned ones
+ * One file, named by the build (`gom-jabbar.json` in production), overwritten in place. Drive keeps every upload as a revision but purges unpinned ones
  * after 30 days and only lets pinned ones be downloaded, so the head is pinned when the newest pinned revision is a
  * week old, up to twelve; those are the restore points.
  */
@@ -20,7 +20,6 @@ const REVOKE = 'https://oauth2.googleapis.com/revoke'
 const API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
 const SCOPE = 'https://www.googleapis.com/auth/drive.file'
-const NAME = 'gom-jabbar.json'
 const KEY = 'gj.drive'
 
 type Stored = {
@@ -37,6 +36,8 @@ type Revision = { id: string; modifiedTime: string; keepForever: boolean; size: 
 
 export type DriveDeps = {
   clientId: string | undefined
+  /** Each Cloud project sees only its own files, so dev and production never meet; the names only tell them apart in the Drive UI. */
+  fileName: string | undefined
   /** Must match an authorised redirect URI of the OAuth client character for character, trailing slash included. */
   redirectUri: string
   fetch: (input: string, init?: RequestInit) => Promise<Response>
@@ -56,7 +57,7 @@ class Stop {
 }
 
 export function createDrive(deps: DriveDeps): CloudProvider {
-  const available = !!deps.clientId
+  const available = !!deps.clientId && !!deps.fileName
 
   function load(): Stored {
     try {
@@ -120,7 +121,7 @@ export function createDrive(deps: DriveDeps): CloudProvider {
       }
       save({ fileId: undefined })
     }
-    const q = encodeURIComponent(`name = '${NAME}' and trashed = false`)
+    const q = encodeURIComponent(`name = '${deps.fileName}' and trashed = false`)
     const { files } = await call<{ files: Meta[] }>(`${API}/files?q=${q}&orderBy=modifiedTime desc&pageSize=1&fields=files(${META})`)
     if (!files.length) return null
     save({ fileId: files[0].id })
@@ -213,7 +214,7 @@ export function createDrive(deps: DriveDeps): CloudProvider {
           f = await call<Meta>(`${API}/files?fields=${META}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: NAME, mimeType: 'application/json', appProperties: { app: 'gom-jabbar' } }),
+            body: JSON.stringify({ name: deps.fileName, mimeType: 'application/json', appProperties: { app: 'gom-jabbar' } }),
           })
           save({ fileId: f.id, lastWriteAt: f.modifiedTime })
         }
@@ -275,9 +276,10 @@ export const defaults = {
   random: randomState,
 }
 
-/** The app's provider: the client id comes from the build (`.env.*`); without one there is no Drive backup. */
+/** The app's provider: client id and file name come from the build (`.env.*`); without them there is no Drive backup. */
 export const googleDrive: CloudProvider = createDrive({
   clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || undefined,
+  fileName: import.meta.env.VITE_DRIVE_FILE_NAME || undefined,
   redirectUri: location.origin + import.meta.env.BASE_URL,
   storage: () => localStorage,
   ...defaults,
