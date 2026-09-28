@@ -225,7 +225,7 @@
     </div>
   </div>
 
-  <p class="small muted center">{t('settings.version', { v: __APP_VERSION__ })}</p>
+  <p class="small muted center">{t('settings.version', { v: __APP_VERSION__ })} · <a href="{import.meta.env.BASE_URL}privacy.html">{t('settings.privacy')}</a></p>
 </div>
 
 <Sheet bind:open={vocabOpen} title={vocab === 'tags' ? t('settings.vocab.tags') : t('settings.vocab.symptoms')}>

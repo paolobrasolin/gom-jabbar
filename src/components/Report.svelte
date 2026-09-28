@@ -146,6 +146,8 @@
         </table>
       </section>
     {/if}
+    <!-- The one page a clinician sees, however it reached them: it says what it is (#35). -->
+    <footer class="disclaimer muted">{t('report.disclaimer')}</footer>
   </article>
 </div>
 
@@ -186,4 +188,5 @@
     .grid4 { grid-template-columns: repeat(4, 1fr); }
     section { break-inside: avoid; }
   }
+  .disclaimer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 12px; }
 </style>

@@ -12,7 +12,7 @@
 
 ## 2. Non-goals (v1)
 
-- No diagnosis, advice, or treatment suggestions. Trends are descriptive only.
+- No diagnosis, advice, or treatment suggestions. Trends are descriptive only. This is the app's intended purpose, and it is what keeps it a personal diary rather than a medical device (EU MDR, #35): features for clinicians, "monitoring patients", or readings that interpret the data would change its legal footing, and need #35 reopened first. Our own wording (the app, README, this spec, issues) counts as a statement of that purpose.
 - No multi-device sync, no cloud, no multi-user.
 - No reminders or push notifications.
 - No wearable or health-platform integration.
@@ -35,7 +35,9 @@
 | Charts and body map | Hand-written SVG | No chart lib, full control, small |
 | Tests | Vitest, `fake-indexeddb`, `@testing-library/svelte` | Paolo's pick |
 | Hosting | GitHub Pages via Actions | Static, free, no infra |
-| Google sign-in (cloud backup) | Two Google Cloud projects: `gom-jabbar` for Pages, `gom-jabbar-dev` (Testing, one test user) for `npm run dev`; client ids in `.env.production` and `.env.development` | Configuration, not infrastructure; set up by hand, no API exists (#32). Production stays in Testing until the privacy page is live (#35) |
+| Google sign-in (cloud backup) | Two Google Cloud projects: `gom-jabbar` for Pages, `gom-jabbar-dev` (Testing, one test user) for `npm run dev`; client ids in `.env.production` and `.env.development` | Configuration, not infrastructure; set up by hand, no API exists (#32). Its branding links the privacy page, `privacy.html` (#35) |
+| Licence | EUPL-1.2 (`LICENSE`), © 2026 Paolo Brasolin | Copyleft that reaches hosted copies, written for EU law, official Italian text; no warranty and, as far as the law allows, no liability (#35) |
+| Third-party notices | `licenses.txt` in the build: every package in the bundle (from the module graph), the service worker's Workbox runtime (listed in `vite.config.ts`, checked by `npm run notices`), CHOIRBM; licence texts and NOTICE files | MIT and Apache ask for their notices to travel with copies (#35) |
 | Package manager | npm | Default, no assumptions |
 
 Browser targets: Chrome on Android (primary), Safari on iOS 16.4+ (secondary). Desktop browsers should work but are not designed for.
@@ -290,7 +292,7 @@ Range picker: 7, 30, 90, 365 days.
 - **Backup**, one card. The header says where the data lives and how much there is ("Il diario sta su questo telefono · N voci": the diary lives here, a backup is a copy of it) and when the last backup was made, by either route, or that there never was one; then two zones (§4.2), whose buttons say the same thing the same way: **Backup su …** and **Ripristina da …**. **Google Drive** first, absent in a build without Drive: the account, how long the access lasts or that the next tap asks Google, the last Drive backup from this phone, **Backup su Drive**, **Ripristina da Drive**, **Scollega** (once connected), and what went wrong last in one line (access expired or refused, no network, an error code from Drive, a newer backup in Drive with **Ripristina da Drive** and **Sovrascrivi**). **File** second: **Backup su file** (share sheet) and **Ripristina da file** (the file picker). Both restore routes open the same **Ripristina** sheet: merge or replace, with a preview of counts before applying.
 - Install to home screen hint (shown until installed).
 - **Cancella tutto**, the last card: back to a fresh install. It opens a sheet, the app's only confirmation, because this is the one destructive action without undo (a snapshot for undo would defeat it). The sheet says what goes (every entry, the vocabulary, the presets, the settings), when the last backup was made or that there never was one, and, with Drive in use, that the Drive file stays and Drive gets disconnected. A labelled text field asks for the word «cancella» (English «delete»), case and surrounding spaces ignored; the red button enables only when it matches, and closing the sheet forgets the word. Confirming revokes the Drive grant, deletes the database, clears `localStorage` and reloads (`lib/reset.ts`): the next launch creates the database with the default vocabulary, default preferences, the install nudge, the Log tab. The service worker and the Drive file are untouched.
-- The version line: `package.json` version and short commit.
+- The version line: `package.json` version and short commit, then **Privacy e licenze**, a plain link to `privacy.html` in the same window (the page links back). The page is static, Italian then English, no script, precached like the app, so it opens offline; it says who publishes the app and how to reach them, that it is not a medical device, where the data lives, what the Drive backup can see and how to revoke it, who else sees anything (GitHub Pages, Google), and the licence, with a link to `licenses.txt`.
 
 ## 7. Report
 
@@ -304,6 +306,8 @@ A full-screen overlay in a fixed light palette, opened for the current range fro
 6. Chronological list of episodes and notes (compact).
 
 The chronological list contains episodes and entries with notes, not every entry.
+
+The page ends with one line in small print, on screen, in print and in the shared file: "Diario personale: dati inseriti dalla persona, non validati clinicamente. Gom Jabbar non è un dispositivo medico." The report is the one page a clinician sees, however it reached them (#35).
 
 Two buttons: **Stampa / PDF** calls `window.print()`, and **Condividi file** shares the report as a single self-contained HTML file (markup plus every stylesheet rule), which opens and prints anywhere. This is the path on iOS home-screen apps, where `window.print()` is unreliable.
 
@@ -349,7 +353,7 @@ Vocabulary editing (Settings → Vocabolario): rename inline, enable/disable wit
 
 ## 11. Testing
 
-- **Unit (Vitest)**: data layer on `fake-indexeddb` (CRUD, episode chains, migrations), stats and correlation functions, export/import round trip and merge semantics, region helpers (mirrors, quick sets, full body, view boxes, the nearest segment), layer operations, the version 6 → 7, 7 → 8 and 8 → 9 conversions, i18n key parity, the banner rule, the reset (a fresh database with the default vocabulary, storage cleared, the Drive grant revoked first), the Drive client against an in-memory fake Drive (`src/test/fakeDrive.ts`: files, revisions, pinning, injected failures; nothing talks to Google).
+- **Unit (Vitest)**: data layer on `fake-indexeddb` (CRUD, episode chains, migrations), stats and correlation functions, export/import round trip and merge semantics, region helpers (mirrors, quick sets, full body, view boxes, the nearest segment), layer operations, the version 6 → 7, 7 → 8 and 8 → 9 conversions, i18n key parity, the third-party notices (`src/build/notices.ts`), the banner rule, the reset (a fresh database with the default vocabulary, storage cleared, the Drive grant revoked first), the Drive client against an in-memory fake Drive (`src/test/fakeDrive.ts`: files, revisions, pinning, injected failures; nothing talks to Google).
 - **Component (Testing Library)**: every screen and sheet, against the real Dexie on `fake-indexeddb`: the fast path (select region, set intensity, save, entry appears), undo, the stage (swipe and card, near-skin taps, both mirrors, the rail, zoom, paint), the drawer (handle, faces, the time on the handle) and Tutti i tag, Azzera with undo, presets, the episode sheet (readings, update and end with undo, hand-off to edit), the kind chips and the end row, the diary (day groups, row content, load more, edit and delete with undo), trends (ranges, heatmap, chart tap, tag comparison, symptom means), the report (numbers, sections, share as one HTML file), settings (language, theme, backup export and import with merge, replace and undo, the Backup card and its Drive zone on the real client and the fake Drive: the way back from Google, backup, conflict and overwrite, restore into the preview, disconnect, failures), the backup banner in both modes (when it asks, its words, its button, the snooze), Cancella tutto (the word arms the button, confirming empties everything and reloads, closing does nothing) and the vocabulary editor.
 - **Manual checklist** before each release: see `CHECKLIST.md`.
 - **Bundle size gate**: `npm run size` fails the build above 150 KB gzipped JS; it runs in CI.

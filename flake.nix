@@ -37,6 +37,7 @@
               npm run check
               npm test
               npm run size
+              npm run notices
               runHook postCheck
             '';
 

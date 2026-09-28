@@ -1,10 +1,11 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { loadEnv } from 'vite'
+import { loadEnv, type Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
 
 import { execSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
+import { packageOf, noticeOf, renderNotices } from './src/build/notices.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 
@@ -19,6 +20,54 @@ function gitRev(): string {
   }
 }
 
+// The service worker's runtime, which the PWA plugin bundles after this build: generateSW with a precache and a
+// navigation fallback ships these (`npm run notices` fails if dist/workbox-*.js ever names another), plus
+// registerSW.js from the plugin itself.
+const SW_PACKAGES = ['workbox-core', 'workbox-precaching', 'workbox-routing', 'workbox-strategies', 'vite-plugin-pwa']
+
+/** licenses.txt next to the app (#35): every package bundled into it, the service worker's runtime, the body map. */
+function notices(): Plugin {
+  const read = (dir: string) => (file: string) => {
+    try {
+      return readFileSync(`${dir}/${file}`, 'utf8')
+    } catch {
+      return null
+    }
+  }
+  const notice = (name: string, dir: string) => noticeOf(name, read(dir), readdirSync(dir))
+  return {
+    name: 'gom-jabbar-notices',
+    // The list comes from what the bundle contains, so the dev server has none: say so instead of serving the app.
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split('?')[0] !== `${server.config.base}licenses.txt`) return next()
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+        res.end('licenses.txt is written by the build, from what the bundle contains.\nRun `npm run build && npm run preview` to see it.\n')
+      })
+    },
+    generateBundle(_, bundle) {
+      const dirs = new Map<string, string>(SW_PACKAGES.map((n) => [n, `node_modules/${n}`]))
+      for (const out of Object.values(bundle)) {
+        if (out.type !== 'chunk') continue
+        for (const id of Object.keys(out.modules)) {
+          const name = packageOf(id)
+          const path = id.split('?')[0]
+          if (name && !dirs.has(name)) dirs.set(name, `${path.slice(0, path.lastIndexOf('node_modules'))}node_modules/${name}`)
+        }
+      }
+      const choir = {
+        name: 'CHOIRBM',
+        version: '(body map polygons, scripts/choir)',
+        license: 'MIT',
+        text: `${readFileSync('scripts/choir/LICENSE.md', 'utf8').trim()}\n\nThe CHOIR body map itself: Scherrer KH et al., "Development and validation of the Collaborative Health Outcomes Information Registry body map", PAIN Reports 2021;6(1):e880, open access under CC BY-NC-ND 4.0.`,
+      }
+      // A byte-order mark: a .txt served without a charset would otherwise read as Latin-1 (© as Â©).
+      const source = '\uFEFF' + renderNotices([...[...dirs].map(([n, d]) => notice(n, d)), choir])
+      this.emitFile({ type: 'asset', fileName: 'licenses.txt', source })
+    },
+  }
+}
+
 // Per-mode values live in .env.production (`vite build`), .env.development (`vite`)
 // and .env.test (Vitest). Nothing is defaulted here: an empty
 // VITE_GOOGLE_CLIENT_ID means no Drive backup, never the wrong Google project.
@@ -27,6 +76,7 @@ export default defineConfig(({ mode }) => ({
   base: loadEnv(mode, process.cwd(), '').BASE_PATH,
   plugins: [
     svelte(),
+    notices(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'],
@@ -48,7 +98,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,txt}'],
         navigateFallback: 'index.html',
       },
     }),
