@@ -260,5 +260,13 @@
   "drive.error.unavailable": "Drive non è disponibile in questa versione.",
   "settings.backup.file": "File",
   "backup.nudgeDrive": "Ultimo backup su Drive {n} giorni fa.",
-  "import.title": "Ripristina"
+  "import.title": "Ripristina",
+  "reset.title": "Cancella tutto",
+  "reset.card": "Riporta l'app come appena installata.",
+  "reset.what": "Cancella ogni voce, il vocabolario, i preset e le impostazioni. Non si può annullare.",
+  "reset.lastBackup": "Ultimo backup: {d}.",
+  "reset.noBackup": "Non hai mai fatto un backup: non resterà nulla.",
+  "reset.drive": "Il file su Drive resta dov'è; Drive viene scollegato.",
+  "reset.type": "Scrivi «{w}» per confermare",
+  "reset.word": "cancella"
 }

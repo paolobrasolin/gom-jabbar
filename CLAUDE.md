@@ -12,7 +12,7 @@ Installable pain diary PWA (Svelte 5, Vite, Dexie), Italian first, for one Andro
 - Anything handed to Dexie must be a plain object. Svelte `$state` deep proxies cannot be structured-cloned by IndexedDB. Live-query results (`lib/live.svelte.ts`) and objects that flow back to the db use `$state.raw`; form drafts are copied via spreads in `lib/draft.ts`.
 - Body region ids (`lib/regions.ts`) are stored in user data. Add regions, never rename or remove them.
 - Every i18n key must exist in both `src/i18n/it.json` and `en.json` (a test enforces it). Italian first, terse, informal.
-- No confirmation dialogs anywhere. Destructive actions get an undo toast (`lib/toast.svelte.ts`).
+- No confirmation dialogs, with one exception: **Cancella tutto** (`lib/reset.ts`), which has no undo, asks for a typed word. Every other destructive action gets an undo toast (`lib/toast.svelte.ts`).
 - Schema change: follow "User data is never lost" below, no exceptions.
 - No chart or UI libraries. Charts and the body map are hand-written SVG; colours come from the intensity ramp in `lib/color.ts`.
 - jsdom lacks `scrollTo` and `matchMedia`: guard or avoid them in code that runs under tests. `ResizeObserver` (behind `bind:clientWidth`) and `PointerEvent` are stubbed in `src/test/setup.ts`.
@@ -33,5 +33,5 @@ The app owns the only copy of a person's medical diary. Every schema or export c
 3. **Convert, never drop.** An upgrade may delete a field only after writing its replacement. Fields the code does not know about pass through Dexie upgrades and `parseImport` untouched; a test enforces it for import.
 4. **Export → import → export is the identity.** The migration test checks it; keep it true.
 5. **Dexie upgrades are one transaction.** If an upgrade throws, the database stays at the old version with the data intact. Never catch inside an upgrade function, never write partial results.
-6. `clear()`, `delete()` and bulk overwrites on user tables happen only in `applyImport('replace')`, which snapshots for undo, and in the delete paths that already have an undo toast. Nowhere else.
+6. `clear()`, `delete()` and bulk overwrites on user tables happen only in `applyImport('replace')`, which snapshots for undo, in the delete paths that already have an undo toast, and in `resetAll` (Cancella tutto), which deletes the whole database behind the typed-word confirmation and nothing else. Nowhere else.
 7. `parseImport` accepts every export version ever written. `EXPORT_VERSION` is bumped only when the export shape changes.

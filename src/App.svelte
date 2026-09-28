@@ -12,7 +12,8 @@
   import type { CloudProvider, Resumed } from './lib/cloud'
 
   /** `resumed`: the tap that left for Google's consent screen, back at startup (main.ts); it is finished in Settings. */
-  let { cloud = googleDrive, resumed = null }: { cloud?: CloudProvider; resumed?: Resumed } = $props()
+  /** `reload`: what Cancella tutto ends with; tests pass a stub, jsdom cannot reload. */
+  let { cloud = googleDrive, resumed = null, reload = () => location.reload() }: { cloud?: CloudProvider; resumed?: Resumed; reload?: () => void } = $props()
 
   // Read once: the tap comes back only at startup.
   let resume = $state.raw(untrack(() => resumed))
@@ -47,7 +48,7 @@
 </script>
 
 <div class="app">
-  {#if tab === 'log'}<Log {cloud} />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} />{/if}
+  {#if tab === 'log'}<Log {cloud} />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} {reload} />{/if}
 
   <nav class="tabs" aria-label="tabs">
     {#each tabs as it (it.id)}
