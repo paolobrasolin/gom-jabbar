@@ -432,13 +432,13 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.input(await screen.findByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '4' } })
     expect(screen.getByRole('slider', { name: 'Gonfiore' })).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /mente/ })).toHaveLength(1)
-    expect(screen.getByRole('button', { name: /5\s*gambe, mente/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /5\s*cosce, mente/ })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '7' } })
-    expect(screen.getByRole('button', { name: /7\s*gambe, mente/ })).toHaveAttribute('aria-pressed', 'true')
-    // A knee joins the same area; the mind slider stays.
+    expect(screen.getByRole('button', { name: /7\s*cosce, mente/ })).toHaveAttribute('aria-pressed', 'true')
+    // A knee joins the same layer; the mind slider stays.
     await body()
     await fireEvent.click(screen.getByRole('button', { name: 'Ginocchio sx' }))
-    expect(screen.getByRole('button', { name: /7\s*gambe, mente/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /7\s*cosce, ginocchia, mente/ })).toHaveAttribute('aria-pressed', 'true')
     await more()
     expect(screen.getByRole('slider', { name: 'Nebbia mentale' })).toHaveValue('4')
     await body()
@@ -465,16 +465,16 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     await more()
     // Fog 6 beats the pain at 5: the chip is the layer's headline, named like the diary pill.
-    expect(screen.getByRole('button', { name: /6\s*nebbia mentale · gambe, mente/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /6\s*nebbia mentale · cosce, mente/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getAllByRole('button', { name: /mente/ })).toHaveLength(1)
     expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveValue('5')
     expect(screen.getByRole('slider', { name: 'Nebbia mentale' })).toHaveValue('6')
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
-    expect(screen.getByRole('button', { name: /8\s*gambe, mente/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /8\s*cosce, mente/ })).toBeInTheDocument()
     // The mind leaves: the legs stay at their level, the mental sliders fold away and their reading does not reach the entry.
     await body()
     await fireEvent.click(screen.getByRole('button', { name: 'Mente' }))
-    expect(screen.getByRole('button', { name: /8\s*gambe$/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /8\s*cosce$/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('slider', { name: 'Nebbia mentale' })).not.toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
@@ -512,9 +512,9 @@ describe('Mind and mind symptoms', () => {
     expect(screen.getByRole('button', { name: 'Compressione' })).toHaveAttribute('aria-pressed', 'false')
     await fireEvent.input(screen.getByRole('slider', { name: 'Gonfiore' }), { target: { value: '6' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Calore' }))
-    expect(screen.getByRole('button', { name: /6\s*gonfiore · gambe · Calore/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /6\s*gonfiore · cosce · Calore/ })).toHaveAttribute('aria-pressed', 'true')
     // Back on the first layer: the legs are still all there, with their tag.
-    await fireEvent.click(screen.getByRole('button', { name: /7\s*fianchi, gambe · Compressione/ }))
+    await fireEvent.click(screen.getByRole('button', { name: /7\s*gambe · Compressione/ }))
     expect(screen.getByRole('button', { name: 'Compressione' })).toHaveAttribute('aria-pressed', 'true')
     await body()
     expect(screen.getByRole('button', { name: 'Coscia dx' })).toHaveAttribute('aria-pressed', 'true')
@@ -528,7 +528,7 @@ describe('Mind and mind symptoms', () => {
     ])
     await go('Diario')
     const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
-    expect(row).toHaveAccessibleName(/7\s*fianchi, gambe 7 · gambe 6 · Compressione · Calore/)
+    expect(row).toHaveAccessibleName(/7\s*gambe 7 · cosce 6 · Compressione · Calore/)
   })
 
   it('a mind-only episode is updated from its sheet without a pain slider', async () => {
@@ -1048,9 +1048,9 @@ describe('The stage', () => {
     expect(screen.getByRole('button', { name: 'Testa' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: regionLabel('100', t) })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(screen.getByRole('button', { name: 'Testa' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Torso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Tronco' }))
     expect(screen.getByRole('button', { name: regionLabel('110', t) })).toHaveAttribute('aria-pressed', 'true')
-    await fireEvent.click(screen.getByRole('button', { name: 'Torso' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Tronco' }))
     expect(screen.queryByRole('button', { name: 'Gamba sx' })).not.toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Entrambi i lati' }))
     expect(screen.queryByRole('button', { name: 'Gambe' })).not.toBeInTheDocument()
@@ -1110,7 +1110,7 @@ describe('The stage', () => {
     await addEntry({ layers: [{ regions: ['226', '227', '152'], readings: { pain: 6 }, tags: [] }] })
     render(App)
     await go('Diario')
-    await fireEvent.click(await screen.findByText('fianchi, gamba sx'))
+    await fireEvent.click(await screen.findByText('glutei, coscia sx'))
     const sheet = await screen.findByRole('dialog')
     expect(within(sheet).getByRole('group', { name: 'Dietro' })).toBeInTheDocument()
     expect(within(sheet).getByRole('button', { name: buttock() })).toHaveAttribute('aria-pressed', 'true')
@@ -1160,9 +1160,9 @@ describe('The stage', () => {
     const clipPath = document.getElementById(clip.slice(5, -1))!
     expect(clipPath.tagName).toBe('clipPath')
     expect(clipPath.querySelector('path')!.getAttribute('d')).toBe(document.querySelector('.region[data-region="152"]')!.getAttribute('d'))
-    expect(screen.getByText('gamba sx')).toBeInTheDocument()
+    expect(screen.getByText('coscia sx, ginocchio sx, stinco sx')).toBeInTheDocument()
     // Mirror is on, but a drawing is one-sided.
-    expect(screen.queryByText('gambe')).not.toBeInTheDocument()
+    expect(screen.queryByText(/cosce|ginocchia|stinchi/)).not.toBeInTheDocument()
 
     await fireEvent.click(screen.getByRole('button', { name: 'Dietro' }))
     const back = screen.getByRole('group', { name: 'Dietro' })
@@ -1171,12 +1171,12 @@ describe('The stage', () => {
     await fireEvent.pointerUp(back, finger(1, at(back, cx, cy)))
     expect(strokes()).toHaveLength(1)
     expect(strokes()[0]!.getAttribute('d')).toMatch(/ l 0.01 0$/)
-    expect(screen.getByText('gambe')).toBeInTheDocument()
+    expect(screen.getByText('coscia sx, ginocchio sx, stinco sx + 1')).toBeInTheDocument()
 
     await fireEvent.click(screen.getByRole('button', { name: 'Annulla tratto' }))
     expect(strokes()).toHaveLength(0)
     // The regions the dot pulled in stay.
-    expect(screen.getByText('gambe')).toBeInTheDocument()
+    expect(screen.getByText('coscia sx, ginocchio sx, stinco sx + 1')).toBeInTheDocument()
 
     // Paint off: the segments are back to tap, the brush's tools fold away, the mind is back, the paint itself shows.
     await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
@@ -1275,7 +1275,7 @@ describe('The stage', () => {
     const svg = screen.getByRole('group', { name: 'Davanti' })
     await paint(svg, centre('152'), centre('160'))
     await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
-    expect(screen.getByText('gamba sx')).toBeInTheDocument()
+    expect(screen.getByText('coscia sx, ginocchio sx, stinco sx')).toBeInTheDocument()
     const knee = () => screen.getByRole('button', { name: regionLabel('154', t) })
     await fireEvent.click(knee())
     expect(strokes()).toHaveLength(2)
@@ -1297,7 +1297,7 @@ describe('The stage', () => {
     await addEntry({ layers: [{ regions: ['152'], readings: { pain: 6 }, strokes: [stroke, alien] }] })
     render(App)
     await go('Diario')
-    await fireEvent.click(await screen.findByText('gamba sx'))
+    await fireEvent.click(await screen.findByText('coscia sx'))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
     expect(strokes()).toHaveLength(0)
     prefs.figure = 'male'

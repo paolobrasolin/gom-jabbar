@@ -82,9 +82,9 @@ describe('Report page', () => {
     const notable = screen.getByRole('heading', { name: 'Episodi e note' }).nextElementSibling!
     const rows = within(notable as HTMLElement).getAllByRole('row')
     expect(rows).toHaveLength(2)
-    expect(rows[0]).toHaveTextContent('gambe · 2h · 6 → 3')
+    expect(rows[0]).toHaveTextContent('cosce · 2h · 6 → 3')
     expect(rows[0].querySelector('.pill')).toHaveTextContent('3')
-    expect(rows[1]).toHaveTextContent('gamba sx · Riposo')
+    expect(rows[1]).toHaveTextContent('coscia sx · Riposo')
     expect(rows[1]).toHaveTextContent('nota uno')
   })
 

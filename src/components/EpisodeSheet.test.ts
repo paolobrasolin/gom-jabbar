@@ -31,7 +31,7 @@ describe('Episode sheet', () => {
   it('shows where the episode stands and every reading of it', async () => {
     await seedEpisode()
     const sheet = await openSheet()
-    expect(sheet).toHaveTextContent('gamba sx')
+    expect(sheet).toHaveTextContent('coscia sx')
     expect(sheet).toHaveTextContent('da 3h')
     const points = within(within(sheet).getByLabelText('Letture')).getAllByRole('button').map((s) => s.textContent?.trim())
     expect(points).toHaveLength(2)
@@ -110,7 +110,7 @@ describe('Episode sheet', () => {
     const e = await addEntry({ at: ago(30), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }, { regions: ['mind'], readings: { fog: 5 } }] })
     const sheet = await openSheet()
     const chips = within(sheet).getAllByRole('button', { name: /^\d\s/ })
-    expect(chips.map((c) => c.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['7 gamba sx', '5 nebbia mentale · mente'])
+    expect(chips.map((c) => c.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['7 coscia sx', '5 nebbia mentale · mente'])
     expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('7')
     expect(within(sheet).queryByRole('slider', { name: 'Nebbia mentale' })).not.toBeInTheDocument()
     await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '3' } })

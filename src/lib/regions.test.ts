@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   REGIONS, REGION_BY_ID, regionsFor, shapeOf, figureBox, shapeCenter, pathFor, shapeArea, mirrorId, flipId, counterparts, toggleRegion, toggleSet, toggleFullBody,
-  summarizeRegions, upgradeRegions, LEGACY_REGIONS, LEG_IDS, ARM_IDS, HEAD_IDS, TORSO_IDS, sided, viewBox, FULL_BODY, MIND, MIND_SHAPE, isMind, onFigure,
+  upgradeRegions, LEGACY_REGIONS, LEG_IDS, ARM_IDS, HEAD_IDS, TORSO_IDS, sided, viewBox, FULL_BODY, MIND, MIND_SHAPE, isMind, onFigure,
 } from './regions'
 
 describe('region codes', () => {
@@ -21,12 +21,13 @@ describe('region codes', () => {
       expect(r.id[0]).toBe(r.view === 'front' ? '1' : '2')
       expect(r.side).toBe(Number(r.id) % 2 === 0 ? 'l' : 'r')
     }
-    expect(REGION_BY_ID['152']).toMatchObject({ view: 'front', name: 'thigh', side: 'l', group: 'leg', choir: 127 })
+    expect(REGION_BY_ID['152']).toMatchObject({ view: 'front', name: 'thigh', word: 'thigh', side: 'l', choir: 127 })
     expect(REGION_BY_ID['153']).toMatchObject({ name: 'thigh', side: 'r', choir: 126 })
-    expect(REGION_BY_ID['254']).toMatchObject({ view: 'back', name: 'knee.back', side: 'l', choir: 231 })
-    expect(REGION_BY_ID['110']).toMatchObject({ name: 'chest', group: 'torso', side: 'l', choir: 109 })
-    expect(REGION_BY_ID['227']).toMatchObject({ name: 'buttock', group: 'hip', side: 'r', choir: 224 })
+    expect(REGION_BY_ID['254']).toMatchObject({ view: 'back', name: 'knee.back', word: 'kneeBack', side: 'l', choir: 231 })
+    expect(REGION_BY_ID['110']).toMatchObject({ name: 'chest', word: 'chest', side: 'l', choir: 109 })
+    expect(REGION_BY_ID['227']).toMatchObject({ name: 'buttock', word: 'buttock', side: 'r', choir: 224 })
     expect(REGION_BY_ID['142']).toMatchObject({ name: 'wrist', choir: 124 })
+    expect(REGION_BY_ID['244']).toMatchObject({ name: 'hand.back', word: 'hand' })
   })
 
   it('the figure has the left side on the viewer right in front, on the viewer left at the back, on both silhouettes', () => {
@@ -79,15 +80,6 @@ describe('region codes', () => {
     expect(LEG_IDS).not.toContain('114')
   })
 
-  it('summarizes into coarse groups with sides', () => {
-    expect(summarizeRegions([FULL_BODY])).toEqual([{ group: 'full', side: 'none' }])
-    expect(summarizeRegions(['152', '153', '150'])).toEqual([{ group: 'hip', side: 'l' }, { group: 'leg', side: 'both' }])
-    expect(summarizeRegions(['131', '110'])).toEqual([{ group: 'arm', side: 'r' }, { group: 'torso', side: 'l' }])
-    expect(summarizeRegions(['nope'])).toEqual([])
-    expect(summarizeRegions([MIND])).toEqual([{ group: 'mind', side: 'none' }])
-    expect(summarizeRegions(['152', MIND])).toEqual([{ group: 'leg', side: 'l' }, { group: 'mind', side: 'none' }])
-    expect(summarizeRegions([MIND, FULL_BODY])).toEqual([{ group: 'full', side: 'none' }, { group: 'mind', side: 'none' }])
-  })
 
   it('the mind is a region of its own, not a CHOIR segment: no side, no mirror, no limb, its own shape', () => {
     expect(isMind(MIND)).toBe(true)
@@ -130,9 +122,11 @@ describe('onFigure', () => {
 })
 
 describe('quick sets', () => {
-  it('head and torso cover their families on both views; a side keeps one side of a limb', () => {
-    expect(HEAD_IDS).toHaveLength(12)
-    expect(HEAD_IDS).toEqual(expect.arrayContaining(['100', '105', '200', '205']))
+  it('head (without the neck) and torso cover their families on both views; a side keeps one side of a limb', () => {
+    expect(HEAD_IDS).toHaveLength(8)
+    expect(HEAD_IDS).toEqual(expect.arrayContaining(['100', '103', '200', '203']))
+    expect(HEAD_IDS).not.toContain('104')
+    expect(HEAD_IDS).not.toContain('205')
     expect(TORSO_IDS).toHaveLength(14)
     expect(TORSO_IDS).toEqual(expect.arrayContaining(['110', '115', '220', '227']))
     expect(sided(LEG_IDS, 'l')).toHaveLength(12)
@@ -165,10 +159,14 @@ describe('viewBox', () => {
 })
 
 describe('the other view', () => {
-  it('flips the view digit for a limb or the head, never for the trunk, and never for what does not exist', () => {
+  it('flips the view digit for a limb or the neck, never for the head or the trunk, and never for what does not exist', () => {
     expect(flipId('152')).toBe('252')
     expect(flipId('252')).toBe('152')
-    expect(flipId('100')).toBe('200')
+    expect(flipId('104')).toBe('204')
+    expect(flipId('205')).toBe('105')
+    // The front and back of the head are different places (#33): forehead and crown, face and back of the head.
+    expect(flipId('100')).toBeNull()
+    expect(flipId('203')).toBeNull()
     expect(flipId('110')).toBeNull()
     expect(flipId('226')).toBeNull()
     expect(flipId('nope')).toBeNull()

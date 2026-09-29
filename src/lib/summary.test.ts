@@ -41,12 +41,26 @@ describe('trail', () => {
 })
 
 describe('regionText', () => {
-  it('summarises regions in the current language', () => {
+  it('summarises regions in the current language, naming what was tapped', () => {
     prefs.lang = 'it'
-    expect(regionText(['152', '153', '150'], t)).toBe('fianco sx, gambe')
+    expect(regionText(['152', '153', '150'], t)).toBe('anca sx, cosce')
+    expect(regionText(['104', '105', '204', '205', '130', '131', '230', '231'], t)).toBe('collo, spalle')
+    expect(regionText(['154', '155', '254', '255'], t)).toBe('ginocchia')
+    expect(regionText(['254'], t)).toBe('dietro il ginocchio sx')
     expect(regionText(['*'], t)).toBe('tutto il corpo')
     expect(regionText(['mind'], t)).toBe('mente')
-    expect(regionText(['mind', '152', '153'], t)).toBe('gambe, mente')
+    expect(regionText(['mind', '152', '153'], t)).toBe('cosce, mente')
     expect(regionText(['*', 'mind'], t)).toBe('tutto il corpo, mente')
+    prefs.lang = 'en'
+    expect(regionText(['154', '254', '145'], t)).toBe('right hand, left knee')
+    expect(regionText(['254', '255'], t)).toBe('backs of knees')
+    prefs.lang = 'it'
+  })
+
+  it('names three things at most, and counts the rest', () => {
+    prefs.lang = 'it'
+    expect(regionText(['104', '130', '144', '154', '164'], t)).toBe('collo sx, spalla sx, mano sx + 2')
+    expect(regionText(['104', '130', '144', '154', 'mind'], t)).toBe('collo sx, spalla sx, mano sx + 2')
+    expect(regionText(['104', '130', '144'], t)).toBe('collo sx, spalla sx, mano sx')
   })
 })

@@ -128,7 +128,7 @@ export default defineConfig(({ mode }) => ({
       thresholds: {
         'src/lib/**': { lines: 99.7, statements: 99.5, functions: 99.0, branches: 96.1 },
         lines: 99.1,
-        statements: 98.6,
+        statements: 98.7,
         functions: 98.0,
         branches: 89.9,
       },
