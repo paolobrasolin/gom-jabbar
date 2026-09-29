@@ -18,17 +18,30 @@
   // Read once: the tap comes back only at startup.
   let resume = $state.raw(untrack(() => resumed))
   let tab = $state<Tab>('log')
+  /** The Diary's search (§6.2): null while closed. It sits one history entry above the Diary, so back closes it first. */
+  let query = $state<string | null>(null)
+  let field = $state<HTMLInputElement>()
 
   /** Log is home (#37): every other screen sits one history entry above it, so the arrow and Android's back gesture both return. */
   function go(to: Tab) {
     history.pushState({ screen: to }, '')
     tab = to
+    query = null
     dismissToast()
   }
   function onPop(e: PopStateEvent) {
-    tab = (e.state as { screen?: Tab } | null)?.screen ?? 'log'
+    const state = e.state as { screen?: Tab; search?: boolean } | null
+    tab = state?.screen ?? 'log'
+    query = state?.search ? (query ?? '') : null
     dismissToast()
   }
+  function openSearch() {
+    history.pushState({ screen: 'diary', search: true }, '')
+    query = ''
+  }
+  $effect(() => {
+    if (query === '') field?.focus()
+  })
   // The app always starts on the log: a reload on another screen must not leave that screen's state under it.
   history.replaceState(null, '')
   // Back from Google's consent screen: land on Settings, with the log under it rather than Google.
@@ -63,10 +76,23 @@
       <button class="back" aria-label={t('nav.back')} onclick={() => history.back()}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
       </button>
-      <h1>{t(`tab.${tab}`)}</h1>
+      {#if tab === 'diary' && query !== null}
+        <input class="search" type="search" enterkeyhint="search" autocomplete="off" placeholder={t('diary.search')} aria-label={t('diary.search')} bind:value={query} bind:this={field} onkeydown={(e) => e.key === 'Enter' && field?.blur()} />
+        <!-- Hidden rather than gone while the field is empty, so the field keeps its width. -->
+        <button class="icon" style:visibility={query ? 'visible' : 'hidden'} aria-label={t('diary.clear')} onclick={() => ((query = ''), field?.focus())}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      {:else}
+        <h1>{t(`tab.${tab}`)}</h1>
+        {#if tab === 'diary'}
+          <button class="icon" aria-label={t('diary.find')} onclick={openSearch}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.5-4.5" /></svg>
+          </button>
+        {/if}
+      {/if}
     </header>
   {/if}
-  {#if tab === 'log'}<Log {cloud} navigate={go} />{:else if tab === 'diary'}<Diary />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} {reload} />{/if}
+  {#if tab === 'log'}<Log {cloud} navigate={go} />{:else if tab === 'diary'}<Diary query={query ?? ''} />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} {reload} />{/if}
 </div>
 
 <Toast />
