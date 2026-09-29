@@ -1,16 +1,22 @@
 import { nanoid } from 'nanoid'
 import { db } from './db'
 import { addEntry } from './entries'
-import { finalize, hasBody, keptLayers, showsCategory, type Layer } from './layers'
-import { PAIN, type Entry, type Preset, type PresetLayer, type Symptom, type SymptomId } from './types'
+import { finalize, keptLayers, showsCategory, type Layer } from './layers'
+import type { Entry, Preset, PresetLayer, Symptom, SymptomId } from './types'
+import { firstEnabled } from './vocabulary'
 import type { EntryDraft } from './draft'
 
 export type PresetInput = Omit<Preset, 'id' | 'order'>
 
-/** The sliders a layer asks for by default (§5.6): pain when it shows the body, then every other symptom set above 0 on it. */
-export function defaultAsks(l: Layer): SymptomId[] {
-  const others = Object.entries(l.readings).filter(([id, v]) => id !== PAIN && v > 0).map(([id]) => id)
-  return [...(showsCategory(l, 'body') ? [PAIN] : []), ...others]
+/**
+ * The sliders a layer asks for by default (§5.6): the body's headline, the first enabled body symptom, when it shows the
+ * body, then every other enabled symptom set above 0 on it.
+ */
+export function defaultAsks(l: Layer, symptoms: Symptom[]): SymptomId[] {
+  const head = showsCategory(l, 'body') ? firstEnabled(symptoms, 'body')?.id : undefined
+  const off = new Set(symptoms.filter((s) => !s.enabled).map((s) => s.id))
+  const others = Object.entries(l.readings).filter(([id, v]) => id !== head && v > 0 && !off.has(id)).map(([id]) => id)
+  return [...(head ? [head] : []), ...others]
 }
 
 /**
@@ -18,12 +24,12 @@ export function defaultAsks(l: Layer): SymptomId[] {
  * its own list when the form set one, else the default. Readings and tags stay behind: a reading is set at each save,
  * a tag is a fact about one reading. With the vocabulary, a layer asks only what its regions show (§6.1).
  */
-export function presetFromDraft(d: EntryDraft, name: string, symptoms?: Symptom[]): PresetInput {
+export function presetFromDraft(d: EntryDraft, name: string, symptoms: Symptom[]): PresetInput {
   const src = keptLayers(d.layers)
-  const category = symptoms ? new Map(symptoms.map((s) => [s.id, s.category])) : null
+  const category = new Map(symptoms.map((s) => [s.id, s.category]))
   const layers = finalize(src, symptoms).map((l, i): PresetLayer => {
-    const asks = (src[i].asks ?? defaultAsks(l)).filter((id) => {
-      const c = category?.get(id)
+    const asks = (src[i].asks ?? defaultAsks(l, symptoms)).filter((id) => {
+      const c = category.get(id)
       return !c || showsCategory(l, c)
     })
     return { regions: l.regions, asks: [...new Set(asks)], ...(l.strokes ? { strokes: l.strokes } : {}) }
@@ -57,13 +63,14 @@ export async function restorePreset(p: Preset): Promise<void> {
   await db.presets.put(p)
 }
 
-/** Log from a preset: each layer with its own levels from the sheet, no tags, a snapshot or an episode as its kind says, an empty note. */
+/**
+ * Log from a preset: each layer with its own levels from the sheet for what it asks and nothing else (a layer asking
+ * nothing is a location), no tags, a snapshot or an episode as its kind says, an empty note.
+ */
 export async function logPreset(preset: Preset, levels: Record<string, number>[], at?: string): Promise<Entry> {
   const layers = preset.layers.map((l, i) => {
     const readings: Record<string, number> = {}
     for (const id of l.asks) readings[id] = levels[i]?.[id] ?? 0
-    // A body layer always records its pain, 0 when the preset does not ask for it.
-    if (hasBody(l) && readings[PAIN] === undefined) readings[PAIN] = 0
     return { regions: [...l.regions], readings, tags: [], ...(l.strokes ? { strokes: l.strokes } : {}) }
   })
   return addEntry({ at, kind: preset.kind, layers, note: '', presetId: preset.id })

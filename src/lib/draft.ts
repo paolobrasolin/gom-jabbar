@@ -1,4 +1,4 @@
-import { PAIN, type Entry, type EntryKind } from './types'
+import type { Entry, EntryKind } from './types'
 import { newLayer, type Layer } from './layers'
 import type { EntryInput } from './entries'
 
@@ -27,12 +27,16 @@ export type EntryDraft = {
   presetId?: string
 }
 
-export function emptyDraft(opts: { kind?: EntryKind; pain?: number } = {}): EntryDraft {
+/**
+ * A fresh draft. `head` is the body's headline symptom (§6.1), the first enabled one: it starts at `level`, 5 unless
+ * carried over from the last save. Without one (no body symptom on, or the vocabulary not read yet) nothing is set.
+ */
+export function emptyDraft(opts: { kind?: EntryKind; head?: string; level?: number } = {}): EntryDraft {
   return {
     at: null,
     kind: opts.kind ?? 'chronic',
     endedAt: null,
-    layers: [newLayer({ [PAIN]: opts.pain ?? 5 })],
+    layers: [newLayer(opts.head ? { [opts.head]: opts.level ?? 5 } : {})],
     cur: 0,
     note: '',
   }
@@ -43,7 +47,7 @@ export function draftFromEntry(e: Entry): EntryDraft {
     at: e.at,
     kind: e.kind,
     endedAt: e.endedAt ?? null,
-    layers: e.layers.length ? copyLayers(e.layers) : [newLayer({ [PAIN]: 0 })],
+    layers: e.layers.length ? copyLayers(e.layers) : [newLayer()],
     cur: 0,
     note: e.note,
     ...(e.presetId ? { presetId: e.presetId } : {}),

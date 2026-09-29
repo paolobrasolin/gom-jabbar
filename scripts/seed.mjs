@@ -76,5 +76,5 @@ for (let d = 59; d >= 0; d--) {
     })
   }
 }
-writeFileSync(out, JSON.stringify({ app: 'gom-jabbar', version: 2, exportedAt: new Date().toISOString(), vocabulary: { symptoms: [], tags: [] }, entries }, null, 1))
+writeFileSync(out, JSON.stringify({ app: 'gom-jabbar', version: 2, exportedAt: new Date().toISOString(), entries }, null, 1))
 console.log(`${entries.length} entries → ${out}`)

@@ -14,7 +14,7 @@
   import { addPreset, updatePreset, deletePreset, restorePreset, presetFromDraft, defaultAsks } from '../lib/presets'
   import { showsCategory, type Layer } from '../lib/layers'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
-  import { PAIN, type Symptom } from '../lib/types'
+  import type { Symptom } from '../lib/types'
 
   let {
     seed = $bindable(null),
@@ -52,10 +52,10 @@
     if (!open) seed = null
   })
 
-  /** What a layer can ask for (§5.6): each enabled symptom its regions show, pain first, in vocabulary order. */
-  const askableFor = (l: Layer): Symptom[] => symptoms.filter((s) => s.enabled && showsCategory(l, s.category)).sort((a, b) => Number(b.id === PAIN) - Number(a.id === PAIN))
+  /** What a layer can ask for (§5.6): each enabled symptom its regions show, in vocabulary order. */
+  const askableFor = (l: Layer): Symptom[] => symptoms.filter((s) => s.enabled && showsCategory(l, s.category))
   /** What a layer asks for: its own list once the chips set one, else the default; explicit, so a symptom at 0 today still belongs. */
-  const asksOf = (l: Layer): string[] => l.asks ?? defaultAsks(l)
+  const asksOf = (l: Layer): string[] => l.asks ?? defaultAsks(l, symptoms)
   const asksFor = (l: Layer): string[] => askableFor(l).map((s) => s.id).filter((id) => asksOf(l).includes(id))
   /** The chips follow the current layer, like the tag strip of the log form (§5.4). */
   const cur = $derived(draft.layers[draft.cur] ?? draft.layers[0])

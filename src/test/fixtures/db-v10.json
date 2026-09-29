@@ -1,5 +1,5 @@
 {
- "version": 9,
+ "version": 10,
  "stores": {
   "entries": "id, at, createdAt, updatedAt, presetId, episodeId",
   "symptoms": "id, order",
@@ -669,185 +669,152 @@
   "symptoms": [
    {
     "id": "anxiety",
-    "label": {
-     "it": "Ansia",
-     "en": "Anxiety"
-    },
+    "label": "i18n:vocab.anxiety",
     "category": "mind",
     "enabled": true,
     "order": 7
    },
    {
     "id": "depression",
-    "label": {
-     "it": "Depressione",
-     "en": "Depression"
-    },
+    "label": "i18n:vocab.depression",
     "category": "mind",
     "enabled": false,
     "order": 8
    },
    {
     "id": "fog",
-    "label": {
-     "it": "Nebbia mentale",
-     "en": "Brain fog"
-    },
+    "label": "i18n:vocab.fog",
     "enabled": true,
     "order": 4,
     "category": "mind"
    },
    {
     "id": "heaviness",
-    "label": {
-     "it": "Peso",
-     "en": "Weight"
-    },
+    "label": "Peso",
     "enabled": true,
     "order": 2,
     "category": "body"
    },
    {
     "id": "pain",
-    "label": {
-     "it": "Dolore",
-     "en": "Pain"
-    },
+    "label": "i18n:vocab.pain",
     "enabled": true,
     "order": 0,
     "category": "body"
    },
    {
     "id": "stiffness",
-    "label": {
-     "it": "Rigidità",
-     "en": "Stiffness"
-    },
+    "label": "i18n:vocab.stiffness",
     "enabled": false,
     "order": 6,
     "category": "body"
    },
    {
     "id": "swelling",
-    "label": {
-     "it": "Gonfiore",
-     "en": "Puffiness"
-    },
+    "label": "i18n:vocab.swelling",
     "enabled": true,
     "order": 1,
     "category": "body"
    },
    {
     "id": "sym-u7",
-    "label": {
-     "it": "Formicolio",
-     "en": "Tingling"
-    },
+    "label": "Formicolio",
     "enabled": true,
     "order": 7,
     "category": "body"
    },
    {
     "id": "sym-u8",
-    "label": {
-     "it": "Ansia",
-     "en": "Anxiety"
-    },
+    "label": "Ansia",
     "category": "mind",
     "enabled": true,
     "order": 9
    },
    {
     "id": "tenderness",
-    "label": {
-     "it": "Male al tocco",
-     "en": "Tenderness"
-    },
+    "label": "Male al tocco",
     "category": "body",
     "enabled": true,
     "order": 5
    },
    {
     "id": "fatigue",
-    "label": {
-     "it": "Sfinimento",
-     "en": "Exhaustion"
-    },
+    "label": "Sfinimento",
     "category": "body",
     "enabled": true,
     "order": 3
    },
    {
     "id": "sym-u9",
-    "label": {
-     "it": "",
-     "en": "Nausea"
-    },
+    "label": "Nausea",
     "category": "body",
     "enabled": true,
     "order": 10
+   },
+   {
+    "id": "V1StGXR8_Z5jdHi6B-myT",
+    "label": "Mal di testa: forte",
+    "category": "body",
+    "enabled": true,
+    "order": 11
+   },
+   {
+    "id": "Uakgb_J5m9g-0JDMbcJqL",
+    "label": "i18n:vocab.future",
+    "category": "mind",
+    "enabled": false,
+    "order": 12
    }
   ],
   "tags": [
    {
     "id": "compression",
-    "label": {
-     "it": "Compressione",
-     "en": "Compression"
-    },
+    "label": "i18n:vocab.compression",
     "group": "intervention",
     "enabled": true,
     "order": 0
    },
    {
     "id": "med-x1",
-    "label": {
-     "it": "Tachipirina",
-     "en": "Tachipirina"
-    },
+    "label": "Tachipirina",
     "group": "medication",
     "enabled": true,
     "order": 0
    },
    {
     "id": "period",
-    "label": {
-     "it": "Ciclo",
-     "en": "Period"
-    },
+    "label": "i18n:vocab.period",
     "group": "context",
     "enabled": false,
     "order": 0
    },
    {
     "id": "stretching",
-    "label": {
-     "it": "Stretching",
-     "en": "Stretching"
-    },
+    "label": "i18n:vocab.stretching",
     "group": "intervention",
     "enabled": true,
     "order": 6
    },
    {
     "id": "mld",
-    "label": {
-     "it": "Linfodrenaggio",
-     "en": "MLD"
-    },
+    "label": "i18n:vocab.mld",
     "group": "intervention",
     "enabled": true,
     "order": 1
    },
    {
     "id": "badsleep",
-    "label": {
-     "it": "Notte in bianco",
-     "en": "Slept badly"
-    },
+    "label": "Notte in bianco",
     "group": "context",
     "enabled": true,
     "order": 12
+   },
+   {
+    "id": "3fD9kQ_x0LmZ7pRt2wYvA",
+    "label": "Brufen",
+    "group": "medication",
+    "enabled": true,
+    "order": 18
    }
   ],
   "presets": [

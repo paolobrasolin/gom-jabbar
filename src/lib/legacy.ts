@@ -1,6 +1,60 @@
-import { PAIN, type Entry, type SymptomCategory } from './types'
+import { PAIN, type Entry, type Label, type SymptomCategory } from './types'
 import { hasBody, holdsMind, showsCategory, type Layer, type Stroke } from './layers'
-import { defaultCategory } from './vocabulary'
+import { defaultCategory, I18N } from './vocabulary'
+
+/** A symptom's or tag's name as written before version 10 (§5.2): both languages. */
+export type LabelV9 = { it: string; en: string }
+
+/** The seed as it was written before version 10, per table: labels in both languages. Frozen: the upgrades read it. */
+export const SEED_V9: Record<'symptoms' | 'tags', Record<string, LabelV9>> = {
+  symptoms: {
+    pain: { it: 'Dolore', en: 'Pain' },
+    swelling: { it: 'Gonfiore', en: 'Swelling' },
+    heaviness: { it: 'Pesantezza', en: 'Heaviness' },
+    fatigue: { it: 'Stanchezza', en: 'Fatigue' },
+    fog: { it: 'Nebbia mentale', en: 'Brain fog' },
+    tenderness: { it: 'Dolorabilità al tatto', en: 'Tenderness' },
+    stiffness: { it: 'Rigidità', en: 'Stiffness' },
+    anxiety: { it: 'Ansia', en: 'Anxiety' },
+    depression: { it: 'Depressione', en: 'Depression' },
+  },
+  tags: {
+    compression: { it: 'Compressione', en: 'Compression' },
+    mld: { it: 'Linfodrenaggio', en: 'Lymphatic drainage' },
+    exercise: { it: 'Movimento', en: 'Exercise' },
+    rest: { it: 'Riposo', en: 'Rest' },
+    heat: { it: 'Calore', en: 'Heat' },
+    cold: { it: 'Freddo', en: 'Cold' },
+    stretching: { it: 'Stretching', en: 'Stretching' },
+    meditation: { it: 'Meditazione', en: 'Meditation' },
+    period: { it: 'Ciclo', en: 'Period' },
+    stress: { it: 'Stress', en: 'Stress' },
+    badsleep: { it: 'Dormito male', en: 'Slept badly' },
+    standing: { it: 'In piedi a lungo', en: 'Standing long' },
+    sitting: { it: 'Seduta a lungo', en: 'Sitting long' },
+    hot_weather: { it: 'Caldo', en: 'Hot weather' },
+    travel: { it: 'Viaggio', en: 'Travel' },
+  },
+}
+
+/** Mind symptoms that arrived with version 6, as written then: a database upgraded from before gets them too, when their ids are free. */
+export const MIND_DEFAULTS_V6 = [
+  { id: 'anxiety', label: SEED_V9.symptoms.anxiety, category: 'mind', enabled: true, order: 7 },
+  { id: 'depression', label: SEED_V9.symptoms.depression, category: 'mind', enabled: true, order: 8 },
+]
+
+/**
+ * A label as written before version 10 as one string (§5.2, §8): a seed item whose Italian is still the seed's reads
+ * from the dictionary (a rename of its English alone is lost); any other keeps its Italian, or its English when the
+ * Italian is empty (a rename that differed in the two languages keeps the Italian). A label already a string is kept.
+ */
+export function oneLabel(table: 'symptoms' | 'tags', id: string, label: unknown): Label {
+  if (typeof label === 'string') return label
+  const l = (label ?? {}) as Partial<LabelV9>
+  const seed = SEED_V9[table][id]
+  if (seed && l.it === seed.it) return `${I18N}vocab.${id}`
+  return l.it || l.en || ''
+}
 
 /**
  * Rows as written before version 7 (§8): an entry carried its readings and tags once, and `areas`, each a

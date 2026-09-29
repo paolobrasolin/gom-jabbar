@@ -9,22 +9,22 @@
   import { t, tl } from '../i18n/index.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
-  import { PAIN, type Symptom, type Tag, type TagGroup } from '../lib/types'
+  import type { Symptom, Tag, TagGroup } from '../lib/types'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { frequentTags } from '../lib/vocab'
   import { LEG_IDS, ARM_IDS, HEAD_IDS, TORSO_IDS, sided, type View } from '../lib/regions'
   import { isFull, showsCategory, readingsFor, tapRegion, tapSet, toggleFull, addLayer, selectLayer, setReading, toggleTag, pieceCount, type LayerState } from '../lib/layers'
   import { addStroke, undoStroke, clearStrokes, mainView, type RawStroke } from '../lib/strokes'
-  import { isMindSymptom } from '../lib/vocabulary'
+  import { firstEnabled, isMindSymptom } from '../lib/vocabulary'
   import { ICONS } from '../lib/icons'
   import type { EntryDraft } from '../lib/draft'
   import { haptic, showToast } from '../lib/toast.svelte'
 
   /**
    * The form (#22) is a stage with a drawer over it. The stage keeps its size; the drawer slides up over it. Collapsed,
-   * the drawer shows the fast path: the layer tabs, the current layer's panel with its headline slider (pain when the
-   * layer shows the body, the first mind symptom otherwise) and `actions`, the Salva bar. Open, the panel goes on with
+   * the drawer shows the fast path: the layer tabs, the current layer's panel with its headline slider (the first enabled
+   * body symptom when the layer shows the body, the first mind symptom otherwise) and `actions`, the Salva bar. Open, the panel goes on with
    * the layer's other sliders and its tags, and below the panel come the entry's own fields: kind and time, the note.
    * So what belongs to a layer sits in its panel under its tab, and what belongs to the entry sits outside.
    *
@@ -85,7 +85,9 @@
   })
   const groups: TagGroup[] = ['intervention', 'context', 'medication']
   const tagsByGroup = $derived(groups.map((g) => ({ g, items: tags.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
-  const bodySymptoms = $derived(symptoms.filter((s) => s.enabled && s.id !== PAIN && !isMindSymptom(s)))
+  /** The body's headline (§6.1): its first enabled symptom, pain in the seed, any other once pain is off or moved. */
+  const bodyHead = $derived(firstEnabled(symptoms, 'body'))
+  const bodySymptoms = $derived(symptoms.filter((s) => s.enabled && !isMindSymptom(s)))
   const mindSymptoms = $derived(symptoms.filter((s) => s.enabled && isMindSymptom(s)))
 
   /** The layer the stage, the sliders and the tag strip edit (§5.4). */
@@ -94,18 +96,21 @@
   /** Which sliders show (§6.1) follows the current layer: body regions, the body ones; the brain, the mind ones; nothing, all. */
   const showBody = $derived(showsCategory(cur, 'body'))
   const showMind = $derived(showsCategory(cur, 'mind'))
-  /** The headline slider of the panel: pain for a layer showing the body, else the first mind symptom; the rest follow when open. */
-  const headSym = $derived(showBody ? null : (mindSymptoms[0] ?? null))
-  const restMind = $derived(showBody ? mindSymptoms : mindSymptoms.slice(1))
+  /**
+   * The headline slider of the panel: the body's for a layer showing the body, else, or with no body symptom on, the
+   * first mind symptom; the rest follow when open, body before mind.
+   */
+  const headSym = $derived((showBody ? bodyHead : undefined) ?? (showMind ? mindSymptoms[0] : undefined))
+  const rest = $derived([...(showBody ? bodySymptoms : []), ...(showMind ? mindSymptoms : [])].filter((s) => s.id !== headSym?.id))
   /** The layers as they will be saved: a layer is coloured and numbered by the readings its regions show, not by a hidden slider. */
   const shown = $derived(draft.layers.map((l) => ({ ...l, readings: readingsFor(l, l.readings, symptoms) })))
-  const pain = $derived(cur.readings[PAIN] ?? 0)
   const full = $derived(isFull(cur))
   const curRegions = $derived(cur.regions)
   const setOn = (ids: string[]) => !full && ids.every((id) => curRegions.includes(id))
   const located = $derived(draft.layers.some((l) => l.regions.length > 0))
-  const painLabel = $derived.by(() => {
-    const base = tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' })
+  /** With several layers, the headline says which one it sets. */
+  const headLabel = $derived.by(() => {
+    const base = headSym ? tl(headSym.label) : ''
     return draft.layers.length > 1 && cur.regions.length ? `${base} · ${regionText(cur.regions, t)}` : base
   })
   /** The handle says what the drawer holds that is not the default: a time, or an end. */
@@ -187,9 +192,9 @@
   function onTag(id: string) {
     apply(toggleTag(st(), id))
   }
-  /** A new layer starts at the current pain level, like the first did (§5.4), and the next thing to do is choose where. */
+  /** A new layer starts at the body's headline level of this one, like the first did (§5.4), and the next thing to do is choose where. */
   function onAddLayer() {
-    apply(addLayer(st(), { [PAIN]: pain }))
+    apply(addLayer(st(), bodyHead ? { [bodyHead.id]: cur.readings[bodyHead.id] ?? 0 } : {}))
     open = false
   }
 
@@ -321,20 +326,11 @@
           {#if reading}
             {@render reading()}
           {:else if mode !== 'preset'}
-            {#if showBody}
-              <IntensitySlider value={pain} label={painLabel} onchange={(v) => onReading(PAIN, v)} />
-            {:else if headSym}
-              <IntensitySlider value={cur.readings[headSym.id] ?? 0} label={tl(headSym.label)} onchange={(v) => onReading(headSym!.id, v)} />
+            {#if headSym}
+              <IntensitySlider value={cur.readings[headSym.id] ?? 0} label={headLabel} onchange={(v) => onReading(headSym!.id, v)} />
             {/if}
             <div class="rest" inert={!open} aria-hidden={!open}>
-              {#if showBody}
-                {#each bodySymptoms as s (s.id)}{@render slider(s)}{/each}
-                {#if showMind}
-                  {#each mindSymptoms as s (s.id)}{@render slider(s)}{/each}
-                {/if}
-              {:else}
-                {#each restMind as s (s.id)}{@render slider(s)}{/each}
-              {/if}
+              {#each rest as s (s.id)}{@render slider(s)}{/each}
               {#if !allTags}
                 <div class="chips suggest" aria-label={t('log.suggestions')}>
                   {@render expander()}

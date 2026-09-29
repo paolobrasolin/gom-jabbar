@@ -95,7 +95,7 @@ describe('Edit sheet', () => {
     await openDiary()
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
-    expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('7')
+    expect(await within(sheet).findByRole('slider', { name: 'Dolore' })).toHaveValue('7')
     expect(within(sheet).getByRole('button', { name: 'Coscia sx' })).toHaveAttribute('aria-pressed', 'true')
     // The rest of the entry is on the Altro face of the slot (#22); the slider and Salva stay in the frame.
     await fireEvent.click(within(sheet).getByRole('button', { name: /^Altro/ }))
@@ -260,7 +260,7 @@ describe('Edit sheet', () => {
     await openDiary()
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
-    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '1' } })
+    await fireEvent.input(await within(sheet).findByRole('slider', { name: 'Dolore' }), { target: { value: '1' } })
     await fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(mergedReadings((await db.entries.get(e.id))!.layers).pain).toBe(7)

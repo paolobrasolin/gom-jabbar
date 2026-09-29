@@ -5,8 +5,7 @@ export type SymptomId = string
 export type TagId = string
 export type RegionId = string
 
-export type LocalizedString = { it: string; en: string }
-export type Lang = keyof LocalizedString
+export type Lang = 'it' | 'en'
 
 /** Two kinds of thing (§5.1): a chronic snapshot, how it is at one time; an episode, a chain of readings with a start and an end. */
 export type EntryKind = 'chronic' | 'episode'
@@ -36,9 +35,15 @@ export type Entry = {
 /** Where a symptom lives: on the body (the pain slider and its siblings) or in the head (§5.2). */
 export type SymptomCategory = 'body' | 'mind'
 
+/**
+ * A symptom's or tag's name (§5.2): `i18n:<key>`, looked up in the dictionaries in the app's language (the seed), or
+ * the person's own word, shown as typed in every language.
+ */
+export type Label = string
+
 export type Symptom = {
   id: SymptomId
-  label: LocalizedString
+  label: Label
   category: SymptomCategory
   enabled: boolean
   order: number
@@ -48,7 +53,7 @@ export type TagGroup = 'intervention' | 'context' | 'medication'
 
 export type Tag = {
   id: TagId
-  label: LocalizedString
+  label: Label
   group: TagGroup
   enabled: boolean
   order: number

@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
+import { toastState } from '../lib/toast.svelte'
+import { addEntry } from '../lib/entries'
+import { addPreset } from '../lib/presets'
 import VocabEditor from './VocabEditor.svelte'
 
 let db: ReturnType<typeof resetDb>
@@ -14,14 +17,16 @@ const names = () => Array.from(document.querySelectorAll('.item .name')).map((b)
 const itemOf = (name: string) => screen.getByRole('button', { name }).closest('.item') as HTMLElement
 
 describe('Vocabulary editor: symptoms', () => {
-  it('lists the symptoms by category in order, pain locked, the others switchable', async () => {
+  it('lists the symptoms by category in order, every one switchable, pain included', async () => {
     render(VocabEditor, { table: 'symptoms' })
     await waitFor(() => expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Dolorabilità al tatto', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Depressione']))
     const titles = Array.from(document.querySelectorAll('.group-title')).map((p) => p.textContent)
     expect(titles).toEqual(['Corpo', 'Mente'])
     expect(screen.getAllByPlaceholderText('Nuovo…')).toHaveLength(2)
-    expect(within(itemOf('Dolore')).queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(within(itemOf('Dolore')).getByRole('checkbox', { name: 'Dolore' })).toBeChecked()
     expect(within(itemOf('Gonfiore')).getByRole('checkbox', { name: 'Gonfiore' })).toBeChecked()
+    await fireEvent.click(screen.getByRole('checkbox', { name: 'Dolore' }))
+    await waitFor(async () => expect((await db.symptoms.get('pain'))?.enabled).toBe(false))
   })
 
   it('adds a mind symptom from the field of its group, and moves only within the group', async () => {
@@ -32,7 +37,7 @@ describe('Vocabulary editor: symptoms', () => {
     await waitFor(() => expect(names()).toContain('Irritabilità'))
     expect(names().slice(-2)).toEqual(['Depressione', 'Irritabilità'])
     const added = (await db.symptoms.orderBy('order').last())!
-    expect(added).toMatchObject({ category: 'mind', label: { it: 'Irritabilità', en: 'Irritabilità' }, enabled: true, order: 9 })
+    expect(added).toMatchObject({ category: 'mind', label: 'Irritabilità', enabled: true, order: 9 })
     await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
     await waitFor(() => expect(names().slice(-2)).toEqual(['Irritabilità', 'Depressione']))
     await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
@@ -55,15 +60,22 @@ describe('Vocabulary editor: symptoms', () => {
     await waitFor(() => expect(itemOf('Gonfiore')).not.toHaveClass('off'))
   })
 
-  it('renames in the current language on Enter, leaving the other translation alone', async () => {
+  it('renames on Enter: the typed word replaces the name, in every language', async () => {
     render(VocabEditor, { table: 'symptoms' })
     await fireEvent.click(await screen.findByRole('button', { name: 'Gonfiore' }))
     const input = screen.getByDisplayValue('Gonfiore')
     await fireEvent.input(input, { target: { value: ' Edema ' } })
     await fireEvent.keyDown(input, { key: 'Enter' })
-    await waitFor(async () => expect((await db.symptoms.get('swelling'))?.label).toEqual({ it: 'Edema', en: 'Swelling' }))
+    await waitFor(async () => expect((await db.symptoms.get('swelling'))?.label).toBe('Edema'))
     await waitFor(() => expect(names()[1]).toBe('Edema'))
     expect(screen.queryByDisplayValue('Edema')).not.toBeInTheDocument()
+  })
+
+  it('shows the seed in the app language and a renamed item as it was typed', async () => {
+    await db.symptoms.update('swelling', { label: 'Edema' })
+    prefs.lang = 'en'
+    render(VocabEditor, { table: 'symptoms' })
+    await waitFor(() => expect(names().slice(0, 3)).toEqual(['Pain', 'Edema', 'Heaviness']))
   })
 
   it('renames on blur too, and a blank name is ignored', async () => {
@@ -73,13 +85,13 @@ describe('Vocabulary editor: symptoms', () => {
     await fireEvent.input(input, { target: { value: '   ' } })
     await fireEvent.blur(input)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Rigidità' })).toBeInTheDocument())
-    expect((await db.symptoms.get('stiffness'))?.label.it).toBe('Rigidità')
+    expect((await db.symptoms.get('stiffness'))?.label).toBe('i18n:vocab.stiffness')
 
     await fireEvent.click(screen.getByRole('button', { name: 'Rigidità' }))
     input = screen.getByDisplayValue('Rigidità')
     await fireEvent.input(input, { target: { value: 'Rigido' } })
     await fireEvent.blur(input)
-    await waitFor(async () => expect((await db.symptoms.get('stiffness'))?.label.it).toBe('Rigido'))
+    await waitFor(async () => expect((await db.symptoms.get('stiffness'))?.label).toBe('Rigido'))
   })
 
   it('moves a symptom up and down, stopping at the ends', async () => {
@@ -111,19 +123,17 @@ describe('Vocabulary editor: symptoms', () => {
     expect(names()[6]).toBe('Formicolio')
     await waitFor(() => expect(field).toHaveValue(''))
     const added = (await db.symptoms.orderBy('order').last())!
-    expect(added).toMatchObject({ label: { it: 'Formicolio', en: 'Formicolio' }, enabled: true, order: 9 })
-    expect(added.id).toMatch(/^formicolio_/)
+    expect(added).toMatchObject({ label: 'Formicolio', enabled: true, order: 9 })
 
     await fireEvent.input(field, { target: { value: 'Crampi' } })
     await fireEvent.keyDown(field, { key: 'Enter' })
     await waitFor(() => expect(names()[7]).toBe('Crampi'))
     await waitFor(() => expect(field).toHaveValue(''))
-    // A user-made item keeps both translations in sync when renamed.
     await fireEvent.click(screen.getByRole('button', { name: 'Crampi' }))
     const input = screen.getByDisplayValue('Crampi')
     await fireEvent.input(input, { target: { value: 'Crampo' } })
     await fireEvent.keyDown(input, { key: 'Enter' })
-    await waitFor(async () => expect((await db.symptoms.orderBy('order').last())?.label).toEqual({ it: 'Crampo', en: 'Crampo' }))
+    await waitFor(async () => expect((await db.symptoms.orderBy('order').last())?.label).toBe('Crampo'))
   })
 })
 
@@ -146,7 +156,7 @@ describe('Vocabulary editor: tags', () => {
     await fireEvent.click(screen.getAllByRole('button', { name: '+ Aggiungi' })[2])
     await waitFor(() => expect(names()).toContain('Ibuprofene'))
     const added = (await db.tags.orderBy('order').last())!
-    expect(added).toMatchObject({ group: 'medication', label: { it: 'Ibuprofene', en: 'Ibuprofene' }, enabled: true, order: 17 })
+    expect(added).toMatchObject({ group: 'medication', label: 'Ibuprofene', enabled: true, order: 17 })
     expect(names()[names().length - 1]).toBe('Ibuprofene')
   })
 
@@ -166,5 +176,42 @@ describe('Vocabulary editor: tags', () => {
     await fireEvent.click(await screen.findByRole('checkbox', { name: 'Viaggio' }))
     await waitFor(async () => expect((await db.tags.get('travel'))?.enabled).toBe(false))
     await waitFor(() => expect(itemOf('Viaggio')).toHaveClass('off'))
+  })
+})
+
+describe('Vocabulary editor: deleting (§6.4)', () => {
+  it('offers Elimina only on unused items, and says how much a used one is used', async () => {
+    await addEntry({ layers: [{ regions: [], readings: { pain: 4, swelling: 2 }, tags: [] }] })
+    await addEntry({ layers: [{ regions: [], readings: { pain: 4, swelling: 1 }, tags: [] }] })
+    await addPreset({ name: 'P', kind: 'chronic', layers: [{ regions: ['mind'], asks: ['fog'] }] })
+    render(VocabEditor, { table: 'symptoms' })
+    await waitFor(() => expect(within(itemOf('Gonfiore')).getByText('2 voci')).toBeInTheDocument())
+    expect(within(itemOf('Gonfiore')).queryByRole('button', { name: 'Elimina Gonfiore' })).not.toBeInTheDocument()
+    expect(within(itemOf('Nebbia mentale')).getByText('1 preset')).toBeInTheDocument()
+    expect(within(itemOf('Nebbia mentale')).queryByRole('button', { name: /Elimina/ })).not.toBeInTheDocument()
+    expect(within(itemOf('Pesantezza')).getByRole('button', { name: 'Elimina Pesantezza' })).toBeInTheDocument()
+    // Pain is used, so it stays; unused, it could go like any other.
+    expect(within(itemOf('Dolore')).getByText('2 voci')).toBeInTheDocument()
+  })
+
+  it('deletes with an undo toast, no dialog, and undo puts the item back in its place', async () => {
+    render(VocabEditor, { table: 'tags' })
+    await fireEvent.click(await screen.findByRole('button', { name: 'Elimina Stress' }))
+    await waitFor(() => expect(names()).not.toContain('Stress'))
+    expect(await db.tags.get('stress')).toBeUndefined()
+    expect(toastState.current?.message).toBe('Eliminato: Stress')
+    toastState.current!.action!.run()
+    await waitFor(() => expect(names().slice(8, 10)).toEqual(['Ciclo', 'Stress']))
+    expect(await db.tags.get('stress')).toMatchObject({ label: 'i18n:vocab.stress', group: 'context', order: 11 })
+  })
+
+  it('can empty a whole group', async () => {
+    render(VocabEditor, { table: 'tags' })
+    for (const name of ['Ciclo', 'Stress', 'Dormito male', 'In piedi a lungo', 'Seduta a lungo', 'Caldo', 'Viaggio']) {
+      await fireEvent.click(await screen.findByRole('button', { name: `Elimina ${name}` }))
+      await waitFor(() => expect(names()).not.toContain(name))
+    }
+    expect(await db.tags.where('group').equals('context').count()).toBe(0)
+    expect(screen.getAllByPlaceholderText('Nuovo…')).toHaveLength(3)
   })
 })

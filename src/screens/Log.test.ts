@@ -41,6 +41,8 @@ const strokes = () => document.querySelectorAll('.stage > svg .stroke')
 describe('Log fast path', () => {
   it('tap region, set intensity, save', async () => {
     render(App)
+    // The headline comes from the vocabulary, read after the first frame.
+    await screen.findByRole('slider', { name: 'Dolore' })
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     const slider = screen.getByRole('slider', { name: 'Dolore' })
     await fireEvent.input(slider, { target: { value: '7' } })
@@ -57,6 +59,8 @@ describe('Log fast path', () => {
 
   it('supports two layers with different levels, the second starting at the level of the first', async () => {
     render(App)
+    // The headline comes from the vocabulary, read after the first frame.
+    await screen.findByRole('slider', { name: 'Dolore' })
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
@@ -81,6 +85,8 @@ describe('Log fast path', () => {
 
   it('an ongoing entry shows in its own dropdown, between the menu and the presets, tinted by its level; its sheet ends it (#37)', async () => {
     render(App)
+    // The headline comes from the vocabulary, read after the first frame.
+    await screen.findByRole('slider', { name: 'Dolore' })
     expect(episodesButton()).toBeNull()
     await fireEvent.click(screen.getByRole('button', { name: 'Tutto il corpo' }))
     await more()
@@ -168,6 +174,8 @@ describe('Episodes with an end', () => {
 describe('The drawer', () => {
   it('peeks with the pain slider and Salva; the handle brings the other symptoms, the tags and the note, the full tag list behind Tutti i tag', async () => {
     render(App)
+    // The headline comes from the vocabulary, read after the first frame.
+    await screen.findByRole('slider', { name: 'Dolore' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('slider', { name: 'Dolore' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Salva' })).toBeInTheDocument()
@@ -271,6 +279,8 @@ describe('The drawer', () => {
 
   it('Azzera empties the form and the toast undoes it', async () => {
     render(App)
+    // The headline comes from the vocabulary, read after the first frame.
+    await screen.findByRole('slider', { name: 'Dolore' })
     const clear = screen.getByRole('button', { name: 'Azzera' })
     expect(clear).toBeDisabled()
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
@@ -387,9 +397,70 @@ describe('Headline reading', () => {
   })
 })
 
+describe('No special symptom (#36)', () => {
+  it('with pain off, the first body symptom is the headline: it starts at 5, it is what gets saved', async () => {
+    await db.symptoms.update('pain', { enabled: false })
+    render(App)
+    const head = await screen.findByRole('slider', { name: 'Gonfiore' })
+    expect(head).toHaveValue('5')
+    expect(screen.queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
+    await more()
+    expect(await screen.findByRole('slider', { name: 'Pesantezza' })).toBeInTheDocument()
+    expect(screen.queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
+    await body()
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.input(screen.getByRole('slider', { name: 'Gonfiore' }), { target: { value: '7' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    expect((await db.entries.toArray())[0].layers).toEqual([{ regions: ['152', '153'], readings: { swelling: 7 }, tags: [] }])
+    // The next draft starts where this one left off, and that alone is nothing to clear.
+    await waitFor(() => expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveValue('7'))
+    expect(screen.queryByRole('button', { name: 'Azzera' })).toBeDisabled()
+    // A second zone starts at the first one's level.
+    await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Spalla sx' }))
+    expect(screen.getByRole('slider', { name: /^Gonfiore/ })).toHaveValue('7')
+  })
+
+  it('the headline follows the vocabulary order: a symptom moved above pain leads', async () => {
+    await db.symptoms.update('swelling', { order: -1 })
+    render(App)
+    expect(await screen.findByRole('slider', { name: 'Gonfiore' })).toHaveValue('5')
+    expect(screen.queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
+    await more()
+    expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveValue('0')
+  })
+
+  it('with no body symptom on, an unlocated layer leads with the first mind symptom and starts at nothing', async () => {
+    await db.symptoms.filter((s) => s.category === 'body').modify({ enabled: false })
+    render(App)
+    const head = await screen.findByRole('slider', { name: 'Nebbia mentale' })
+    expect(head).toHaveValue('0')
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    expect((await db.entries.toArray())[0].layers).toEqual([{ regions: ['152', '153'], readings: {}, tags: [] }])
+  })
+
+  it('the episode sheet leads a body layer with the first body symptom, pain off', async () => {
+    await db.symptoms.update('pain', { enabled: false })
+    await addEntry({ kind: 'episode', layers: [{ regions: ['152'], readings: { fatigue: 4 } }] })
+    render(App)
+    const sheet = await openEpisode()
+    expect(within(sheet).getAllByRole('slider')).toHaveLength(2)
+    expect(within(sheet).getByRole('slider', { name: 'Gonfiore' })).toHaveValue('0')
+    expect(within(sheet).getByRole('slider', { name: 'Stanchezza' })).toHaveValue('4')
+    expect(within(sheet).queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
+  })
+})
+
 describe('Mind and mind symptoms', () => {
   it('opens with both kinds of sliders; the mind shows the mind ones only and saves a mind layer with the mental readings, no pain', async () => {
     render(App)
+    // The headline comes from the vocabulary, read after the first frame.
+    await screen.findByRole('slider', { name: 'Dolore' })
     expect(screen.getByRole('slider', { name: 'Dolore' })).toBeInTheDocument()
     await more()
     expect(await screen.findByRole('slider', { name: 'Nebbia mentale' })).toBeInTheDocument()
@@ -495,6 +566,8 @@ describe('Mind and mind symptoms', () => {
 
   it('a second layer over the same legs keeps its own readings and tags, and the map fades the other layer', async () => {
     render(App)
+    // The headline comes from the vocabulary, read after the first frame.
+    await screen.findByRole('slider', { name: 'Dolore' })
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '7' } })
     await more()
@@ -760,7 +833,7 @@ describe('Presets', () => {
     expect(within(ps).getByRole('slider', { name: 'Gonfiore' })).toHaveValue('0')
   })
 
-  it('a preset asking nothing at all is a one-tap "nothing to report": its sheet has no sliders and records pain 0 on the body', async () => {
+  it('a preset asking nothing at all is a one-tap "nothing to report": its sheet has no sliders and records no reading', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await pickPreset('Nuovo preset')
@@ -777,7 +850,7 @@ describe('Presets', () => {
     expect(within(ps).queryByRole('slider')).not.toBeInTheDocument()
     await fireEvent.click(within(ps).getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
-    expect((await db.entries.toArray())[0].layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: { pain: 0 }, tags: [] }])
+    expect((await db.entries.toArray())[0].layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: {}, tags: [] }])
   })
 
   it('a layer asking nothing is kept: Crea stays enabled, the sheet shows it no sliders', async () => {

@@ -15,7 +15,7 @@ describe('entries', () => {
   it('seeds vocabulary on first open', async () => {
     expect(await db.symptoms.count()).toBeGreaterThan(3)
     expect(await db.tags.count()).toBeGreaterThan(5)
-    expect((await db.symptoms.get('pain'))?.label.it).toBe('Dolore')
+    expect((await db.symptoms.get('pain'))?.label).toBe('i18n:vocab.pain')
   })
 
   it('adds an entry with defaults, its layers finalized against the vocabulary', async () => {
@@ -166,7 +166,7 @@ describe('entries', () => {
     const input = draftToInput(d)
     expect(input.note).toBe('n')
     expect(input.layers).toEqual([L(['154'], { pain: 5 }, ['rest'])])
-    const fresh = draftToInput(emptyDraft({ pain: 4 }))
+    const fresh = draftToInput(emptyDraft({ head: 'pain', level: 4 }))
     expect(fresh.layers).toEqual([L([], { pain: 4 })])
     expect(Date.parse(fresh.at!)).toBeGreaterThan(Date.now() - 5000)
   })

@@ -8,7 +8,7 @@
   import { durationMs, episodesOf, isHead, isUpdate, isActive, latest } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
-  import type { Entry, Symptom, Tag } from '../lib/types'
+  import { PAIN, type Entry, type Symptom, type Tag } from '../lib/types'
   import { entryHeadline, symptomName, trail } from '../lib/summary'
   import { intensityColor, intensityInk } from '../lib/color'
   import { shareOrDownload, exportFilename } from '../lib/backup'
@@ -21,11 +21,14 @@
   const fmtDay = (iso: string) => new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso))
   const series = $derived(dailySeries(entries, from, days))
   const summary = $derived(summarize(entries, days))
-  const heat = $derived(regionHeat(entries))
-  const strokes = $derived(allStrokes(entries))
   const cmp = $derived(tagComparison(entries, tags))
   const counts = $derived(tagCounts(entries, tags))
   const symMeans = $derived(symptomMeans(entries, symptoms))
+  /** Pain figures only when something in range reads pain (#36); the map then reads the first other symptom recorded. */
+  const hasPain = $derived(summary.meanPain !== null)
+  const heatSymptom = $derived(hasPain ? PAIN : (symMeans[0]?.symptom.id ?? PAIN))
+  const heat = $derived(regionHeat(entries, heatSymptom))
+  const strokes = $derived(allStrokes(entries, heatSymptom))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : (Math.round(v * 10) / 10).toString())
   /** Compact chronological list: episodes and entries with notes; an update is read through its episode. */
@@ -84,8 +87,10 @@
 
     <section class="grid4">
       <div><span class="k">{t('trends.entries')}</span><b>{summary.entries}</b><span class="k">{t('trends.onDays', { n: summary.daysWithEntries })}</span></div>
-      <div><span class="k">{t('trends.meanPain')}</span><b>{fmt1(summary.meanPain)}</b><span class="k">{t('trends.maxPain', { n: summary.maxPain ?? '–' })}</span></div>
-      <div><span class="k">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="k">{t('trends.badDaysHint')}</span></div>
+      {#if hasPain}
+        <div><span class="k">{t('trends.meanPain')}</span><b>{fmt1(summary.meanPain)}</b><span class="k">{t('trends.maxPain', { n: summary.maxPain ?? '–' })}</span></div>
+        <div><span class="k">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="k">{t('trends.badDaysHint')}</span></div>
+      {/if}
       <div><span class="k">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="k">{summary.meanEpisodeMs !== null ? t('trends.episodeMean', { d: formatDuration(summary.meanEpisodeMs, units) }) : ''}</span></div>
     </section>
 
@@ -95,8 +100,10 @@
         <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       </div>
       <div>
-        <h2>{t('trends.overTime')}</h2>
-        <DailyChart {series} height={150} interactive={false} />
+        {#if hasPain}
+          <h2>{t('trends.overTime')}</h2>
+          <DailyChart {series} height={150} interactive={false} />
+        {/if}
         {#if symMeans.length}
           <h2>{t('trends.symptoms')}</h2>
           <table>

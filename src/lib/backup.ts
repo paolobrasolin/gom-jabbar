@@ -1,11 +1,11 @@
 import { db } from './db'
 import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
 import type { Layer } from './layers'
-import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7, type PresetV8 } from './legacy'
+import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, oneLabel, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7, type PresetV8 } from './legacy'
 import { upgradeRegions } from './regions'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
 
-export const EXPORT_VERSION = 9
+export const EXPORT_VERSION = 10
 
 export type ExportFile = {
   app: 'gom-jabbar'
@@ -45,14 +45,16 @@ export function parseImport(text: string): ExportFile {
   if (o.app !== 'gom-jabbar' || !Array.isArray(o.entries)) throw new Error('invalid-file')
   const version = typeof o.version === 'number' ? o.version : 1
   const vocab = (o.vocabulary ?? {}) as Partial<ExportFile['vocabulary']>
-  const symptoms = Array.isArray(vocab.symptoms) ? vocab.symptoms.map(normalizeSymptom) : []
+  // A file without a vocabulary (no version ever wrote one) reads as carrying the seed; an empty one stays empty (§8).
+  const symptoms = Array.isArray(vocab.symptoms) ? vocab.symptoms.map((s) => normalizeSymptom(s, version)) : DEFAULT_SYMPTOMS
+  const tags = Array.isArray(vocab.tags) ? vocab.tags.map((x) => normalizeTag(x, version)) : DEFAULT_TAGS
   const categoryOf = categoryLookup(symptoms)
   const entries = (o.entries as Row[]).flatMap((e) => normalizeEntry(e, version, categoryOf))
   return {
     app: 'gom-jabbar',
     version: EXPORT_VERSION,
     exportedAt: typeof o.exportedAt === 'string' ? o.exportedAt : new Date().toISOString(),
-    vocabulary: { symptoms, tags: Array.isArray(vocab.tags) ? vocab.tags : [] },
+    vocabulary: { symptoms, tags },
     entries,
     presets: Array.isArray(o.presets) ? (o.presets as Row[]).map((p) => normalizePreset(p, version, categoryOf)) : [],
   }
@@ -77,9 +79,18 @@ function normalizePreset(p: Row, version: number, categoryOf: CategoryOf): Prese
 
 type Row = Record<string, unknown>
 
-/** Before version 6 a symptom had no category; it gets the default for its id (fog mind, the rest body). Nothing else is touched. */
-function normalizeSymptom(s: Symptom): Symptom {
-  return s.category ? s : { ...s, category: defaultCategory(s.id) }
+/**
+ * Before version 6 a symptom had no category; it gets the default for its id (fog mind, the rest body). Before version
+ * 10 its label held both languages; it becomes one string (§5.2). Nothing else is touched.
+ */
+function normalizeSymptom(s: Symptom, version: number): Symptom {
+  const out = s.category ? s : { ...s, category: defaultCategory(s.id) }
+  return version < 10 ? { ...out, label: oneLabel('symptoms', s.id, s.label) } : out
+}
+
+/** Before version 10 a tag's label held both languages; it becomes one string (§5.2). Nothing else is touched. */
+function normalizeTag(t: Tag, version: number): Tag {
+  return version < 10 ? { ...t, label: oneLabel('tags', t.id, t.label) } : t
 }
 
 type PointV6 = { at: string; readings: Record<string, number> }
@@ -180,9 +191,9 @@ export async function applyImport(file: ExportFile, mode: ImportMode): Promise<I
       await Promise.all([db.entries.clear(), db.symptoms.clear(), db.tags.clear(), db.presets.clear()])
       await db.entries.bulkPut(file.entries)
       await db.presets.bulkPut(file.presets)
-      // A file without vocabulary must not leave the app without symptoms or tags.
-      await db.symptoms.bulkPut(file.vocabulary.symptoms.length ? file.vocabulary.symptoms : DEFAULT_SYMPTOMS)
-      await db.tags.bulkPut(file.vocabulary.tags.length ? file.vocabulary.tags : DEFAULT_TAGS)
+      // An empty vocabulary is one that was emptied on purpose (§5.2): it stays empty.
+      await db.symptoms.bulkPut(file.vocabulary.symptoms)
+      await db.tags.bulkPut(file.vocabulary.tags)
       return
     }
     const existing = new Map((await db.entries.toArray()).map((e) => [e.id, e]))

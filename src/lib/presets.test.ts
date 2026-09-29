@@ -4,7 +4,7 @@ import { addEntry, makeEntry, logUpdate } from './entries'
 import { emptyDraft } from './draft'
 import { LEG_IDS } from './regions'
 import { finalize } from './layers'
-import { DEFAULT_SYMPTOMS } from './vocabulary'
+import { DEFAULT_SYMPTOMS, isMindSymptom } from './vocabulary'
 import { presetFromDraft, defaultAsks, addPreset, updatePreset, deletePreset, restorePreset, logPreset, lastForPreset, lastByPreset, presetEntries } from './presets'
 
 let db: ReturnType<typeof resetDb>
@@ -20,7 +20,7 @@ describe('presets', () => {
   it('captures a draft as a shape: each kept layer with its regions, what it asks (its list, else the default), no readings, no tags', () => {
     const d = emptyDraft({ kind: 'episode' })
     d.layers = [L(['153', '152'], { pain: 6, swelling: 3, fatigue: 0 }, ['compression']), L(['mind'], { fog: 2 }), L([], { pain: 3 })]
-    expect(presetFromDraft(d, '  Gambe ')).toEqual({
+    expect(presetFromDraft(d, '  Gambe ', DEFAULT_SYMPTOMS)).toEqual({
       name: 'Gambe',
       layers: [
         { regions: ['152', '153'], asks: ['pain', 'swelling'] },
@@ -29,14 +29,14 @@ describe('presets', () => {
       kind: 'episode',
     })
     d.layers[0].asks = ['swelling', 'swelling']
-    expect(presetFromDraft(d, 'Gambe').layers[0].asks).toEqual(['swelling'])
+    expect(presetFromDraft(d, 'Gambe', DEFAULT_SYMPTOMS).layers[0].asks).toEqual(['swelling'])
     // Only the mind: no pain slider.
     const m = emptyDraft()
     m.layers = [L(['mind'], { pain: 5, fog: 6 })]
-    expect(presetFromDraft(m, 'Testa').layers).toEqual([{ regions: ['mind'], asks: ['fog'] }])
-    // Nothing located: the first layer alone, asking everything it holds.
+    expect(presetFromDraft(m, 'Testa', DEFAULT_SYMPTOMS).layers).toEqual([{ regions: ['mind'], asks: ['fog'] }])
+    // Nothing located: the first layer alone, asking the body's headline and anything set.
     const n = emptyDraft()
-    expect(presetFromDraft(n, 'Vago').layers).toEqual([{ regions: [], asks: ['pain'] }])
+    expect(presetFromDraft(n, 'Vago', DEFAULT_SYMPTOMS).layers).toEqual([{ regions: [], asks: ['pain'] }])
   })
 
   it('with the vocabulary, a layer asks only what its regions show, whether the list is the default or the form set it', () => {
@@ -46,14 +46,24 @@ describe('presets', () => {
     expect(presetFromDraft(d, 'Schiena', DEFAULT_SYMPTOMS)).toEqual({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain', 'swelling'] }], kind: 'chronic' })
     d.layers[0].asks = ['pain', 'anxiety', 'stiffness']
     expect(presetFromDraft(d, 'Schiena', DEFAULT_SYMPTOMS).layers[0].asks).toEqual(['pain', 'stiffness'])
-    expect(defaultAsks(finalizeWith(d.layers)[0])).toEqual(['pain', 'swelling'])
+    expect(defaultAsks(finalizeWith(d.layers)[0], DEFAULT_SYMPTOMS)).toEqual(['pain', 'swelling'])
+  })
+
+  it('asks the first enabled body symptom by default, pain or not (§5.6)', () => {
+    const noPain = DEFAULT_SYMPTOMS.map((s) => (s.id === 'pain' ? { ...s, enabled: false } : s))
+    expect(defaultAsks(L(['224'], { pain: 4, stiffness: 2 }), noPain)).toEqual(['swelling', 'stiffness'])
+    expect(defaultAsks(L(['224'], { swelling: 3 }), noPain)).toEqual(['swelling'])
+    expect(defaultAsks(L(['mind'], { fog: 3 }), noPain)).toEqual(['fog'])
+    // No body symptom enabled: only what was set.
+    const mindOnly = DEFAULT_SYMPTOMS.map((s) => (isMindSymptom(s) ? s : { ...s, enabled: false }))
+    expect(defaultAsks(L(['224'], { fog: 0 }), mindOnly)).toEqual([])
   })
 
   it('paint rides along, readings and tags do not', () => {
     const d = emptyDraft()
     const strokes = [{ region: '160', fig: 'female' as const, view: 'front' as const, points: [[1, 2]] as [number, number][], w: 8 }]
     d.layers = [{ ...L(['160'], { pain: 5 }, ['heat']), strokes }]
-    expect(presetFromDraft(d, 'Coscia').layers).toEqual([{ regions: ['160'], asks: ['pain'], strokes }])
+    expect(presetFromDraft(d, 'Coscia', DEFAULT_SYMPTOMS).layers).toEqual([{ regions: ['160'], asks: ['pain'], strokes }])
   })
 
   it('updates a preset in place: same id, same order, new name and shape', async () => {
@@ -120,16 +130,10 @@ describe('preset edge cases', () => {
     expect(lastByPreset([newer, upd])).toEqual({ a: newer })
   })
 
-  it('a layer asking nothing is a location: a body layer records pain 0 there, a mind layer nothing', async () => {
+  it('records what each layer asks and nothing else: a layer asking nothing is a location', async () => {
     const p = await addPreset({ name: 'Posti', layers: [P(['224'], ['swelling']), P(['160'], []), P(['mind'], [])], kind: 'episode' })
     const e = await logPreset(p, [{ swelling: 4 }, {}, {}])
-    expect(e.layers).toEqual([L(['224'], { swelling: 4, pain: 0 }), L(['160'], { pain: 0 }), L(['mind'], {})])
+    expect(e.layers).toEqual([L(['224'], { swelling: 4 }), L(['160'], {}), L(['mind'], {})])
     expect(e).toMatchObject({ kind: 'episode', episodeId: e.id, endedAt: null })
-  })
-
-  it('a body layer records pain 0 when the preset does not track pain', async () => {
-    const p = await addPreset({ name: 'Gonfiore', layers: [P(['160'], ['swelling'])], kind: 'chronic' })
-    const e = await logPreset(p, [{ swelling: 4 }])
-    expect(e.layers).toEqual([L(['160'], { swelling: 4, pain: 0 })])
   })
 })

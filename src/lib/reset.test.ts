@@ -18,7 +18,7 @@ describe('resetAll', () => {
     await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }], note: 'ciao' })
     await addPreset({ name: 'Schiena', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic' })
     await addSymptom('Formicolio')
-    await rename('symptoms', 'pain', 'it', 'Male')
+    await rename('symptoms', 'pain', 'Male')
     const g = fakeGoogle()
     await resetAll(g.provider)
     await db.open()

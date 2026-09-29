@@ -3,10 +3,12 @@ import { emptyDraft, draftFromEntry, draftToInput } from './draft'
 import { makeEntry } from './entries'
 
 describe('draft conversions', () => {
-  it('a fresh draft is "now", one layer without regions at pain 5', () => {
-    const d = emptyDraft()
+  it('a fresh draft is "now", one layer without regions, its headline at 5 when there is one', () => {
+    const d = emptyDraft({ head: 'pain' })
     expect(d).toEqual({ at: null, kind: 'chronic', endedAt: null, layers: [{ regions: [], readings: { pain: 5 }, tags: [] }], cur: 0, note: '' })
-    expect(emptyDraft({ kind: 'episode', pain: 2 })).toMatchObject({ kind: 'episode', endedAt: null, layers: [{ readings: { pain: 2 } }] })
+    expect(emptyDraft({ kind: 'episode', head: 'swelling', level: 2 })).toMatchObject({ kind: 'episode', endedAt: null, layers: [{ readings: { swelling: 2 } }] })
+    // No body symptom enabled, or the vocabulary not read yet: no reading.
+    expect(emptyDraft().layers).toEqual([{ regions: [], readings: {}, tags: [] }])
   })
 
   it('draftFromEntry copies layers so edits do not touch the entry, and always has a layer', () => {
@@ -17,7 +19,7 @@ describe('draft conversions', () => {
     d.layers[0].readings.pain = 1
     expect(e.layers[0]).toEqual({ regions: ['152'], readings: { pain: 7, swelling: 2 }, tags: ['rest'] })
     expect(d.layers[0].readings).toEqual({ pain: 1, swelling: 2 })
-    expect(draftFromEntry({ ...e, layers: [] }).layers).toEqual([{ regions: [], readings: { pain: 0 }, tags: [] }])
+    expect(draftFromEntry({ ...e, layers: [] }).layers).toEqual([{ regions: [], readings: {}, tags: [] }])
   })
 
   it('draftToInput resolves "now", trims the note and copies the rest', () => {

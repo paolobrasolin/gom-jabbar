@@ -17,7 +17,8 @@
   import { showToast, haptic, toastState } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration } from '../lib/time'
-  import { PAIN, type Entry, type Preset } from '../lib/types'
+  import type { Entry, Preset } from '../lib/types'
+  import { firstEnabled } from '../lib/vocabulary'
   import { lastByPreset, presetEntries } from '../lib/presets'
   import { entryHeadline, symptomName } from '../lib/summary'
   import { backupReminder, buildExport, shareOrDownload, exportFilename, REMIND } from '../lib/backup'
@@ -88,10 +89,16 @@
       now: tick,
     })
   })
+  /** The body's headline (§6.1), the first enabled body symptom: a new draft starts it at 5, or where the last save left it. */
+  const head = $derived(firstEnabled(symptoms.value, 'body')?.id)
   let draft = $state(emptyDraft({ kind: prefs.ongoing ? 'episode' : 'chronic' }))
-  /** Anything worth clearing: a region, a tag or a reading other than pain on any layer, a time, a note, a preset just named. The pain level alone is not. */
+  // The vocabulary is read after the first draft is made: a draft that has no reading yet gets its headline then.
+  $effect(() => {
+    if (head && draft.layers.length === 1 && !Object.keys(draft.layers[0].readings).length) draft.layers[0].readings[head] = 5
+  })
+  /** Anything worth clearing: a region, a tag or a reading other than the headline on any layer, a time, a note, a preset just named. The headline's level alone is not. */
   const dirty = $derived(
-    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.entries(l.readings).some(([id, v]) => id !== PAIN && v > 0)) ||
+    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.entries(l.readings).some(([id, v]) => id !== head && v > 0)) ||
       draft.at !== null ||
       draft.endedAt !== null ||
       draft.note.trim() !== '' ||
@@ -110,14 +117,14 @@
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 
   function reset() {
-    draft = emptyDraft({ kind: draft.kind, pain: draft.layers[draft.cur]?.readings[PAIN] ?? 5 })
+    draft = emptyDraft({ kind: draft.kind, head, level: head ? draft.layers[draft.cur]?.readings[head] : undefined })
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
   }
 
   /** Azzera: back to an empty form, undoable from the toast (no confirmation dialogs, §6.1). */
   function clear() {
     const before = $state.snapshot(draft) as EntryDraft
-    draft = emptyDraft({ kind: draft.kind })
+    draft = emptyDraft({ kind: draft.kind, head })
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
     haptic(20)
     showToast(t('log.cleared'), { label: t('log.undo'), run: () => (draft = before) })
