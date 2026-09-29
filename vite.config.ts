@@ -130,7 +130,7 @@ export default defineConfig(({ mode }) => ({
         lines: 99.1,
         statements: 98.7,
         functions: 98.1,
-        branches: 90.3,
+        branches: 90.4,
       },
     },
   },
