@@ -4,7 +4,7 @@ import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { addEntry, logUpdate, endEpisode, isHead } from '../lib/entries'
 import { addPreset, deletePreset, logPreset } from '../lib/presets'
-import { go } from '../test/nav'
+import { go, back } from '../test/nav'
 import App from '../App.svelte'
 import { mergedReadings, mergedTags } from '../lib/layers'
 
@@ -264,5 +264,141 @@ describe('Edit sheet', () => {
     await fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(mergedReadings((await db.entries.get(e.id))!.layers).pain).toBe(7)
+  })
+})
+
+describe('Diary search', () => {
+  const field = () => screen.getByRole('searchbox', { name: 'Cerca nel diario' })
+  async function searchFor(q: string) {
+    if (!screen.queryByRole('searchbox')) await fireEvent.click(screen.getByRole('button', { name: 'Cerca' }))
+    await fireEvent.input(field(), { target: { value: q } })
+  }
+  const count = () => document.querySelector('.count')?.textContent
+
+  it('the magnifier turns the title into a field; with nothing typed the diary is as it was', async () => {
+    await addEntry({ at: ago(10), layers: [L(['152'], 2)], note: 'corsa' })
+    await openDiary()
+    await waitFor(() => expect(rows()).toHaveLength(1))
+    expect(screen.getByRole('heading', { name: 'Diario' })).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Cerca' }))
+    expect(screen.queryByRole('heading', { name: 'Diario' })).not.toBeInTheDocument()
+    expect(field()).toHaveFocus()
+    expect(rows()).toHaveLength(1)
+    expect(rows()[0]).not.toHaveClass('hit')
+    expect(count()).toBeUndefined()
+  })
+
+  it('lists the matching readings of the whole table, grouped by day, under a count', async () => {
+    await addEntry({ at: ago(10), layers: [L(['152'], 2, ['rest'])], note: 'dopo la corsa' })
+    await addEntry({ at: ago(20), layers: [L(['130'], 5)], note: 'nuoto' })
+    await addEntry({ at: ago(100 * DAY), layers: [L(['154'], 8)], note: 'corsa in salita' })
+    await openDiary()
+    await waitFor(() => expect(rows()).toHaveLength(2))
+    await searchFor('corsa')
+    await waitFor(() => expect(rows()).toHaveLength(2))
+    expect(rows()[0].querySelector('.pill')).toHaveTextContent('2')
+    expect(rows()[1].querySelector('.pill')).toHaveTextContent('8')
+    expect(count()).toBe('2 voci · 2 giorni')
+    // A hit wraps rather than cutting its line short: what matched stays in sight.
+    for (const r of rows()) expect(r).toHaveClass('hit')
+    expect(dayHeadings()).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Mostra altre' })).not.toBeInTheDocument()
+    // Words of the anatomy and tags find readings too, sides bound to their word.
+    await searchFor('ginocchio sx')
+    await waitFor(() => expect(rows()).toHaveLength(1))
+    expect(count()).toBe('1 voce · 1 giorno')
+    await searchFor('riposo')
+    await waitFor(() => expect(rows()).toHaveLength(1))
+    await searchFor('pallanuoto')
+    expect(await screen.findByText('Nessuna voce')).toBeInTheDocument()
+    expect(rows).toThrow()
+  })
+
+  it('an update is a hit of its own, named after its head, and opens the episode', async () => {
+    const p = await addPreset({ name: 'Emicrania', layers: [{ regions: ['100', '101'], asks: ['pain'] }], kind: 'episode' })
+    const head = await logPreset(p, [{ pain: 6 }], ago(3 * 60))
+    await logUpdate(head!.id, [{ pain: 3 }], ago(60), [['heat']])
+    await openDiary()
+    await waitFor(() => expect(rows()).toHaveLength(1))
+    await searchFor('calore')
+    await waitFor(() => expect(rows()).toHaveLength(1))
+    const [u] = rows()
+    expect(u.querySelector('.pill')).toHaveTextContent('3')
+    expect(u).toHaveTextContent('Emicrania')
+    expect(u).toHaveTextContent('Calore')
+    expect(u).toHaveTextContent(/aggiornamento · inizio \d\d:\d\d/)
+    await fireEvent.click(u)
+    expect(await screen.findByRole('dialog', { name: 'Episodio in corso' })).toBeInTheDocument()
+  })
+
+  it('an update says the day its episode started when it was another day', async () => {
+    // Yesterday at nine, updated now: the days differ whatever the time the test runs.
+    const start = new Date()
+    start.setDate(start.getDate() - 1)
+    start.setHours(9, 0, 0, 0)
+    const head = await addEntry({ at: start.toISOString(), kind: 'episode', layers: [L(['152'], 7)] })
+    await logUpdate(head.id, [{ pain: 3 }], new Date().toISOString(), [['heat']])
+    await openDiary()
+    await searchFor('calore')
+    await waitFor(() => expect(rows()[0]).toHaveTextContent(/aggiornamento · inizio ieri 09:00/))
+  })
+
+  it("a head is found by its preset once, with its own reading, not every update's", async () => {
+    const p = await addPreset({ name: 'Emicrania', layers: [{ regions: ['100', '101'], asks: ['pain'] }], kind: 'episode' })
+    const head = await logPreset(p, [{ pain: 6 }], ago(3 * 60))
+    await logUpdate(head!.id, [{ pain: 3 }], ago(60))
+    await openDiary()
+    await searchFor('emicrania')
+    await waitFor(() => expect(count()).toBe('1 voce · 1 giorno'))
+    expect(rows()[0].querySelector('.pill')).toHaveTextContent('6')
+    expect(rows()[0]).toHaveTextContent('in corso · 6 → 3')
+  })
+
+  it('a long note shows from a little before the match', async () => {
+    await addEntry({ at: ago(10), layers: [L(['152'], 2)], note: 'Giornata lunga in ufficio, poi la sera male forte dopo la Tachipirina presa tardi' })
+    await openDiary()
+    await searchFor('tachi')
+    await waitFor(() => expect(rows()[0]).toHaveTextContent('…male forte dopo la Tachipirina'))
+  })
+
+  it('the cross empties the field; back closes the search; leaving the diary forgets it', async () => {
+    await addEntry({ at: ago(10), layers: [L(['152'], 2)], note: 'corsa' })
+    await addEntry({ at: ago(20), layers: [L(['130'], 5)], note: 'nuoto' })
+    await openDiary()
+    await searchFor('nuoto')
+    await waitFor(() => expect(rows()).toHaveLength(1))
+    const list = document.querySelector('.screen')!
+    list.scrollTop = 300
+    await fireEvent.click(screen.getByRole('button', { name: 'Svuota' }))
+    expect(field()).toHaveValue('')
+    expect(field()).toHaveFocus()
+    expect(list.scrollTop).toBe(0)
+    // Nothing to empty: the cross keeps its place, out of sight.
+    expect(screen.queryByRole('button', { name: 'Svuota' })).not.toBeInTheDocument()
+    await waitFor(() => expect(rows()).toHaveLength(2))
+    await searchFor('nuoto')
+    await waitFor(() => expect(rows()).toHaveLength(1))
+    // Back closes the search and stays on the diary.
+    await fireEvent.click(screen.getByRole('button', { name: 'Indietro' }))
+    await screen.findByRole('heading', { name: 'Diario' })
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+    await waitFor(() => expect(rows()).toHaveLength(2))
+    // Forward, where a browser has it, opens the search again, empty.
+    history.forward()
+    await waitFor(() => expect(field()).toHaveValue(''))
+    history.back()
+    await screen.findByRole('heading', { name: 'Diario' })
+    // Back again leaves for the log; coming back, nothing is kept.
+    await back()
+    await go('Diario')
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+    await waitFor(() => expect(rows()).toHaveLength(2))
+  })
+
+  it('Enter puts the keyboard away', async () => {
+    await openDiary()
+    await searchFor('corsa')
+    await fireEvent.keyDown(field(), { key: 'Enter' })
+    expect(field()).not.toHaveFocus()
   })
 })
