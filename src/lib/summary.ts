@@ -1,17 +1,17 @@
-import { summarizeRegions } from './regions'
+import { whereItems } from './anatomy'
 import { mergedReadings, maxReadings } from './layers'
 import { PAIN, type LocalizedString, type Symptom } from './types'
 
-/** Human summary of a region list, e.g. "fianchi, gambe". `t` is the i18n lookup. */
-export function regionText(regions: string[], t: (k: string) => string): string {
-  return summarizeRegions(regions)
-    .map((s) => {
-      if (s.group === 'full') return t('region.full')
-      if (s.group === 'mind') return t('region.mind')
-      if (s.group === 'head' || s.group === 'torso' || s.group === 'back') return t(`region.${s.group}`)
-      return t(`region.${s.group}.${s.side === 'none' ? 'both' : s.side}`)
-    })
-    .join(', ')
+type T = (k: string, p?: Record<string, string | number>) => string
+
+/** How many places a summary names before counting the rest (#33). */
+const MAX_NAMES = 3
+
+/** Human summary of a region list, e.g. "collo, spalle" or "gambe, schiena + 3". `t` is the i18n lookup. */
+export function regionText(regions: string[], t: T): string {
+  const names = whereItems(regions).map(({ word, side }) => (word === 'full' ? t('region.full') : word === 'mind' ? t('region.mind') : t(`part.${word}.${side}`)))
+  if (names.length <= MAX_NAMES) return names.join(', ')
+  return t('region.more', { list: names.slice(0, MAX_NAMES).join(', '), n: names.length - MAX_NAMES })
 }
 
 export type Headline = { id: string; value: number }

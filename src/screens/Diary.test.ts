@@ -50,10 +50,10 @@ describe('Diary list', () => {
     const r = rows()
     expect(r).toHaveLength(3)
     expect(r[0].querySelector('.pill')).toHaveTextContent('7')
-    expect(r[0]).toHaveTextContent('gamba sx')
+    expect(r[0]).toHaveTextContent('coscia sx')
     expect(r[1].querySelector('.pill')).toHaveTextContent('3')
-    expect(r[1]).toHaveTextContent('gambe')
-    expect(r[2]).toHaveTextContent('braccio sx')
+    expect(r[1]).toHaveTextContent('cosce')
+    expect(r[2]).toHaveTextContent('spalla sx')
   })
 
   it('shows the symptom name, tags, duration, level trail and note of an episode', async () => {
@@ -68,7 +68,7 @@ describe('Diary list', () => {
     await waitFor(() => expect(swelling).toHaveTextContent('gonfiore'))
     expect(swelling).toHaveTextContent('in corso')
     expect(episode.querySelector('.pill')).toHaveTextContent('4')
-    expect(episode).toHaveTextContent('gamba sx · Riposo')
+    expect(episode).toHaveTextContent('coscia sx · Riposo')
     expect(episode).toHaveTextContent('2h · 7 → 4')
     expect(episode).toHaveTextContent('dopo la corsa')
   })
@@ -93,7 +93,7 @@ describe('Edit sheet', () => {
   it('opens prefilled from a row and saves the changes', async () => {
     const e = await addEntry({ at: ago(60), layers: [L(['152'], 7, ['rest'])], note: 'dopo la corsa' })
     await openDiary()
-    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
     expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('7')
     expect(within(sheet).getByRole('button', { name: 'Coscia sx' })).toHaveAttribute('aria-pressed', 'true')
@@ -121,7 +121,7 @@ describe('Edit sheet', () => {
   it('deletes with undo', async () => {
     await addEntry({ at: ago(60), layers: [L(['152'], 7)] })
     await openDiary()
-    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Elimina' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(0))
@@ -129,12 +129,12 @@ describe('Edit sheet', () => {
     expect(await screen.findByText('Ancora nessuna voce.')).toBeInTheDocument()
     await fireEvent.click(await screen.findByRole('button', { name: 'Annulla' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
-    expect(await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ })).toHaveLength(1)
+    expect(await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ })).toHaveLength(1)
   })
 
   /** An episode row opens its sheet (§5.5); Modifica zone e note is the way to the form. */
   async function openHeadForm() {
-    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ }))[0])
     const ep = await screen.findByRole('dialog', { name: /Episodio/ })
     await fireEvent.click(within(ep).getByRole('button', { name: 'Modifica zone e note' }))
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
@@ -250,15 +250,15 @@ describe('Edit sheet', () => {
     // A shape holds no tags: nothing is replayed onto the reading.
     expect(back).not.toHaveTextContent('Calore')
     // Several layers keep their levels beside the name.
-    expect(legs).toHaveAccessibleName(/6\s*Gambe · gambe 6 · fianchi 6/)
+    expect(legs).toHaveAccessibleName(/6\s*Gambe · cosce 6 · anche 6/)
     // A preset that no longer exists leaves the row as any other.
-    expect(orphan).toHaveAccessibleName(/2\s*busto/)
+    expect(orphan).toHaveAccessibleName(/2\s*petto sx/)
   })
 
   it('closes on Escape without touching the entry', async () => {
     const e = await addEntry({ at: ago(60), layers: [L(['152'], 7)] })
     await openDiary()
-    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*gamba sx/ }))[0])
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ }))[0])
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
     await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '1' } })
     await fireEvent.keyDown(window, { key: 'Escape' })

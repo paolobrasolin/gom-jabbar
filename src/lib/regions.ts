@@ -17,8 +17,6 @@ export const MIND_SHAPE = {
 }
 export type View = 'front' | 'back'
 export type Side = 'l' | 'r'
-/** Display groups, for summaries and the limb shortcuts. */
-export type Group = 'head' | 'arm' | 'torso' | 'back' | 'hip' | 'leg'
 
 /** A region's polygon on a figure, with rounded corners. (Before version 5 a region could be an ellipse; every segment is a CHOIR polygon now.) */
 export type Shape = { kind: 'poly'; points: [number, number][]; r: number }
@@ -32,71 +30,72 @@ export type Shape = { kind: 'poly'; points: [number, number][]; r: number }
 export type RegionDef = {
   id: string
   view: View
-  group: Group
   side: Side
-  /** i18n key suffix: `reg.<name>`. */
+  /** The segment's own name, a stable key: `head.back`, `knee.back`. */
   name: string
+  /** The part it shows (§5.3), an i18n key `part.<word>.<side>`: the back of the hand is `hand`, the back of the knee `kneeBack`. */
+  word: string
   choir: number
 }
 
 /** Corner rounding applied to the traced polygons when drawn. */
 const ROUND = 2
 
-/** Pair rows: our code prefix (two digits), name, display group, and the CHOIR pair as [viewer's left, viewer's right]. */
-type Pair = [prefix: string, name: string, group: Group, choir: [number, number]]
+/** Pair rows: our code prefix (two digits), name, the part's word, and the CHOIR pair as [viewer's left, viewer's right]. */
+type Pair = [prefix: string, name: string, word: string, choir: [number, number]]
 
 const FRONT: Pair[] = [
-  ['10', 'head', 'head', [101, 102]],
-  ['10', 'face', 'head', [103, 104]],
-  ['10', 'neck', 'head', [105, 106]],
-  ['11', 'chest', 'torso', [108, 109]],
-  ['11', 'abdomen', 'torso', [116, 117]],
-  ['11', 'groin', 'torso', [121, 122]],
-  ['13', 'shoulder', 'arm', [107, 110]],
-  ['13', 'upperarm', 'arm', [111, 112]],
-  ['13', 'elbow', 'arm', [113, 114]],
-  ['14', 'forearm', 'arm', [115, 118]],
-  ['14', 'wrist', 'arm', [119, 124]],
-  ['14', 'hand', 'arm', [125, 128]],
+  ['10', 'head', 'forehead', [101, 102]],
+  ['10', 'face', 'face', [103, 104]],
+  ['10', 'neck', 'neck', [105, 106]],
+  ['11', 'chest', 'chest', [108, 109]],
+  ['11', 'abdomen', 'abdomen', [116, 117]],
+  ['11', 'groin', 'groin', [121, 122]],
+  ['13', 'shoulder', 'shoulder', [107, 110]],
+  ['13', 'upperarm', 'upperArm', [111, 112]],
+  ['13', 'elbow', 'elbow', [113, 114]],
+  ['14', 'forearm', 'forearm', [115, 118]],
+  ['14', 'wrist', 'wrist', [119, 124]],
+  ['14', 'hand', 'hand', [125, 128]],
   ['15', 'hip', 'hip', [120, 123]],
-  ['15', 'thigh', 'leg', [126, 127]],
-  ['15', 'knee', 'leg', [129, 130]],
-  ['16', 'shin', 'leg', [131, 132]],
-  ['16', 'ankle', 'leg', [133, 134]],
-  ['16', 'foot', 'leg', [135, 136]],
+  ['15', 'thigh', 'thigh', [126, 127]],
+  ['15', 'knee', 'knee', [129, 130]],
+  ['16', 'shin', 'shin', [131, 132]],
+  ['16', 'ankle', 'ankle', [133, 134]],
+  ['16', 'foot', 'foot', [135, 136]],
 ]
 const BACK: Pair[] = [
-  ['20', 'head.back', 'head', [201, 202]],
-  ['20', 'nape', 'head', [203, 204]],
-  ['20', 'neck.back', 'head', [205, 206]],
-  ['22', 'upperback', 'back', [208, 209]],
-  ['22', 'midback', 'back', [212, 213]],
-  ['22', 'lowerback', 'back', [218, 219]],
-  ['22', 'buttock', 'hip', [223, 224]],
-  ['23', 'shoulder.back', 'arm', [207, 210]],
-  ['23', 'upperarm.back', 'arm', [211, 214]],
-  ['23', 'elbow.back', 'arm', [215, 216]],
-  ['24', 'forearm.back', 'arm', [217, 220]],
-  ['24', 'wrist.back', 'arm', [221, 226]],
-  ['24', 'hand.back', 'arm', [227, 230]],
+  ['20', 'head.back', 'crown', [201, 202]],
+  ['20', 'nape', 'backOfHead', [203, 204]],
+  ['20', 'neck.back', 'neck', [205, 206]],
+  ['22', 'upperback', 'upperBack', [208, 209]],
+  ['22', 'midback', 'midBack', [212, 213]],
+  ['22', 'lowerback', 'lowerBack', [218, 219]],
+  ['22', 'buttock', 'buttock', [223, 224]],
+  ['23', 'shoulder.back', 'shoulder', [207, 210]],
+  ['23', 'upperarm.back', 'upperArm', [211, 214]],
+  ['23', 'elbow.back', 'elbow', [215, 216]],
+  ['24', 'forearm.back', 'forearm', [217, 220]],
+  ['24', 'wrist.back', 'wrist', [221, 226]],
+  ['24', 'hand.back', 'hand', [227, 230]],
   ['25', 'hip.back', 'hip', [222, 225]],
-  ['25', 'thigh.back', 'leg', [228, 229]],
-  ['25', 'knee.back', 'leg', [231, 232]],
-  ['26', 'calf', 'leg', [233, 234]],
-  ['26', 'heel', 'leg', [235, 236]],
-  ['26', 'foot.back', 'leg', [237, 238]],
+  ['25', 'thigh.back', 'thigh', [228, 229]],
+  ['25', 'knee.back', 'kneeBack', [231, 232]],
+  ['26', 'calf', 'calf', [233, 234]],
+  ['26', 'heel', 'heel', [235, 236]],
+  ['26', 'foot.back', 'foot', [237, 238]],
 ]
 
 function expand(pairs: Pair[], view: View): RegionDef[] {
   const next: Record<string, number> = {}
-  return pairs.flatMap(([prefix, name, group, choir]) => {
+  return pairs.flatMap(([prefix, name, word, choir]) => {
     const n = next[prefix] ?? 0
     next[prefix] = n + 2
     // The CHOIR pair is viewer's left first: the figure's right in front, its left at the back.
     const [leftCode, rightCode] = view === 'front' ? [choir[1], choir[0]] : choir
     return [
-      { id: `${prefix}${n}`, view, group, side: 'l' as Side, name, choir: leftCode },
-      { id: `${prefix}${n + 1}`, view, group, side: 'r' as Side, name, choir: rightCode },
+      { id: `${prefix}${n}`, view, side: 'l' as Side, name, word, choir: leftCode },
+      { id: `${prefix}${n + 1}`, view, side: 'r' as Side, name, word, choir: rightCode },
     ]
   })
 }
@@ -191,6 +190,10 @@ export function shapeCenter(s: Shape): [number, number] {
   return [s.points.reduce((t, p) => t + p[0], 0) / n, s.points.reduce((t, p) => t + p[1], 0) / n]
 }
 
+const family = (id: string) => id[1]
+/** The head family without the neck (its parts 4 and 5). */
+const isHead = (id: string) => family(id) === '0' && Number(id[2]) < 4
+
 /** The same part on the other side: flip the parity of the code. */
 export function mirrorId(id: string): string | null {
   const def = REGION_BY_ID[id]
@@ -199,10 +202,10 @@ export function mirrorId(id: string): string | null {
   return String(n % 2 === 0 ? n + 1 : n - 1)
 }
 
-/** The same part seen from the other view: flip the view digit. The trunk families do not correspond (§5.3), so they have none. */
+/** The segment seen from the other view: flip the view digit. The trunk families do not correspond (§5.3), and neither do the head's front and back (the forehead and the crown, the face and the back of the head, #33): only the neck does. */
 export function flipId(id: string): string | null {
   const def = REGION_BY_ID[id]
-  if (!def || def.group === 'torso' || def.group === 'back') return null
+  if (!def || family(id) === '1' || family(id) === '2' || isHead(id)) return null
   const other = (id[0] === '1' ? '2' : '1') + id.slice(1)
   return REGION_BY_ID[other] ? other : null
 }
@@ -216,11 +219,10 @@ export function counterparts(id: string, both: Both): string[] {
   return [...new Set(ids)]
 }
 
-const family = (id: string) => id[1]
 export const LEG_IDS = REGIONS.filter((r) => family(r.id) === '5' || family(r.id) === '6').map((r) => r.id)
 export const ARM_IDS = REGIONS.filter((r) => family(r.id) === '3' || family(r.id) === '4').map((r) => r.id)
-/** The quick sets of the rail (#22): the head and the trunk on both views, and each limb on one side. */
-export const HEAD_IDS = REGIONS.filter((r) => family(r.id) === '0').map((r) => r.id)
+/** The quick sets of the rail (#22): the head (without the neck, #33) and the trunk on both views, and each limb on one side. They are the areas of the summaries (`lib/anatomy.ts`). */
+export const HEAD_IDS = REGIONS.filter((r) => isHead(r.id)).map((r) => r.id)
 export const TORSO_IDS = REGIONS.filter((r) => family(r.id) === '1' || family(r.id) === '2').map((r) => r.id)
 export const sided = (ids: string[], side: Side): string[] => ids.filter((id) => REGION_BY_ID[id].side === side)
 
@@ -251,32 +253,6 @@ export function toggleSet(selected: string[], ids: string[]): string[] {
 
 export function toggleFullBody(selected: string[]): string[] {
   return isFullBody(selected) ? [] : [FULL_BODY]
-}
-
-export type RegionSummaryItem = { group: Group | 'full' | 'mind'; side: 'both' | Side | 'none' }
-
-/** Collapse region ids into coarse groups with side info, for display. Full body stands for every body region; the mind comes last. */
-export function summarizeRegions(regions: string[]): RegionSummaryItem[] {
-  const mind: RegionSummaryItem[] = regions.includes(MIND) ? [{ group: 'mind', side: 'none' }] : []
-  if (isFullBody(regions)) return [{ group: 'full', side: 'none' }, ...mind]
-  const order: Group[] = ['head', 'arm', 'torso', 'back', 'hip', 'leg']
-  const sides = new Map<Group, Set<Side>>()
-  for (const id of regions) {
-    const def = REGION_BY_ID[id]
-    if (!def) continue
-    if (!sides.has(def.group)) sides.set(def.group, new Set())
-    sides.get(def.group)!.add(def.side)
-  }
-  return [
-    ...order
-      .filter((g) => sides.has(g))
-      .map((g) => {
-        const s = sides.get(g)!
-        const side: RegionSummaryItem['side'] = s.has('l') && s.has('r') ? 'both' : s.has('l') ? 'l' : 'r'
-        return { group: g, side }
-      }),
-    ...mind,
-  ]
 }
 
 /**
