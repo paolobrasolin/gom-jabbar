@@ -3,7 +3,8 @@
   import { intensityColor } from '../lib/color'
   import type { DayPoint } from '../lib/stats'
 
-  let { series, height = 170, interactive = true }: { series: DayPoint[]; height?: number; interactive?: boolean } = $props()
+  /** `label` names the chart for assistive tech: the symptom it reads, "Gonfiore per giorno". */
+  let { series, label, height = 170, interactive = true }: { series: DayPoint[]; label: string; height?: number; interactive?: boolean } = $props()
 
   let width = $state(360)
   let sel = $state<number | null>(null)
@@ -46,7 +47,7 @@
     <span><i class="key bar"></i>{t('trends.legendMax')}</span>
     {#if showMean}<span><i class="key dot"></i>{t('trends.legendMean')}</span>{/if}
   </div>
-  <svg {width} {height} role="img" aria-label={t('trends.chartLabel')}>
+  <svg {width} {height} role="img" aria-label={label}>
     {#each [0, 5, 10] as g (g)}
       <line class="grid" x1={padL} x2={width - padR} y1={y(g)} y2={y(g)} />
       <text class="tick" x={padL - 6} y={y(g) + 4} text-anchor="end">{g}</text>

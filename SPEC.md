@@ -208,7 +208,7 @@ An entry is a stack of **layers** (#29): each its own regions, its own sliders, 
 - Full body fills the current layer: its regions become the star (and the mind, if selected), its paint stays; off again, the body goes with its paint and the mind stays.
 - **The mind is one region among the others** (#28): tapping it puts it in the current layer or takes it out, so body and mind make one pill, "7 · gambe, mente". Mirror never applies to it, sets and limbs never include it, and it stays toggleable under full body. Which sliders a layer shows follows its regions (§6.1).
 - Tags belong to the layer: a remedy for the legs is not one for the head. The strip and the grouped list, in the layer's panel, toggle the current layer's tags.
-- Overall pain shown in the diary and used for trends is the max over the layers' pain; a layer holding only the mind has none, and neither has an entry that never read pain (§6.3).
+- An entry's level of a symptom, in the diary and in Trends, is the max over its layers' readings of it; an entry that never read the symptom has none (§6.3).
 
 Before 0.5.0 an entry had *areas*: a partition of the body with one level each, and one set of readings and tags for the whole entry. Selecting a region in one area silently took it out of another, and the mind needed rules of its own to carry a level. Layers are what areas were meant to be.
 
@@ -279,13 +279,14 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 Range picker: 7, 30, 90, 365 days.
 
-- **Body heatmap**: the same body SVG, read for **one symptom at a time**: pain by default, with a chip row to pick any other symptom recorded in range; when nothing in range reads pain (it is off, or deleted, #36), the first other symptom recorded. A region is coloured by the mean level of that symptom over the entries that selected it, an entry counting once at the max over its layers that carry the symptom, at full opacity, and by how often it appeared as the width of a ring drawn inside the region in the ink colour, from 0.75px for once to 2.5px for the most frequent, whatever the map's size, on a log scale, ln(1 + count) against the most frequent region's (frequency is read in ratios: once against twice matters, 18 against 20 hardly, and the counts have a long tail). The ring is clipped to its region, so it never lies on a neighbour. Frequency is not opacity: fading a colour moves it along the ramp, lighter (milder) on a light ground and darker (more severe) on a dark one, so a rare 8 would read as a 4 or a 10 (#23); a layer without the symptom contributes nothing. The map sits on the theme's own ground. Every stroke in range from such layers is laid over it at low opacity in its level's colour (§5.3). The mind is one more region: it lights up under a mental symptom.
-- **Intensity over time**: daily max and mean pain as a bar/line chart. Other symptoms selectable.
-- **Pain only where it was read** (#36): the pain figures (mean and max, days ≥ 5, the chart, the tag comparison) are over the entries that read pain; an entry without a pain reading (the mind alone, pain off) is not a 0, and a day without one sits out the comparison. With no pain read in range, the two pain tiles and the chart are left out. Trends by any symptom is later work.
+**One symptom at a time** (#38). Under the ranges, a chip row, **Sintomo**, offers every symptom read in range (a reading of 0 counts, disabled symptoms too: they stay in history), in the vocabulary editor's order, and the screen opens on the first: Dolore in the seed, whatever leads once reordered or once pain is off (§5.2). The tiles, the map, the chart and the tag comparison read the symptom picked; Per preset keeps its own rule. Their labels are neutral, **Media · max 8**, **Giorni ≥ 5** ("almeno 5 nel giorno"), because the row already says which symptom and a name would need gender agreement ("gonfiore medio", "stanchezza media") that a user-made symptom does not carry; the chart's accessible name is "Gonfiore per giorno". The figures are over the entries that read the symptom: one without the reading (the mind alone, a symptom not asked) is not a 0, and a day without one sits out the tag comparison (#36). With nothing read in range there is no row, and the two symptom tiles and the chart are left out; Voci and Episodi stay. Until #38 every figure but the map read pain.
+
+- **Body heatmap**: the same body SVG, read for the symptom picked. A region is coloured by the mean level of that symptom over the entries that selected it, an entry counting once at the max over its layers that carry the symptom, at full opacity, and by how often it appeared as the width of a ring drawn inside the region in the ink colour, from 0.75px for once to 2.5px for the most frequent, whatever the map's size, on a log scale, ln(1 + count) against the most frequent region's (frequency is read in ratios: once against twice matters, 18 against 20 hardly, and the counts have a long tail). The ring is clipped to its region, so it never lies on a neighbour. Frequency is not opacity: fading a colour moves it along the ramp, lighter (milder) on a light ground and darker (more severe) on a dark one, so a rare 8 would read as a 4 or a 10 (#23); a layer without the symptom contributes nothing. The map sits on the theme's own ground. Every stroke in range from such layers is laid over it at low opacity in its level's colour (§5.3). The mind is one more region: it lights up under a mental symptom.
+- **Intensity over time**: daily max and mean of the symptom picked as a bar/line chart.
 - **Per preset** (only when a preset has samples in range): one small line per preset, pain over time when any of its layers asks for it, else the first symptom its first layer asks for, dots coloured by the intensity ramp. Samples only: days without a sample stay empty, no carry-forward (§5.6).
 - **Episodes**: count and mean duration (heads only). Every other number counts every entry, an episode's updates included: the daily max sees the 8 a migraine started at, not only the 3 it ended at, and a three-day episode contributes to every day it was updated on. Region frequency on the heatmap counts an episode once per reading, as a chronic preset logged daily already does.
-- **Tags**: for each tag with enough data, mean of the daily maximum on days with vs without it, shown as two small bars with the day counts. Labelled as descriptive. Hidden when fewer than 5 days on either side; usage counts are shown instead until then.
-- **Other symptoms**: mean of each non-pain symptom over the entries where it was recorded.
+- **Tags**: for each tag with enough data, mean of the daily maximum of the symptom picked on days with vs without it, shown as two small bars with the day counts. Labelled as descriptive. Hidden when fewer than 5 days on either side; usage counts are shown instead until then.
+- **Other symptoms** (Altri sintomi): mean of every symptom but the one picked over the entries where it was recorded above 0.
 - **Report** button → §7.
 
 ### 6.4 Settings
@@ -302,12 +303,12 @@ Range picker: 7, 30, 90, 365 days.
 
 ## 7. Report
 
-A full-screen overlay in a fixed light palette, opened for the current range from Trends, with print CSS for A4; `@media print` hides the app behind it. No library. Contents:
+A full-screen overlay in a fixed light palette, opened for the current range and the symptom picked from Trends (§6.3; by itself it reads the first symptom read in range, in the editor's order), with print CSS for A4; `@media print` hides the app behind it. No library. Contents:
 
-1. Header: date range, generated on, number of entries and episodes.
-2. Body heatmap for pain, or, with no pain read in range, for the first other symptom recorded (front and back side by side), colour for the mean and a ring for frequency as on Trends (§6.3), strokes as shading (§5.3).
+1. Header: date range, generated on, and the symptom its figures read, "Sintomo: Gonfiore" (left out when nothing in range reads one).
+2. Body heatmap for that symptom (front and back side by side), colour for the mean and a ring for frequency as on Trends (§6.3), strokes as shading (§5.3).
 3. Intensity over time chart.
-4. Summary numbers: mean/max pain and days with pain ≥ 5 (left out with no pain read in range, §6.3), episode count and durations; the chart likewise.
+4. Summary numbers: entries, mean/max and days ≥ 5 of the symptom (left out when nothing in range reads it, §6.3), episode count and durations; the chart likewise; Altri sintomi without it.
 5. Tag summary table.
 6. Chronological list of episodes and notes (compact), each where it hurt in the words of the diary rows (§5.3).
 

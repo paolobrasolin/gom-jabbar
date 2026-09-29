@@ -8,11 +8,15 @@ import { intensityColor } from '../lib/color'
 import { go } from '../test/nav'
 import App from '../App.svelte'
 import { loadAppCss } from '../test/css'
+import type { GomJabbarDB } from '../lib/db'
 
+let db: GomJabbarDB
 beforeEach(() => {
-  resetDb()
+  db = resetDb()
   prefs.lang = 'it'
 })
+/** A change to the fresh database before the screen opens. */
+const resetDbWith = async (change: (db: GomJabbarDB) => Promise<unknown>) => change(db)
 
 /** Noon `n` days ago, so a test never straddles midnight. */
 function daysAgo(n: number, hour = 12): Date {
@@ -48,8 +52,8 @@ describe('Trends summary', () => {
     await openTrends()
     await waitFor(() => expect(tile('Voci')).toHaveTextContent('3'))
     expect(tile('Voci')).toHaveTextContent('in 2 giorni')
-    expect(tile('Dolore medio')).toHaveTextContent('6')
-    expect(tile('Dolore medio')).toHaveTextContent('max 8')
+    expect(tile('Media')).toHaveTextContent('6')
+    expect(tile('Media')).toHaveTextContent('max 8')
     expect(tile('Giorni ≥ 5')).toHaveTextContent('2')
     expect(tile('Episodi')).toHaveTextContent('1')
     expect(tile('Episodi')).toHaveTextContent('durata media 2h')
@@ -60,11 +64,11 @@ describe('Trends summary', () => {
     await addEntry({ at: at(0), ...legs(2) })
     await openTrends()
     await waitFor(() => expect(tile('Voci')).toHaveTextContent('2'))
-    expect(tile('Dolore medio')).toHaveTextContent('max 9')
+    expect(tile('Media')).toHaveTextContent('max 9')
     await fireEvent.click(screen.getByRole('button', { name: '7 giorni' }))
     expect(screen.getByRole('button', { name: '7 giorni' })).toHaveAttribute('aria-pressed', 'true')
     await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
-    expect(tile('Dolore medio')).toHaveTextContent('max 2')
+    expect(tile('Media')).toHaveTextContent('max 2')
     // A year of columns: the mean dots would smear, so the legend drops them.
     expect(screen.getByText('media')).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: '365 giorni' }))
@@ -72,31 +76,69 @@ describe('Trends summary', () => {
   })
 })
 
-describe('Trends without pain (#36)', () => {
-  it('leaves out the pain tiles and chart when nothing in range reads pain, and opens the map on what was read', async () => {
-    await addEntry({ at: at(0), layers: [{ regions: ['152'], readings: { swelling: 6 }, tags: [] }] })
-    await addEntry({ at: at(1), layers: [{ regions: ['mind'], readings: { fog: 3 }, tags: [] }] })
+describe('Trends by any symptom (#38)', () => {
+  const picker = () => screen.findByRole('group', { name: 'Sintomo' })
+  const swollen = (n: number, swelling: number, pain: number, tags: string[] = []) => addEntry({ at: at(n), layers: [{ regions: ['152'], readings: { pain, swelling }, tags }] })
+
+  it('opens on the first symptom read in range, in the editor\'s order, and every card follows the pick', async () => {
+    await swollen(0, 6, 2, ['rest'])
+    await swollen(1, 4, 3)
     await openTrends()
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('2'))
-    expect(screen.queryByText('Dolore medio')).not.toBeInTheDocument()
+    const chips = within(await picker()).getAllByRole('button')
+    expect(chips.map((c) => c.textContent)).toEqual(['Dolore', 'Gonfiore'])
+    expect(chips[0]).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() => expect(tile('Media')).toHaveTextContent('2.5'))
+    expect(screen.getByRole('img', { name: 'Dolore per giorno' })).toBeInTheDocument()
+    await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
+    expect(tile('Media')).toHaveTextContent('5')
+    expect(tile('Media')).toHaveTextContent('max 6')
+    expect(tile('Giorni ≥ 5')).toHaveTextContent('1')
+    expect(screen.getByRole('img', { name: 'Gonfiore per giorno' })).toBeInTheDocument()
+    await waitFor(() => expect(document.querySelector('[data-region="152"]')!.getAttribute('style')).toContain(`fill: ${intensityColor(5)}`))
+    // Altri sintomi: the others, pain among them.
+    const others = screen.getByText('Altri sintomi').closest('.card')!
+    expect(others).toHaveTextContent('Dolore')
+    expect(others).not.toHaveTextContent('Gonfiore')
+  })
+
+  it('leads with whatever the editor puts first, pain off or moved', async () => {
+    await resetDbWith((db) => db.symptoms.update('swelling', { order: -1 }))
+    await swollen(0, 6, 2)
+    await openTrends()
+    expect(within(await picker()).getByRole('button', { name: 'Gonfiore' })).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() => expect(tile('Media')).toHaveTextContent('6'))
+  })
+
+  it('without a reading in range, leaves out the figures of a symptom but keeps counting entries', async () => {
+    await addEntry({ at: at(0), layers: [{ regions: ['152'], readings: {}, tags: [] }] })
+    await openTrends()
+    await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
+    expect(screen.queryByRole('group', { name: 'Sintomo' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Media')).not.toBeInTheDocument()
     expect(screen.queryByText('Giorni ≥ 5')).not.toBeInTheDocument()
     expect(screen.queryByText('Nel tempo')).not.toBeInTheDocument()
-    const picker = await screen.findByRole('group', { name: 'Sintomo della mappa' })
-    expect(within(picker).queryByRole('button', { name: 'Dolore' })).not.toBeInTheDocument()
-    expect(within(picker).getByRole('button', { name: 'Gonfiore' })).toHaveAttribute('aria-pressed', 'true')
-    await waitFor(() => expect(document.querySelector('[data-region="152"]')!.getAttribute('style')).toContain(`fill: ${intensityColor(6)}`))
+  })
+
+  it('hands the pick to the report, which names it', async () => {
+    await swollen(0, 6, 2)
+    await openTrends()
+    await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
+    const report = document.querySelector('article.page') as HTMLElement
+    expect(within(report).getByText('Sintomo: Gonfiore')).toBeInTheDocument()
+    expect(within(report).getByText('Media').parentElement!).toHaveTextContent('6')
   })
 })
 
 describe('Trends heatmap and chart', () => {
-  it('reads one symptom at a time: pain by default, the mind lighting up under a mental symptom, read-only', async () => {
+  it('reads the symptom picked: pain first here, the mind lighting up under a mental symptom, read-only', async () => {
     await addEntry({ at: at(0), layers: [{ regions: ['mind'], readings: { fog: 6 } }] })
     await addEntry({ at: at(1), layers: [{ regions: ['*'], readings: { pain: 2 } }] })
     await openTrends()
     const mind = () => document.querySelector('[data-region="mind"]') as SVGPathElement
     await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
     expect(mind()).not.toHaveClass('on')
-    const picker = await screen.findByRole('group', { name: 'Sintomo della mappa' })
+    const picker = await screen.findByRole('group', { name: 'Sintomo' })
     expect(within(picker).getByRole('button', { name: 'Dolore' })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(within(picker).getByRole('button', { name: 'Nebbia mentale' }))
     await waitFor(() => expect(mind().getAttribute('style')).toContain(`fill: ${intensityColor(6)}`))

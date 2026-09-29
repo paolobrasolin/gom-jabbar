@@ -7,9 +7,12 @@ import { dayKey } from './time'
 
 const ALL_IDS = [...new Set(REGIONS.map((r) => r.id))]
 const readings = (e: Entry) => mergedReadings(e.layers)
-/** An entry's pain, when it reads pain at all: one without a pain reading is not a 0 (#36), it sits out the pain figures. */
-const pain = (e: Entry): number | undefined => readings(e)[PAIN]
-const withPain = (entries: Entry[]) => entries.flatMap((e) => (pain(e) === undefined ? [] : [{ e, pain: pain(e)! }]))
+/**
+ * The figures of Trends and the report read one symptom (§6.3, #38): pain unless another is picked. An entry counts only
+ * when it reads that symptom: one without the reading is not a 0 (#36), it sits out the figures.
+ */
+const level = (e: Entry, symptom: string): number | undefined => readings(e)[symptom]
+const withLevel = (entries: Entry[], symptom: string) => entries.flatMap((e) => (level(e, symptom) === undefined ? [] : [{ e, v: level(e, symptom)! }]))
 
 export function rangeStart(days: number, now = new Date()): Date {
   const d = new Date(now)
@@ -29,13 +32,13 @@ export function inRange(entries: Entry[], from: Date, to: Date = new Date(8.64e1
 
 export type DayPoint = { day: string; date: Date; max: number | null; mean: number | null; count: number }
 
-/** One point per calendar day in [from, from + days), over the entries reading pain. Days without any have null values. */
-export function dailySeries(entries: Entry[], from: Date, days: number): DayPoint[] {
+/** One point per calendar day in [from, from + days), over the entries reading the symptom. Days without any have null values. */
+export function dailySeries(entries: Entry[], from: Date, days: number, symptom = PAIN): DayPoint[] {
   const byDay = new Map<string, number[]>()
-  for (const { e, pain } of withPain(entries)) {
+  for (const { e, v } of withLevel(entries, symptom)) {
     const k = dayKey(e.at)
     if (!byDay.has(k)) byDay.set(k, [])
-    byDay.get(k)!.push(pain)
+    byDay.get(k)!.push(v)
   }
   const out: DayPoint[] = []
   for (let i = 0; i < days; i++) {
@@ -57,8 +60,9 @@ export function dailySeries(entries: Entry[], from: Date, days: number): DayPoin
 export type Summary = {
   entries: number
   daysWithEntries: number
-  meanPain: number | null
-  maxPain: number | null
+  /** The symptom's mean and max over the entries reading it; null when none does. */
+  mean: number | null
+  max: number | null
   daysAtLeast5: number
   episodes: number
   meanEpisodeMs: number | null
@@ -66,19 +70,19 @@ export type Summary = {
   hoursPerWeek: number | null
 }
 
-export function summarize(entries: Entry[], days: number, now = Date.now()): Summary {
+export function summarize(entries: Entry[], days: number, symptom = PAIN, now = Date.now()): Summary {
   const series = new Set(entries.map((e) => dayKey(e.at)))
-  const read = withPain(entries)
-  const pains = read.map((r) => r.pain)
+  const read = withLevel(entries, symptom)
+  const vs = read.map((r) => r.v)
   const dayMax = new Map<string, number>()
-  for (const { e, pain } of read) dayMax.set(dayKey(e.at), Math.max(dayMax.get(dayKey(e.at)) ?? 0, pain))
+  for (const { e, v } of read) dayMax.set(dayKey(e.at), Math.max(dayMax.get(dayKey(e.at)) ?? 0, v))
   const eps = entries.map((e) => durationMs(e, now)).filter((d): d is number => d !== null)
   const total = eps.reduce((a, b) => a + b, 0)
   return {
     entries: entries.length,
     daysWithEntries: series.size,
-    meanPain: pains.length ? pains.reduce((a, b) => a + b, 0) / pains.length : null,
-    maxPain: pains.length ? Math.max(...pains) : null,
+    mean: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null,
+    max: vs.length ? Math.max(...vs) : null,
     daysAtLeast5: [...dayMax.values()].filter((v) => v >= 5).length,
     episodes: eps.length,
     meanEpisodeMs: eps.length ? total / eps.length : null,
@@ -126,14 +130,14 @@ export type TagComparison = { tag: Tag; withN: number; withoutN: number; withMea
 
 export const MIN_DAYS_PER_SIDE = 5
 
-/** Mean daily max pain on days with vs without each tag, over the days reading pain. Only tags with enough days on both sides. */
-export function tagComparison(entries: Entry[], tags: Tag[], minDays = MIN_DAYS_PER_SIDE): TagComparison[] {
+/** Mean daily max of the symptom on days with vs without each tag, over the days reading it. Only tags with enough days on both sides. */
+export function tagComparison(entries: Entry[], tags: Tag[], symptom = PAIN, minDays = MIN_DAYS_PER_SIDE): TagComparison[] {
   const days = new Map<string, { max: number | undefined; tags: Set<string> }>()
   for (const e of entries) {
     const k = dayKey(e.at)
     const d = days.get(k) ?? { max: undefined, tags: new Set<string>() }
-    const p = pain(e)
-    if (p !== undefined) d.max = Math.max(d.max ?? 0, p)
+    const v = level(e, symptom)
+    if (v !== undefined) d.max = Math.max(d.max ?? 0, v)
     mergedTags(e.layers).forEach((t) => d.tags.add(t))
     days.set(k, d)
   }
@@ -151,16 +155,25 @@ export function tagComparison(entries: Entry[], tags: Tag[], minDays = MIN_DAYS_
 
 export type SymptomMean = { symptom: Symptom; mean: number; count: number }
 
-/** Mean of each non-pain symptom over the entries where it was recorded above zero. */
-export function symptomMeans(entries: Entry[], symptoms: Symptom[]): SymptomMean[] {
+/** Mean of every symptom but `except` (the one picked, §6.3) over the entries where it was recorded above zero. */
+export function symptomMeans(entries: Entry[], symptoms: Symptom[], except = PAIN): SymptomMean[] {
   return symptoms
-    .filter((s) => s.id !== PAIN)
+    .filter((s) => s.id !== except)
     .map((symptom) => {
       const vals = entries.map((e) => readings(e)[symptom.id]).filter((v): v is number => typeof v === 'number' && v > 0)
       return { symptom, mean: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0, count: vals.length }
     })
     .filter((x) => x.count > 0)
     .sort((a, b) => b.mean - a.mean)
+}
+
+/**
+ * The symptoms read in range, a reading of 0 included, disabled ones too (they stay in history), in vocabulary order:
+ * the Trends picker, whose first is where it opens (§6.3). Ids the vocabulary no longer knows are left out.
+ */
+export function symptomsRead(entries: Entry[], symptoms: Symptom[]): Symptom[] {
+  const ids = new Set(entries.flatMap((e) => e.layers.flatMap((l) => Object.keys(l.readings))))
+  return symptoms.filter((s) => ids.has(s.id)).sort((a, b) => a.order - b.order)
 }
 
 /** Tag usage counts in the range. */

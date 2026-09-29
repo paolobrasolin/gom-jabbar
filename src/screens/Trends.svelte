@@ -8,7 +8,7 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, tagCounts, presetSeries, MIN_DAYS_PER_SIDE } from '../lib/stats'
+  import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE } from '../lib/stats'
   import { formatDuration } from '../lib/time'
   import { allStrokes } from '../lib/strokes'
   import { PAIN } from '../lib/types'
@@ -24,19 +24,22 @@
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
   const byPreset = $derived(presetSeries(entries.value, presets.value))
 
-  const series = $derived(dailySeries(entries.value, from, days))
-  const summary = $derived(summarize(entries.value, days))
-  const cmp = $derived(tagComparison(entries.value, tags.value))
-  const symMeans = $derived(symptomMeans(entries.value, symptoms.value))
-  /** Pain figures only when something in range reads pain (#36): an entry without a pain reading is not a 0. */
-  const hasPain = $derived(summary.meanPain !== null)
-  /** The heatmap reads one symptom at a time (§6.3): pain, or any other recorded in range; the first of them to begin with. */
-  let picked = $state(PAIN)
-  const heatChoices = $derived([...(hasPain ? [PAIN] : []), ...symMeans.map((s) => s.symptom.id)])
-  const heatSymptom = $derived(heatChoices.includes(picked) ? picked : (heatChoices[0] ?? PAIN))
-  const heat = $derived(regionHeat(entries.value, heatSymptom))
-  const strokes = $derived(allStrokes(entries.value, heatSymptom))
-  const symptomLabel = (id: string) => tl(symptoms.value.find((s) => s.id === id)?.label ?? id)
+  /**
+   * The screen reads one symptom at a time (§6.3, #38): the tiles, the map, the chart and the tag comparison. The picker
+   * offers every symptom read in range, in the editor's order, and opens on the first.
+   */
+  const choices = $derived(symptomsRead(entries.value, symptoms.value))
+  let picked = $state<string | null>(null)
+  const symptom = $derived(choices.find((s) => s.id === picked) ?? choices[0])
+  const sid = $derived(symptom?.id ?? PAIN)
+  const series = $derived(dailySeries(entries.value, from, days, sid))
+  const summary = $derived(summarize(entries.value, days, sid))
+  const cmp = $derived(tagComparison(entries.value, tags.value, sid))
+  const symMeans = $derived(symptomMeans(entries.value, symptoms.value, sid))
+  /** The symptom's figures only when something in range reads it: an entry without the reading is not a 0 (#36). */
+  const read = $derived(summary.mean !== null)
+  const heat = $derived(regionHeat(entries.value, sid))
+  const strokes = $derived(allStrokes(entries.value, sid))
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : (Math.round(v * 10) / 10).toString())
@@ -52,10 +55,18 @@
   {#if summary.entries === 0}
     <div class="card muted small">{t('trends.empty')}</div>
   {:else}
+    {#if choices.length}
+      <div class="chips pick" role="group" aria-label={t('trends.heatSymptom')}>
+        {#each choices as s (s.id)}
+          <button class="chip small" aria-pressed={sid === s.id} onclick={() => (picked = s.id)}>{tl(s.label)}</button>
+        {/each}
+      </div>
+    {/if}
+
     <div class="tiles">
       <div class="card tile"><span class="small muted">{t('trends.entries')}</span><b>{summary.entries}</b><span class="small muted">{t('trends.onDays', { n: summary.daysWithEntries })}</span></div>
-      {#if hasPain}
-        <div class="card tile"><span class="small muted">{t('trends.meanPain')}</span><b>{fmt1(summary.meanPain)}</b><span class="small muted">{t('trends.maxPain', { n: summary.maxPain ?? '–' })}</span></div>
+      {#if read}
+        <div class="card tile"><span class="small muted">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="small muted">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
         <div class="card tile"><span class="small muted">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="small muted">{t('trends.badDaysHint')}</span></div>
       {/if}
       <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="small muted">{summary.meanEpisodeMs !== null ? t('trends.episodeMean', { d: formatDuration(summary.meanEpisodeMs, units) }) : ''}</span></div>
@@ -63,21 +74,14 @@
 
     <div class="card">
       <p class="small muted label">{t('trends.heatmap')}</p>
-      {#if heatChoices.length > 1}
-        <div class="chips heatpick" role="group" aria-label={t('trends.heatSymptom')}>
-          {#each heatChoices as id (id)}
-            <button class="chip small" aria-pressed={heatSymptom === id} onclick={() => (picked = id)}>{symptomLabel(id)}</button>
-          {/each}
-        </div>
-      {/if}
       <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
 
-    {#if hasPain}
+    {#if read && symptom}
       <div class="card">
         <p class="small muted label">{t('trends.overTime')}</p>
-        <DailyChart {series} />
+        <DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} />
       </div>
     {/if}
 
@@ -120,7 +124,7 @@
 </div>
 
 {#if showReport}
-  <Report {days} {from} entries={entries.value} tags={tags.value} symptoms={symptoms.value} onclose={() => (showReport = false)} />
+  <Report {days} {from} entries={entries.value} tags={tags.value} symptoms={symptoms.value} symptom={symptom?.id} onclose={() => (showReport = false)} />
 {/if}
 
 <style>
@@ -135,8 +139,9 @@
     background: var(--bg); border-radius: 12px; padding: 8px 8px 4px;
   }
   .top { margin-top: 10px; }
-  .heatpick { margin-bottom: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .heatpick::-webkit-scrollbar { display: none; }
+  /* A scrolling row in the screen's column: without `flex: none` it may shrink to nothing. */
+  .pick { flex: none; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .pick::-webkit-scrollbar { display: none; }
   .sym { display: flex; flex-direction: column; gap: 8px; }
   .val { font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
 </style>

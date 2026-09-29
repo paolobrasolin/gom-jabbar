@@ -59,8 +59,9 @@ describe('Report page', () => {
     // Every reading counts, the episode's update too.
     expect(box('Voci')).toHaveTextContent('4')
     expect(box('Voci')).toHaveTextContent('in 3 giorni')
-    expect(box('Dolore medio')).toHaveTextContent('4.8')
-    expect(box('Dolore medio')).toHaveTextContent('max 8')
+    expect(box('Media')).toHaveTextContent('4.8')
+    expect(box('Media')).toHaveTextContent('max 8')
+    expect(screen.getByText('Sintomo: Dolore')).toBeInTheDocument()
     expect(box('Giorni ≥ 5')).toHaveTextContent('2')
     expect(box('Episodi')).toHaveTextContent('1')
     expect(box('Episodi')).toHaveTextContent('durata media 2h')
@@ -148,15 +149,30 @@ describe('Report page', () => {
   })
 })
 
-describe('Report without pain (#36)', () => {
-  it('leaves out the pain numbers and chart, and maps the first symptom read', () => {
+describe('Report for another symptom (#38)', () => {
+  it('reads the symptom it is given: numbers, map and chart, named once', () => {
+    const { from, entries } = fixture()
+    render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, symptom: 'swelling', onclose: vi.fn() })
+    expect(screen.getByText('Sintomo: Gonfiore')).toBeInTheDocument()
+    const box = (k: string) => screen.getByText(k).parentElement!
+    expect(box('Media')).toHaveTextContent('5')
+    expect(box('Giorni ≥ 5')).toHaveTextContent('1')
+    expect(screen.getByRole('img', { name: 'Gonfiore per giorno' })).toBeInTheDocument()
+    // Swelling was read without a place: the map stays empty.
+    expect(document.querySelector('[data-region="152"]')).not.toHaveClass('on')
+    // Altri sintomi: pain among them now.
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toContain('Altri sintomi')
+    expect(screen.getByText('Altri sintomi').nextElementSibling).toHaveTextContent('Dolore')
+  })
+
+  it('leaves out the figures of a symptom nothing in range read', () => {
     const from = rangeStart(7)
-    const entries = [makeEntry({ at: at(0), layers: [{ regions: ['152'], readings: { swelling: 6 }, tags: [] }] })]
+    const entries = [makeEntry({ at: at(0), layers: [{ regions: ['152'], readings: {}, tags: [] }] })]
     render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
-    expect(screen.queryByText('Dolore medio')).not.toBeInTheDocument()
+    expect(screen.queryByText('Media')).not.toBeInTheDocument()
     expect(screen.queryByText('Giorni ≥ 5')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Sintomo:/)).not.toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).not.toContain('Nel tempo')
-    expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
   })
 })
 
