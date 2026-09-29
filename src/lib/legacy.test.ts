@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { entryToLayers, presetToLayers, placeReadings, categoryLookup, splitEpisode, presetKind, presetAsks } from './legacy'
+import { entryToLayers, presetToLayers, placeReadings, categoryLookup, splitEpisode, presetKind, presetAsks, oneLabel } from './legacy'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
 
 const cat = categoryLookup(DEFAULT_SYMPTOMS)
@@ -173,3 +173,18 @@ describe('version 8 → 9: a preset asks per layer', () => {
     expect(presetAsks({ symptomIds: ['pain'], layers: [{ readings: {} }] }, categoryOf)).toEqual({ layers: [{ readings: {}, regions: [], asks: ['pain'] }] })
   })
 })
+
+describe('oneLabel (9 → 10)', () => {
+  it('turns an untouched seed name into its dictionary key and any other into its Italian, else its English', () => {
+    expect(oneLabel('symptoms', 'pain', { it: 'Dolore', en: 'Ache' })).toBe('i18n:vocab.pain')
+    expect(oneLabel('tags', 'mld', { it: 'Drenaggio', en: 'Lymphatic drainage' })).toBe('Drenaggio')
+    expect(oneLabel('tags', 'pain', { it: 'Dolore', en: 'Pain' })).toBe('Dolore')
+    expect(oneLabel('symptoms', 'x', { it: '', en: 'Nausea' })).toBe('Nausea')
+  })
+  it('keeps a label that is already one string, and makes a missing one empty', () => {
+    expect(oneLabel('symptoms', 'x', 'Formicolio')).toBe('Formicolio')
+    expect(oneLabel('symptoms', 'x', undefined)).toBe('')
+    expect(oneLabel('tags', 'stress', { it: '', en: '' })).toBe('')
+  })
+})
+

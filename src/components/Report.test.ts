@@ -148,6 +148,18 @@ describe('Report page', () => {
   })
 })
 
+describe('Report without pain (#36)', () => {
+  it('leaves out the pain numbers and chart, and maps the first symptom read', () => {
+    const from = rangeStart(7)
+    const entries = [makeEntry({ at: at(0), layers: [{ regions: ['152'], readings: { swelling: 6 }, tags: [] }] })]
+    render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
+    expect(screen.queryByText('Dolore medio')).not.toBeInTheDocument()
+    expect(screen.queryByText('Giorni ≥ 5')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).not.toContain('Nel tempo')
+    expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
+  })
+})
+
 describe('Report strokes', () => {
   it('shades the strokes over the figures', () => {
     const onclose = vi.fn()

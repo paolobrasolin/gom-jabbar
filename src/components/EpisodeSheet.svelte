@@ -11,6 +11,7 @@
   import { formatDuration, formatTime } from '../lib/time'
   import { intensityColor, intensityInk } from '../lib/color'
   import { PAIN, type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
+  import { firstEnabled } from '../lib/vocabulary'
 
   /** `entry` is the head (§5.5); the sheet loads its updates and works from the latest reading. */
   let {
@@ -21,7 +22,7 @@
   }: { entry: Entry | null; tagDefs?: Tag[]; symptoms?: Symptom[]; onedit?: (e: Entry) => void } = $props()
 
   let open = $state(false)
-  /** One record per layer: the level of every symptom it tracks (pain when it shows the body, the others when set above 0). */
+  /** One record per layer: the level of every symptom it tracks (the body's headline when it shows the body, the others when set above 0). */
   let levels = $state<Record<string, number>[]>([])
   /** Each layer's tags as edited in the sheet; saved with Aggiorna and Termina. */
   let picked = $state<string[][]>([])
@@ -37,9 +38,11 @@
         if (!loaded || entry !== head) return
         ep = loaded
         const from = latest(loaded)
+        const lead = firstEnabled(symptoms, 'body')?.id
         levels = from.layers.map((l) => {
-          const lv = Object.fromEntries(Object.entries(l.readings).filter(([id, v]) => (id === PAIN && showsCategory(l, 'body')) || v > 0))
-          if (!(PAIN in lv) && showsCategory(l, 'body')) lv[PAIN] = 0
+          const body = showsCategory(l, 'body')
+          const lv = Object.fromEntries(Object.entries(l.readings).filter(([id, v]) => (id === lead && body) || v > 0))
+          if (lead && body && !(lead in lv)) lv[lead] = 0
           return lv
         })
         picked = from.layers.map((l) => [...l.tags])
@@ -66,11 +69,16 @@
   const points = $derived(
     (ep ? [ep.head, ...ep.updates] : []).map((e) => ({ entry: e, value: maxReadings(e.layers.map((l) => l.readings))[hl.id] })).filter((p) => typeof p.value === 'number'),
   )
-  /** Sliders of the current layer in vocabulary order, pain first; a symptom missing from the vocabulary still gets one. */
+  /** Sliders of the current layer in vocabulary order; a symptom missing from the vocabulary still gets one, named by its id. */
   const tracked = $derived.by(() => {
     const ids = Object.keys(levels[cur] ?? {})
-    const order = (id: string) => (id === PAIN ? -1 : (symptoms.find((s) => s.id === id)?.order ?? 1e9))
-    return ids.sort((a, b) => order(a) - order(b)).map((id) => ({ id, label: id === PAIN ? tl(symptoms.find((s) => s.id === PAIN)?.label ?? { it: 'Dolore', en: 'Pain' }) : symptomName(id, symptoms, tl) }))
+    const def = (id: string) => symptoms.find((s) => s.id === id)
+    const order = (id: string) => def(id)?.order ?? 1e9
+    const name = (id: string) => {
+      const d = def(id)
+      return d ? tl(d.label) : id.charAt(0).toUpperCase() + id.slice(1)
+    }
+    return ids.sort((a, b) => order(a) - order(b)).map((id) => ({ id, label: name(id) }))
   })
   /** Each layer as it stands in the sheet, for the chips: its regions, its edited level. */
   const edited = $derived((now?.layers ?? []).map((l, i) => ({ ...l, readings: { ...l.readings, ...levels[i] }, tags: picked[i] ?? l.tags })))
@@ -128,7 +136,7 @@
       {/if}
       <p class="small muted now">{t('episode.levelNow')}</p>
       {#each tracked as s (s.id)}
-        <IntensitySlider label={s.id === PAIN ? s.label : s.label.charAt(0).toUpperCase() + s.label.slice(1)} value={levels[cur][s.id]} onchange={(v) => (levels[cur][s.id] = v)} />
+        <IntensitySlider label={s.label} value={levels[cur][s.id]} onchange={(v) => (levels[cur][s.id] = v)} />
       {/each}
       {#each remedies as { g, items } (g)}
         <div>

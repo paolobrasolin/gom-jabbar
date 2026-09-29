@@ -41,7 +41,7 @@
     if (!open) preset = null
   })
 
-  const label = (id: string) => tl(symptoms.find((s) => s.id === id)?.label ?? { it: id, en: id })
+  const label = (id: string) => tl(symptoms.find((s) => s.id === id)?.label ?? id)
   /** Each layer as it stands in the sheet, for the summary and the chips: its regions and its levels, no tags. */
   const shown = $derived((current?.layers ?? []).map((l, i) => ({ regions: l.regions, readings: levels[i] ?? {}, tags: [] })))
 

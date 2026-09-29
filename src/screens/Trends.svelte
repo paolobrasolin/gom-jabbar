@@ -28,13 +28,15 @@
   const summary = $derived(summarize(entries.value, days))
   const cmp = $derived(tagComparison(entries.value, tags.value))
   const symMeans = $derived(symptomMeans(entries.value, symptoms.value))
-  /** The heatmap reads one symptom at a time (§6.3): pain, or any other recorded in range. */
+  /** Pain figures only when something in range reads pain (#36): an entry without a pain reading is not a 0. */
+  const hasPain = $derived(summary.meanPain !== null)
+  /** The heatmap reads one symptom at a time (§6.3): pain, or any other recorded in range; the first of them to begin with. */
   let picked = $state(PAIN)
-  const heatChoices = $derived([PAIN, ...symMeans.map((s) => s.symptom.id)])
-  const heatSymptom = $derived(heatChoices.includes(picked) ? picked : PAIN)
+  const heatChoices = $derived([...(hasPain ? [PAIN] : []), ...symMeans.map((s) => s.symptom.id)])
+  const heatSymptom = $derived(heatChoices.includes(picked) ? picked : (heatChoices[0] ?? PAIN))
   const heat = $derived(regionHeat(entries.value, heatSymptom))
   const strokes = $derived(allStrokes(entries.value, heatSymptom))
-  const symptomLabel = (id: string) => tl(symptoms.value.find((s) => s.id === id)?.label ?? { it: id, en: id })
+  const symptomLabel = (id: string) => tl(symptoms.value.find((s) => s.id === id)?.label ?? id)
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : (Math.round(v * 10) / 10).toString())
@@ -52,8 +54,10 @@
   {:else}
     <div class="tiles">
       <div class="card tile"><span class="small muted">{t('trends.entries')}</span><b>{summary.entries}</b><span class="small muted">{t('trends.onDays', { n: summary.daysWithEntries })}</span></div>
-      <div class="card tile"><span class="small muted">{t('trends.meanPain')}</span><b>{fmt1(summary.meanPain)}</b><span class="small muted">{t('trends.maxPain', { n: summary.maxPain ?? '–' })}</span></div>
-      <div class="card tile"><span class="small muted">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="small muted">{t('trends.badDaysHint')}</span></div>
+      {#if hasPain}
+        <div class="card tile"><span class="small muted">{t('trends.meanPain')}</span><b>{fmt1(summary.meanPain)}</b><span class="small muted">{t('trends.maxPain', { n: summary.maxPain ?? '–' })}</span></div>
+        <div class="card tile"><span class="small muted">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="small muted">{t('trends.badDaysHint')}</span></div>
+      {/if}
       <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="small muted">{summary.meanEpisodeMs !== null ? t('trends.episodeMean', { d: formatDuration(summary.meanEpisodeMs, units) }) : ''}</span></div>
     </div>
 
@@ -70,10 +74,12 @@
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
 
-    <div class="card">
-      <p class="small muted label">{t('trends.overTime')}</p>
-      <DailyChart {series} />
-    </div>
+    {#if hasPain}
+      <div class="card">
+        <p class="small muted label">{t('trends.overTime')}</p>
+        <DailyChart {series} />
+      </div>
+    {/if}
 
     {#if byPreset.length}
       <div class="card">

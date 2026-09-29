@@ -1,6 +1,6 @@
 import { whereItems } from './anatomy'
 import { mergedReadings, maxReadings } from './layers'
-import { PAIN, type LocalizedString, type Symptom } from './types'
+import { PAIN, type Label, type Symptom } from './types'
 
 type T = (k: string, p?: Record<string, string | number>) => string
 
@@ -30,7 +30,7 @@ export const entryHeadline = (e: { layers: { readings: Record<string, number> }[
 export const layerLevel = (l: { readings: Record<string, number> }): number => headline(l.readings).value
 
 /** Lowercase name of a symptom for a headline, e.g. "gonfiore"; empty for pain, which needs no naming. */
-export function symptomName(id: string, symptoms: Symptom[], tl: (s: LocalizedString) => string): string {
+export function symptomName(id: string, symptoms: Symptom[], tl: (s: Label) => string): string {
   if (id === PAIN) return ''
   const def = symptoms.find((s) => s.id === id)
   return def ? tl(def.label).toLowerCase() : id

@@ -7,7 +7,9 @@ import { dayKey } from './time'
 
 const ALL_IDS = [...new Set(REGIONS.map((r) => r.id))]
 const readings = (e: Entry) => mergedReadings(e.layers)
-const pain = (e: Entry) => readings(e)[PAIN] ?? 0
+/** An entry's pain, when it reads pain at all: one without a pain reading is not a 0 (#36), it sits out the pain figures. */
+const pain = (e: Entry): number | undefined => readings(e)[PAIN]
+const withPain = (entries: Entry[]) => entries.flatMap((e) => (pain(e) === undefined ? [] : [{ e, pain: pain(e)! }]))
 
 export function rangeStart(days: number, now = new Date()): Date {
   const d = new Date(now)
@@ -27,13 +29,13 @@ export function inRange(entries: Entry[], from: Date, to: Date = new Date(8.64e1
 
 export type DayPoint = { day: string; date: Date; max: number | null; mean: number | null; count: number }
 
-/** One point per calendar day in [from, from + days). Days without entries have null values. */
+/** One point per calendar day in [from, from + days), over the entries reading pain. Days without any have null values. */
 export function dailySeries(entries: Entry[], from: Date, days: number): DayPoint[] {
   const byDay = new Map<string, number[]>()
-  for (const e of entries) {
+  for (const { e, pain } of withPain(entries)) {
     const k = dayKey(e.at)
     if (!byDay.has(k)) byDay.set(k, [])
-    byDay.get(k)!.push(pain(e))
+    byDay.get(k)!.push(pain)
   }
   const out: DayPoint[] = []
   for (let i = 0; i < days; i++) {
@@ -66,9 +68,10 @@ export type Summary = {
 
 export function summarize(entries: Entry[], days: number, now = Date.now()): Summary {
   const series = new Set(entries.map((e) => dayKey(e.at)))
-  const pains = entries.map(pain)
+  const read = withPain(entries)
+  const pains = read.map((r) => r.pain)
   const dayMax = new Map<string, number>()
-  for (const e of entries) dayMax.set(dayKey(e.at), Math.max(dayMax.get(dayKey(e.at)) ?? 0, pain(e)))
+  for (const { e, pain } of read) dayMax.set(dayKey(e.at), Math.max(dayMax.get(dayKey(e.at)) ?? 0, pain))
   const eps = entries.map((e) => durationMs(e, now)).filter((d): d is number => d !== null)
   const total = eps.reduce((a, b) => a + b, 0)
   return {
@@ -123,17 +126,18 @@ export type TagComparison = { tag: Tag; withN: number; withoutN: number; withMea
 
 export const MIN_DAYS_PER_SIDE = 5
 
-/** Mean daily max pain on days with vs without each tag. Only tags with enough days on both sides. */
+/** Mean daily max pain on days with vs without each tag, over the days reading pain. Only tags with enough days on both sides. */
 export function tagComparison(entries: Entry[], tags: Tag[], minDays = MIN_DAYS_PER_SIDE): TagComparison[] {
-  const days = new Map<string, { max: number; tags: Set<string> }>()
+  const days = new Map<string, { max: number | undefined; tags: Set<string> }>()
   for (const e of entries) {
     const k = dayKey(e.at)
-    const d = days.get(k) ?? { max: 0, tags: new Set<string>() }
-    d.max = Math.max(d.max, pain(e))
+    const d = days.get(k) ?? { max: undefined, tags: new Set<string>() }
+    const p = pain(e)
+    if (p !== undefined) d.max = Math.max(d.max ?? 0, p)
     mergedTags(e.layers).forEach((t) => d.tags.add(t))
     days.set(k, d)
   }
-  const all = [...days.values()]
+  const all = [...days.values()].flatMap((d) => (d.max === undefined ? [] : [{ max: d.max, tags: d.tags }]))
   const out: TagComparison[] = []
   for (const tag of tags) {
     const w = all.filter((d) => d.tags.has(tag.id))

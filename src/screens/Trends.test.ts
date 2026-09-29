@@ -72,6 +72,22 @@ describe('Trends summary', () => {
   })
 })
 
+describe('Trends without pain (#36)', () => {
+  it('leaves out the pain tiles and chart when nothing in range reads pain, and opens the map on what was read', async () => {
+    await addEntry({ at: at(0), layers: [{ regions: ['152'], readings: { swelling: 6 }, tags: [] }] })
+    await addEntry({ at: at(1), layers: [{ regions: ['mind'], readings: { fog: 3 }, tags: [] }] })
+    await openTrends()
+    await waitFor(() => expect(tile('Voci')).toHaveTextContent('2'))
+    expect(screen.queryByText('Dolore medio')).not.toBeInTheDocument()
+    expect(screen.queryByText('Giorni ≥ 5')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nel tempo')).not.toBeInTheDocument()
+    const picker = await screen.findByRole('group', { name: 'Sintomo della mappa' })
+    expect(within(picker).queryByRole('button', { name: 'Dolore' })).not.toBeInTheDocument()
+    expect(within(picker).getByRole('button', { name: 'Gonfiore' })).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() => expect(document.querySelector('[data-region="152"]')!.getAttribute('style')).toContain(`fill: ${intensityColor(6)}`))
+  })
+})
+
 describe('Trends heatmap and chart', () => {
   it('reads one symptom at a time: pain by default, the mind lighting up under a mental symptom, read-only', async () => {
     await addEntry({ at: at(0), layers: [{ regions: ['mind'], readings: { fog: 6 } }] })

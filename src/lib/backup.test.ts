@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { resetDb } from './db'
 import { addEntry, updateEntry } from './entries'
-import { buildExport, parseImport, previewImport, applyImport, backupReminder, exportFilename, shareOrDownload, REMIND } from './backup'
+import { buildExport, parseImport, previewImport, applyImport, backupReminder, exportFilename, shareOrDownload, REMIND, EXPORT_VERSION } from './backup'
+import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 import { addPreset } from './presets'
 
 const DAY = 86_400_000
@@ -65,7 +66,7 @@ describe('backup', () => {
     expect(parsed.entries[0]).not.toHaveProperty('areas')
     expect(parsed.entries[0]).not.toHaveProperty('tags')
     expect(parsed.entries[0].updatedAt).toBe('2026-01-01T00:00:00.000Z')
-    expect(parsed.vocabulary.tags).toEqual([])
+    expect(parsed.vocabulary.tags).toEqual(DEFAULT_TAGS)
   })
 
   it('upgrades a version 6 file: readings by category, tags on the first layer, presets too; a version 7 entry without layers gets one', () => {
@@ -92,14 +93,35 @@ describe('backup', () => {
     ]
     const parsed = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 5, entries: [], vocabulary: { symptoms, tags: [] } }))
     expect(parsed.vocabulary.symptoms.map((s) => s.category)).toEqual(['body', 'mind', 'mind', 'body'])
-    expect(parsed.vocabulary.symptoms[2]).toEqual(symptoms[2])
+    expect(parsed.vocabulary.symptoms[2]).toEqual({ ...symptoms[2], label: 'Ansia' })
   })
 
-  it('replace with an empty vocabulary keeps the defaults', async () => {
+  it('reads a file without a vocabulary as one carrying the seed', async () => {
     const parsed = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 2, entries: [] }))
+    expect(parsed.vocabulary).toEqual({ symptoms: DEFAULT_SYMPTOMS, tags: DEFAULT_TAGS })
     await applyImport(parsed, 'replace')
-    expect(await db.symptoms.count()).toBeGreaterThan(3)
-    expect(await db.tags.count()).toBeGreaterThan(5)
+    expect(await db.symptoms.count()).toBe(DEFAULT_SYMPTOMS.length)
+    expect(await db.tags.count()).toBe(DEFAULT_TAGS.length)
+  })
+
+  it('replace with an empty vocabulary leaves it empty: everything was deleted on purpose', async () => {
+    const parsed = parseImport(JSON.stringify({ app: 'gom-jabbar', version: EXPORT_VERSION, entries: [], vocabulary: { symptoms: [], tags: [] } }))
+    await applyImport(parsed, 'replace')
+    expect(await db.symptoms.count()).toBe(0)
+    expect(await db.tags.count()).toBe(0)
+  })
+
+  it('gives version 9 labels one string: the seed as a dictionary key, the rest as their Italian', () => {
+    const symptoms = [
+      { id: 'pain', label: { it: 'Dolore', en: 'Ache' }, category: 'body', enabled: true, order: 0 },
+      { id: 'fog', label: { it: 'Testa vuota', en: 'Brain fog' }, category: 'mind', enabled: true, order: 4 },
+      { id: 'x1', label: { it: '', en: 'Nausea' }, category: 'body', enabled: true, order: 9, extra: 1 },
+    ]
+    const tags = [{ id: 'stress', label: { it: 'Stress', en: 'Stress' }, group: 'context', enabled: false, order: 11 }]
+    const parsed = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 9, entries: [], vocabulary: { symptoms, tags } }))
+    expect(parsed.vocabulary.symptoms.map((s) => s.label)).toEqual(['i18n:vocab.pain', 'Testa vuota', 'Nausea'])
+    expect(parsed.vocabulary.symptoms[2]).toEqual({ ...symptoms[2], label: 'Nausea' })
+    expect(parsed.vocabulary.tags).toEqual([{ ...tags[0], label: 'i18n:vocab.stress' }])
   })
 
   it('rejects garbage', () => {
@@ -176,7 +198,7 @@ describe('shareOrDownload', () => {
 describe('vocab', () => {
   it('adds, renames, toggles and reorders', async () => {
     const s = await addSymptom('Formicolio')
-    expect(s.label).toEqual({ it: 'Formicolio', en: 'Formicolio' })
+    expect(s.label).toBe('Formicolio')
     expect(s.category).toBe('body')
     expect(s.order).toBeGreaterThan(0)
     const m = await addSymptom('Ansia', 'mind')
@@ -185,12 +207,12 @@ describe('vocab', () => {
     await move('symptoms', 'fog', 1)
     expect((await db.symptoms.orderBy('order').toArray()).filter((x) => x.category === 'mind').map((x) => x.id)).toEqual(['anxiety', 'fog', 'depression', m.id])
     expect((await db.symptoms.get('tenderness'))?.order).toBe(5)
-    await rename('symptoms', s.id, 'en', 'Tingling')
-    expect((await db.symptoms.get(s.id))?.label).toEqual({ it: 'Tingling', en: 'Tingling' })
-    await rename('symptoms', 'pain', 'it', 'Male')
-    expect((await db.symptoms.get('pain'))?.label).toEqual({ it: 'Male', en: 'Pain' })
+    await rename('symptoms', s.id, 'Tingling')
+    expect((await db.symptoms.get(s.id))?.label).toBe('Tingling')
+    await rename('symptoms', 'pain', 'Male')
+    expect((await db.symptoms.get('pain'))?.label).toBe('Male')
     await setEnabled('symptoms', 'pain', false)
-    expect((await db.symptoms.get('pain'))?.enabled).toBe(true)
+    expect((await db.symptoms.get('pain'))?.enabled).toBe(false)
     await setEnabled('symptoms', 'fog', false)
     expect((await db.symptoms.get('fog'))?.enabled).toBe(false)
 

@@ -1,8 +1,8 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Entry, Preset, Symptom, Tag } from './types'
-import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, MIND_DEFAULTS_V6, defaultCategory } from './vocabulary'
+import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
 import { upgradeRegions } from './regions'
-import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, type AreaV6, type EntryV6, type EntryV7, type PresetV6, type PresetV7, type PresetV8 } from './legacy'
+import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, oneLabel, MIND_DEFAULTS_V6, type AreaV6, type EntryV6, type EntryV7, type PresetV6, type PresetV7, type PresetV8 } from './legacy'
 
 export class GomJabbarDB extends Dexie {
   entries!: EntityTable<Entry, 'id'>
@@ -122,6 +122,17 @@ export class GomJabbarDB extends Dexie {
           for (const k of Object.keys(row)) delete row[k]
           Object.assign(row, next)
         })
+      })
+    // 10: a symptom's or tag's label is one string (§5.2): the seed's own names become dictionary keys, every other
+    // name keeps its Italian (its English when the Italian is empty). Entries and presets are untouched.
+    this.version(10)
+      .stores({})
+      .upgrade(async (tx) => {
+        for (const table of ['symptoms', 'tags'] as const) {
+          await tx.table(table).toCollection().modify((row: { id: string; label: unknown }) => {
+            row.label = oneLabel(table, row.id, row.label)
+          })
+        }
       })
     this.on('populate', () => {
       this.symptoms.bulkAdd(DEFAULT_SYMPTOMS)

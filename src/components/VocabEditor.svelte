@@ -1,17 +1,19 @@
 <script lang="ts">
   import { t, tl } from '../i18n/index.svelte'
-  import { prefs } from '../lib/prefs.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
-  import { addSymptom, addTag, rename, setEnabled, move } from '../lib/vocab'
-  import { PAIN, type Symptom, type SymptomCategory, type Tag, type TagGroup } from '../lib/types'
+  import { addSymptom, addTag, rename, setEnabled, move, usage, deleteItem, restoreItem, type Usage } from '../lib/vocab'
+  import type { Symptom, SymptomCategory, Tag, TagGroup } from '../lib/types'
   import { isMindSymptom } from '../lib/vocabulary'
-  import { haptic } from '../lib/toast.svelte'
+  import { ICONS } from '../lib/icons'
+  import { haptic, showToast } from '../lib/toast.svelte'
 
   let { table }: { table: 'symptoms' | 'tags' } = $props()
 
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
+  /** How much each item is used (§6.4): a used one says so and can only be switched off, an unused one can go. */
+  const used = live(() => null, async () => usage(await db.entries.toArray(), await db.presets.toArray()), new Map<string, Usage>())
   const groups: TagGroup[] = ['intervention', 'context', 'medication']
   const categories: SymptomCategory[] = ['body', 'mind']
 
@@ -30,8 +32,22 @@
     editText = tl(item.label)
   }
   async function commitEdit() {
-    if (editingId && editText.trim()) await rename(table, editingId, prefs.lang, editText.trim())
+    if (editingId) await rename(table, editingId, editText)
     editingId = null
+  }
+  function usageText(u: Usage): string {
+    const parts = []
+    if (u.entries) parts.push(u.entries === 1 ? t('vocab.entries1') : t('vocab.entriesN', { n: u.entries }))
+    if (u.presets) parts.push(u.presets === 1 ? t('vocab.presets1') : t('vocab.presetsN', { n: u.presets }))
+    return parts.join(' · ')
+  }
+  /** Elimina (§6.4): no dialog, an undo toast that puts the item back as it was. */
+  async function remove(item: Symptom | Tag) {
+    const name = tl(item.label)
+    const gone = await deleteItem(table, item.id)
+    if (!gone) return
+    haptic(20)
+    showToast(t('vocab.deleted', { name }), { label: t('log.undo'), run: () => void restoreItem(table, gone) })
   }
   async function add(key: string) {
     const text = (newText[key] ?? '').trim()
@@ -49,20 +65,26 @@
       {#if sec.title}<p class="small muted group-title">{sec.title}</p>{/if}
       <div class="list">
         {#each sec.items as item (item.id)}
+          {@const u = used.value.get(item.id)}
           <div class="item" class:off={!item.enabled}>
-            {#if table === 'symptoms' && item.id === PAIN}
-              <span class="lock" aria-hidden="true"></span>
-            {:else}
-              <label class="switch">
-                <input type="checkbox" checked={item.enabled} onchange={(e) => setEnabled(table, item.id, (e.target as HTMLInputElement).checked)} aria-label={tl(item.label)} />
-                <span class="knob"></span>
-              </label>
-            {/if}
+            <label class="switch">
+              <input type="checkbox" checked={item.enabled} onchange={(e) => setEnabled(table, item.id, (e.target as HTMLInputElement).checked)} aria-label={tl(item.label)} />
+              <span class="knob"></span>
+            </label>
             {#if editingId === item.id}
               <!-- svelte-ignore a11y_autofocus -->
               <input class="grow rename" type="text" bind:value={editText} onblur={commitEdit} onkeydown={(e) => e.key === 'Enter' && commitEdit()} autofocus />
             {:else}
               <button class="grow name" onclick={() => startEdit(item)}>{tl(item.label)}</button>
+            {/if}
+            {#if u}
+              <span class="small muted use">{usageText(u)}</span>
+            {:else}
+              <button class="del" aria-label={t('vocab.delete', { name: tl(item.label) })} onclick={() => remove(item)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  {#each ICONS.clear as d, i (i)}<path {d} />{/each}
+                </svg>
+              </button>
             {/if}
             <button class="arrow" aria-label="↑" onclick={() => move(table, item.id, -1)}>↑</button>
             <button class="arrow" aria-label="↓" onclick={() => move(table, item.id, 1)}>↓</button>
@@ -89,10 +111,13 @@
   .list { display: flex; flex-direction: column; gap: 4px; }
   .item { display: flex; align-items: center; gap: 8px; min-height: 48px; }
   .item.off .name { color: var(--ink-2); text-decoration: line-through; }
-  .lock { width: 46px; flex: none; }
   .name { text-align: left; min-height: 44px; padding: 0 6px; border-radius: 8px; }
   .name:active { background: var(--surface-2); }
   .rename, .add input { min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); }
+  .use { flex: none; max-width: 30%; text-align: right; line-height: 1.2; }
+  .del { width: 44px; min-height: 44px; flex: none; border-radius: 8px; color: var(--ink-2); display: grid; place-items: center; }
+  .del svg { width: 20px; height: 20px; }
+  .del:active { background: var(--surface-2); }
   .arrow { width: 44px; min-height: 44px; border-radius: 8px; background: var(--surface-2); font-size: 16px; }
   .add { padding-top: 4px; }
 </style>

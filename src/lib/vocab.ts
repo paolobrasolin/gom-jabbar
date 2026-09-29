@@ -1,45 +1,40 @@
+import { nanoid } from 'nanoid'
 import { db } from './db'
-import { PAIN, type Entry, type Symptom, type SymptomCategory, type Tag, type TagGroup, type Lang } from './types'
-import { isMindSymptom } from './vocabulary'
+import type { Entry, Preset, Symptom, SymptomCategory, Tag, TagGroup } from './types'
+import { I18N, isMindSymptom } from './vocabulary'
 import { mergedTags } from './layers'
 
 type Table = 'symptoms' | 'tags'
 
-function slug(text: string): string {
-  const base = text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-  return (base || 'item') + '_' + Math.random().toString(36).slice(2, 6)
+/** A typed name as stored (§5.2): trimmed, never a dictionary key. Empty when nothing is left. */
+function cleanName(text: string): string {
+  let s = text.trim()
+  while (s.startsWith(I18N)) s = s.slice(I18N.length).trim()
+  return s
 }
 
+/** A new item: a random id (a name in it would outlive a rename) and the name as typed. */
 export async function addSymptom(text: string, category: SymptomCategory = 'body'): Promise<Symptom> {
   const last = await db.symptoms.orderBy('order').last()
-  const s: Symptom = { id: slug(text), label: { it: text, en: text }, category, enabled: true, order: (last?.order ?? -1) + 1 }
+  const s: Symptom = { id: nanoid(), label: cleanName(text), category, enabled: true, order: (last?.order ?? -1) + 1 }
   await db.symptoms.add(s)
   return s
 }
 
 export async function addTag(text: string, group: TagGroup): Promise<Tag> {
   const last = await db.tags.orderBy('order').last()
-  const t: Tag = { id: slug(text), label: { it: text, en: text }, group, enabled: true, order: (last?.order ?? -1) + 1 }
+  const t: Tag = { id: nanoid(), label: cleanName(text), group, enabled: true, order: (last?.order ?? -1) + 1 }
   await db.tags.add(t)
   return t
 }
 
-export async function rename(table: Table, id: string, lang: Lang, text: string): Promise<void> {
-  const item = await db[table].get(id)
-  if (!item) return
-  const label = { ...item.label, [lang]: text }
-  // Items whose two labels were identical are user-made or untranslated: keep them in sync.
-  if (item.label.it === item.label.en) label.it = label.en = text
-  await db[table].update(id, { label })
+/** The typed word replaces the name, in every language (§5.2); a blank one leaves the item as it was. */
+export async function rename(table: Table, id: string, text: string): Promise<void> {
+  const label = cleanName(text)
+  if (label) await db[table].update(id, { label })
 }
 
 export async function setEnabled(table: Table, id: string, enabled: boolean): Promise<void> {
-  if (table === 'symptoms' && id === PAIN) return
   await db[table].update(id, { enabled })
 }
 
@@ -73,4 +68,42 @@ export function frequentTags(entries: Entry[], tags: Tag[]): Tag[] {
   const count = new Map<string, number>()
   for (const e of entries) for (const id of mergedTags(e.layers)) if (ids.has(id)) count.set(id, (count.get(id) ?? 0) + 1)
   return [...enabled].sort((a, b) => (count.get(b.id) ?? 0) - (count.get(a.id) ?? 0))
+}
+
+export type Usage = { entries: number; presets: number }
+
+/**
+ * How much each symptom and tag is used (§5.2): the entries reading the symptom or carrying the tag on any layer, and
+ * the presets asking for the symptom. An id missing from the map is unused.
+ */
+export function usage(entries: Entry[], presets: Preset[]): Map<string, Usage> {
+  const out = new Map<string, Usage>()
+  const bump = (id: string, k: keyof Usage) => {
+    const u = out.get(id) ?? { entries: 0, presets: 0 }
+    u[k]++
+    out.set(id, u)
+  }
+  for (const e of entries) {
+    const ids = new Set([...e.layers.flatMap((l) => Object.keys(l.readings)), ...mergedTags(e.layers)])
+    for (const id of ids) bump(id, 'entries')
+  }
+  for (const p of presets) for (const id of new Set(p.layers.flatMap((l) => l.asks ?? []))) bump(id, 'presets')
+  return out
+}
+
+/** Delete an unused item (§5.2), checked in the same transaction; the row comes back for the undo toast. */
+export async function deleteItem(table: Table, id: string): Promise<Symptom | Tag | undefined> {
+  return db.transaction('rw', db[table], db.entries, db.presets, async () => {
+    const item = await db[table].get(id)
+    if (!item) return undefined
+    const used = usage(await db.entries.toArray(), await db.presets.toArray()).has(id)
+    if (used) return undefined
+    await db[table].delete(id)
+    return item
+  })
+}
+
+/** Undo of a deletion: the row as it was, same id and order. */
+export async function restoreItem(table: Table, item: Symptom | Tag): Promise<void> {
+  await (db[table] as typeof db.tags).put(item as Tag)
 }
