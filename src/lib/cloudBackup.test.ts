@@ -91,7 +91,9 @@ describe('failureText', () => {
     expect(failureText({ ok: false, reason: 'http', status: 503 })).toBe('Drive ha risposto con un errore (503).')
     expect(failureText({ ok: false, reason: 'http' })).toBe('Drive ha risposto con un errore (?).')
     expect(failureText({ ok: false, reason: 'unavailable' })).toBe('Drive non è disponibile in questa versione.')
-    expect(failureText({ ok: false, reason: 'conflict', remoteAt: '2026-09-28T18:41:00.000Z' })).toMatch(/^Su Drive c'è un backup più recente di questo telefono \(28 set, \d\d:41\)\.$/)
+    // A local time, so the day and the minutes read the same in any time zone.
+    const remoteAt = new Date(2026, 8, 28, 18, 41).toISOString()
+    expect(failureText({ ok: false, reason: 'conflict', remoteAt })).toBe("Su Drive c'è un backup più recente di questo telefono (28 set, 18:41).")
     prefs.lang = 'en'
     expect(failureText({ ok: false, reason: 'network' })).toBe('No network, or a flaky one.')
     prefs.lang = 'it'

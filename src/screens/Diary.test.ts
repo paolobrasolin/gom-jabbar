@@ -334,8 +334,12 @@ describe('Diary search', () => {
 
   it('an update is a hit of its own, named after its head, and opens the episode', async () => {
     const p = await addPreset({ name: 'Emicrania', layers: [{ regions: ['100', '101'], asks: ['pain'] }], kind: 'episode' })
-    const head = await logPreset(p, [{ pain: 6 }], ago(3 * 60))
-    await logUpdate(head!.id, [{ pain: 3 }], ago(60), [['heat']])
+    // Both on one day, whatever the clock: at 01:30, "3 h ago" and "1 h ago" straddle midnight.
+    const noon = new Date()
+    noon.setDate(noon.getDate() - 1)
+    noon.setHours(12, 0, 0, 0)
+    const head = await logPreset(p, [{ pain: 6 }], new Date(noon.getTime() - 2 * 3_600_000).toISOString())
+    await logUpdate(head!.id, [{ pain: 3 }], noon.toISOString(), [['heat']])
     await openDiary()
     await waitFor(() => expect(rows()).toHaveLength(1))
     await searchFor('calore')

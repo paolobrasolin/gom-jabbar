@@ -52,7 +52,8 @@ describe('Cancella tutto', () => {
   })
 
   it('names the last backup, and says the Drive file stays', async () => {
-    prefs.lastBackupAt = '2026-09-20T10:00:00.000Z'
+    // A local time: at UTC+14 the instant 10:00Z is already the 21st.
+    prefs.lastBackupAt = new Date(2026, 8, 20, 10).toISOString()
     g.signIn()
     await g.provider.whoami()
     const sheet = await openReset()
