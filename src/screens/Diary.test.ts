@@ -255,6 +255,24 @@ describe('Edit sheet', () => {
     expect(orphan).toHaveAccessibleName(/2\s*petto sx/)
   })
 
+  it('Salva has an undo that puts back the row exactly as it was', async () => {
+    const e = await addEntry({ at: ago(300), kind: 'episode', layers: [L(['152'], 7, ['rest'])], note: 'dopo la corsa' })
+    await endEpisode(e.id, ago(180))
+    const before = await db.entries.get(e.id)
+    await openDiary()
+    const sheet = await openHeadForm()
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Cronico' }))
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '2' } })
+    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'meglio' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect((await db.entries.get(e.id))?.kind).toBe('chronic'))
+    const toast = await screen.findByRole('status')
+    expect(toast).toHaveTextContent('Salvato')
+    await fireEvent.click(within(toast).getByRole('button', { name: 'Annulla' }))
+    await waitFor(async () => expect(await db.entries.get(e.id)).toEqual(before))
+    await waitFor(() => expect(rows()[0]).toHaveTextContent('dopo la corsa'))
+  })
+
   it('closes on Escape without touching the entry', async () => {
     const e = await addEntry({ at: ago(60), layers: [L(['152'], 7)] })
     await openDiary()
@@ -400,5 +418,20 @@ describe('Diary search', () => {
     await searchFor('corsa')
     await fireEvent.keyDown(field(), { key: 'Enter' })
     expect(field()).not.toHaveFocus()
+  })
+})
+
+describe('editing a migrated entry', () => {
+  it('Salva keeps the mental reading the 6 → 7 migration left on a body layer', async () => {
+    const at = ago(90)
+    await db.entries.add({ id: 'm1', kind: 'chronic', at, layers: [{ regions: ['152'], readings: { pain: 7, fog: 4 }, tags: [] }], note: '', createdAt: at, updatedAt: at })
+    await openDiary()
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+    const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
+    await fireEvent.input(await within(sheet).findByRole('slider', { name: 'Dolore' }), { target: { value: '6' } })
+    expect(within(sheet).queryByRole('slider', { name: 'Nebbia mentale' })).not.toBeInTheDocument()
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect((await db.entries.get('m1'))?.layers[0].readings).toEqual({ pain: 6, fog: 4 }))
+    expect((await db.entries.get('m1'))?.layers[0]).not.toHaveProperty('had')
   })
 })

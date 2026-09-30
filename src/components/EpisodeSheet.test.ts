@@ -136,3 +136,15 @@ describe('Episode sheet', () => {
     expect(within(sheet).queryByLabelText('Letture')).not.toBeInTheDocument()
   })
 })
+
+describe('a migrated episode', () => {
+  it('Aggiorna keeps the mental reading on the body layer, and the sheet offers its slider', async () => {
+    const at = ago(120)
+    await db.entries.add({ id: 'm1', kind: 'episode', episodeId: 'm1', endedAt: null, at, layers: [{ regions: ['152'], readings: { pain: 5, fog: 3 }, tags: [] }], note: '', createdAt: at, updatedAt: at })
+    const sheet = await openSheet()
+    expect(within(sheet).getByRole('slider', { name: 'Nebbia mentale' })).toHaveValue('3')
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '6' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
+    await waitFor(async () => expect((await updates())[0]?.layers[0].readings).toEqual({ pain: 6, fog: 3 }))
+  })
+})

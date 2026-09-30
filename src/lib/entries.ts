@@ -56,6 +56,15 @@ export async function updateEntry(id: string, patch: Partial<Omit<Entry, 'id' | 
   return db.entries.get(id)
 }
 
+/** An edit from the form (§6.2): the row as it was comes back with the saved one, for the undo toast. */
+export function editEntry(id: string, patch: Partial<Omit<Entry, 'id' | 'createdAt'>>): Promise<{ before?: Entry; after?: Entry }> {
+  return db.transaction('rw', db.entries, db.symptoms, async () => {
+    const before = await db.entries.get(id)
+    if (!before) return { before: undefined, after: undefined }
+    return { before, after: await updateEntry(id, patch) }
+  })
+}
+
 /** The head of an episode: the reading it started with, carrying its end (§5.5). */
 export const isHead = (e: Entry): boolean => e.kind === 'episode' && e.episodeId === e.id
 /** A later reading of an episode. */
@@ -127,7 +136,11 @@ export async function logUpdate(headId: string, readings: (Record<string, number
   if (!ep) return undefined
   const from = latest(ep)
   const layers = withTags(
-    from.layers.map((l, i) => ({ ...l, readings: { ...l.readings, ...(readings[i] ?? {}) } })),
+    // Every reading the latest had stays on its layer, at the level the sheet set: the sheet shows them all.
+    from.layers.map((l, i) => {
+      const next = { ...l.readings, ...(readings[i] ?? {}) }
+      return { ...l, readings: next, had: { regions: l.regions, readings: Object.fromEntries(Object.keys(l.readings).map((id) => [id, next[id]])) } }
+    }),
     tags,
   )
   const ts = now()
