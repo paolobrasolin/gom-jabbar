@@ -181,3 +181,87 @@ describe('the other view', () => {
     expect(counterparts('110', { sides: true, views: true })).toEqual(['110', '111'])
   })
 })
+
+describe('the region table is user data', () => {
+  // Entries store these ids. Each is frozen to its view, side, CHOIR code and name: reordering a row of FRONT or BACK in
+  // regions.ts would renumber every region after it and silently move the tester's history. Add rows, never move them.
+  it('every id keeps its view, side, CHOIR segment and name', () => {
+    const frozen = `
+      100 front l 102 head
+      101 front r 101 head
+      102 front l 104 face
+      103 front r 103 face
+      104 front l 106 neck
+      105 front r 105 neck
+      110 front l 109 chest
+      111 front r 108 chest
+      112 front l 117 abdomen
+      113 front r 116 abdomen
+      114 front l 122 groin
+      115 front r 121 groin
+      130 front l 110 shoulder
+      131 front r 107 shoulder
+      132 front l 112 upperarm
+      133 front r 111 upperarm
+      134 front l 114 elbow
+      135 front r 113 elbow
+      140 front l 118 forearm
+      141 front r 115 forearm
+      142 front l 124 wrist
+      143 front r 119 wrist
+      144 front l 128 hand
+      145 front r 125 hand
+      150 front l 123 hip
+      151 front r 120 hip
+      152 front l 127 thigh
+      153 front r 126 thigh
+      154 front l 130 knee
+      155 front r 129 knee
+      160 front l 132 shin
+      161 front r 131 shin
+      162 front l 134 ankle
+      163 front r 133 ankle
+      164 front l 136 foot
+      165 front r 135 foot
+      200 back l 201 head.back
+      201 back r 202 head.back
+      202 back l 203 nape
+      203 back r 204 nape
+      204 back l 205 neck.back
+      205 back r 206 neck.back
+      220 back l 208 upperback
+      221 back r 209 upperback
+      222 back l 212 midback
+      223 back r 213 midback
+      224 back l 218 lowerback
+      225 back r 219 lowerback
+      226 back l 223 buttock
+      227 back r 224 buttock
+      230 back l 207 shoulder.back
+      231 back r 210 shoulder.back
+      232 back l 211 upperarm.back
+      233 back r 214 upperarm.back
+      234 back l 215 elbow.back
+      235 back r 216 elbow.back
+      240 back l 217 forearm.back
+      241 back r 220 forearm.back
+      242 back l 221 wrist.back
+      243 back r 226 wrist.back
+      244 back l 227 hand.back
+      245 back r 230 hand.back
+      250 back l 222 hip.back
+      251 back r 225 hip.back
+      252 back l 228 thigh.back
+      253 back r 229 thigh.back
+      254 back l 231 knee.back
+      255 back r 232 knee.back
+      260 back l 233 calf
+      261 back r 234 calf
+      262 back l 235 heel
+      263 back r 236 heel
+      264 back l 237 foot.back
+      265 back r 238 foot.back
+    `.trim().split('\n').map((l) => l.trim())
+    expect(REGIONS.map((r) => `${r.id} ${r.view} ${r.side} ${r.choir} ${r.name}`)).toEqual(frozen)
+  })
+})

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { createHash } from 'node:crypto'
 import { FIGURES, FIGURE_SIZE } from './figures'
 
 describe('CHOIR figures', () => {
@@ -39,5 +40,15 @@ describe('CHOIR figures', () => {
       // 112 is an upper arm, far from the midline; before the renumbering it was the female abdomen.
       expect(Math.abs(cx(front['112']) - FIGURE_SIZE[f].w / 2)).toBeGreaterThan(60)
     }
+  })
+})
+
+describe('the geometry is user data', () => {
+  // Strokes store points in these coordinates (§5.3) and regions draw these polygons: a CSV refresh or an upstream fix of
+  // the female numbering would move every stored stroke or swap segments under unchanged ids. A change here needs a
+  // stroke migration first; only then update the hash.
+  it('FIGURES and FIGURE_SIZE hash to the vendored CHOIRBM geometry', () => {
+    const hash = createHash('sha256').update(JSON.stringify({ FIGURES, FIGURE_SIZE })).digest('hex')
+    expect(hash).toBe('42de562e2518f9f4fd5f6539a1cb28827305fd46947bce61c7d559968e899850')
   })
 })
