@@ -188,7 +188,10 @@ export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; count: num
 
 export type PresetPoint = { at: number; value: number }
 
-/** One line per preset that has samples: the preset's first symptom over time, samples only, no carry-forward. An update of an episode opened from a preset is a sample of it. */
+/**
+ * One line per preset that has samples: the preset's first symptom over time, samples only, no carry-forward. An update
+ * of an episode opened from a preset is a sample of it. A sample without the reading is skipped: no reading is not a 0.
+ */
 export function presetSeries(entries: Entry[], presets: Preset[]): { preset: Preset; points: PresetPoint[] }[] {
   const heads = new Map(entries.filter((e) => e.presetId && e.episodeId === e.id).map((e) => [e.id, e]))
   return presets
@@ -197,7 +200,10 @@ export function presetSeries(entries: Entry[], presets: Preset[]): { preset: Pre
       const id = preset.layers.some((l) => l.asks?.includes(PAIN)) ? PAIN : (preset.layers[0]?.asks?.[0] ?? PAIN)
       const points = entries
         .filter((e) => presetOf(e, heads) === preset.id)
-        .map((e) => ({ at: Date.parse(e.at), value: readings(e)[id] ?? 0 }))
+        .flatMap((e) => {
+          const value = readings(e)[id]
+          return value === undefined ? [] : [{ at: Date.parse(e.at), value }]
+        })
         .sort((a, b) => a.at - b.at)
       return { preset, points }
     })
