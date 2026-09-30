@@ -54,6 +54,15 @@ describe('entries', () => {
     expect(makeEntry({ endedAt: '2026-09-01T13:30:00.000Z' })).not.toHaveProperty('endedAt')
   })
 
+  it('active episodes are read in one go: a chain deleted meanwhile is either all there or not at all', async () => {
+    const a = await addEntry({ at: '2026-09-01T10:00:00.000Z', kind: 'episode', readings: { pain: 6 } })
+    const b = await addEntry({ at: '2026-09-01T11:00:00.000Z', kind: 'episode', readings: { pain: 5 } })
+    await logUpdate(b.id, [{ pain: 4 }], '2026-09-01T12:00:00.000Z')
+    const [got] = await Promise.all([activeEpisodes(), deleteEntry(b.id)])
+    expect(got.every((ep) => ep?.head)).toBe(true)
+    expect(got.map((ep) => ep.head.id)).toContain(a.id)
+  })
+
   it('runs an episode lifecycle', async () => {
     const e = await addEntry({ readings: { pain: 7 }, kind: 'episode', at: '2026-01-01T10:00:00.000Z' })
     expect((await activeEpisodes()).map((x) => x.head.id)).toEqual([e.id])

@@ -150,11 +150,14 @@ export async function logUpdate(headId: string, readings: (Record<string, number
 }
 
 /** Active episodes, oldest first, each with its updates. */
-export async function activeEpisodes(): Promise<Episode[]> {
-  const heads = await db.entries.filter(isActive).sortBy('at')
-  const out: Episode[] = []
-  for (const h of heads) out.push((await loadEpisode(h.id))!)
-  return out
+export function activeEpisodes(): Promise<Episode[]> {
+  // One read transaction: a chain deleted between reading the heads and loading them is never half seen.
+  return db.transaction('r', db.entries, async () => {
+    const heads = await db.entries.filter(isActive).sortBy('at')
+    const out: Episode[] = []
+    for (const h of heads) out.push((await loadEpisode(h.id))!)
+    return out
+  })
 }
 
 /** How long an episode has lasted (heads only): until its end, or now. */
