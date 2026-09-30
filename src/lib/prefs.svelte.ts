@@ -13,7 +13,6 @@ type Prefs = {
   mirrorViews: boolean
   /** Which of the two CHOIR silhouettes the body map draws (§5.3). */
   figure: FigureId
-  ongoing: boolean
   lastBackupAt: string | null
   backupSnoozedUntil: string | null
   /** First launch as an installed app; set once, hides the install nudge for good. */
@@ -34,7 +33,6 @@ function load(): Prefs {
     mirror: false,
     mirrorViews: true,
     figure: 'female',
-    ongoing: false,
     lastBackupAt: null,
     backupSnoozedUntil: null,
     installedAt: null,
@@ -45,6 +43,8 @@ function load(): Prefs {
     const stored = JSON.parse(raw) as Partial<Prefs>
     // Before #22 the sides mirror was on by default, so a store without the views mirror holds a default, not a choice: it starts off like a fresh install.
     if (!('mirrorViews' in stored)) delete stored.mirror
+    // Until 0.9.5 the kind of the last save was remembered; it no longer is, and the stale key is not carried on.
+    delete (stored as Record<string, unknown>).ongoing
     return { ...defaults, ...stored }
   } catch {
     return defaults

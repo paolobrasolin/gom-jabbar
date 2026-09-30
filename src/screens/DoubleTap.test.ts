@@ -14,7 +14,6 @@ let db: ReturnType<typeof resetDb>
 beforeEach(() => {
   db = resetDb()
   prefs.lang = 'it'
-  prefs.ongoing = false
   history.replaceState(null, '', '/')
   dismissToast()
 })

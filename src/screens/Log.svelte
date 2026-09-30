@@ -91,7 +91,8 @@
   })
   /** The body's headline (§6.1), the first enabled body symptom: a new draft starts it at 5, or where the last save left it. */
   const head = $derived(firstEnabled(symptoms.value, 'body')?.id)
-  let draft = $state(emptyDraft({ kind: prefs.ongoing ? 'episode' : 'chronic' }))
+  // Every draft starts Cronico: the kind is chosen per entry, never remembered (§6.1).
+  let draft = $state(emptyDraft())
   // The vocabulary is read after the first draft is made: a draft that has no reading yet gets its headline then.
   $effect(() => {
     if (head && draft.layers.length === 1 && !Object.keys(draft.layers[0].readings).length) draft.layers[0].readings[head] = 5
@@ -123,14 +124,14 @@
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 
   function reset() {
-    draft = emptyDraft({ kind: draft.kind, head, level: head ? draft.layers[draft.cur]?.readings[head] : undefined })
+    draft = emptyDraft({ head, level: head ? draft.layers[draft.cur]?.readings[head] : undefined })
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
   }
 
   /** Azzera: back to an empty form, undoable from the toast (no confirmation dialogs, §6.1). */
   function clear() {
     const before = $state.snapshot(draft) as EntryDraft
-    draft = emptyDraft({ kind: draft.kind, head })
+    draft = emptyDraft({ head })
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
     haptic(20)
     showToast(t('log.cleared'), { label: t('log.undo'), run: () => (draft = before) })
@@ -148,8 +149,6 @@
     }
     saving = true
     try {
-      prefs.ongoing = draft.kind === 'episode'
-      savePrefs()
       const entry = await addEntry(draftToInput(draft))
       haptic(20)
       showToast(t('log.saved'), { label: t('log.undo'), run: () => void deleteEntry(entry.id) })
