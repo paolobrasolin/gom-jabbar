@@ -219,15 +219,6 @@
   </div>
 
   <div class="card">
-    <p class="small muted label">{t('settings.help')}</p>
-    <ul class="help">
-      {#each ['tap', 'limb', 'level', 'areas', 'ongoing', 'time', 'undo', 'edit', 'backup'] as k (k)}
-        <li>{t(`help.${k}`)}</li>
-      {/each}
-    </ul>
-  </div>
-
-  <div class="card">
     <p class="small muted label">{t('reset.title')}</p>
     <p class="small muted">{t('reset.card')}</p>
     <div class="chips top">
@@ -277,7 +268,6 @@
 
 <style>
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
-  .help { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
   .chip:disabled { opacity: 0.55; }
   .center { text-align: center; }
   .about { margin: 8px 0 16px; }
