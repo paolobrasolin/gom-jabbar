@@ -55,6 +55,14 @@ describe('Settings about', () => {
   const [version, build] = __APP_VERSION__.split('+')
   const day = (lang: string) => new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${__APP_DATE__}T12:00:00`))
 
+  it('has no help card: what needs explaining gets redesigned instead (§10)', async () => {
+    await openSettings()
+    expect(screen.queryByText('Come si usa')).not.toBeInTheDocument()
+    // The card promised undo on every edit and named controls that are gone («+ Altra zona», long press on a limb).
+    expect(document.body).not.toHaveTextContent('Altra zona')
+    expect(document.body).not.toHaveTextContent('Tieni premuta')
+  })
+
   it('ends with the version, its release date and the build, then the three pages and a way to reach the author', async () => {
     await openSettings()
     const about = screen.getByRole('contentinfo')
