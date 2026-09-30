@@ -1,7 +1,10 @@
 export type Toast = { id: number; message: string; action?: { label: string; run: () => void } }
 
-/** `lift`: where the log's drawer ends, in px above the tab bar, so the toast sits over the stage and not over the slider (#23); null elsewhere. */
-export const toastState = $state<{ current: Toast | null; lift: number | null }>({ current: null, lift: null })
+/**
+ * `lift`: where the log's drawer ends, in px above the tab bar, so the toast sits over the stage and not over the slider
+ * (#23); null elsewhere. `top`: the log's drawer is pulled up, so the toast shows at the top of the screen instead.
+ */
+export const toastState = $state<{ current: Toast | null; lift: number | null; top: boolean }>({ current: null, lift: null, top: false })
 
 let seq = 0
 let timer: ReturnType<typeof setTimeout> | undefined

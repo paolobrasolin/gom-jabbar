@@ -172,6 +172,21 @@ describe('Episodes with an end', () => {
     }
   })
 
+  it('the refusal of an end before the start shows at the top, clear of the time rows the open drawer shows', async () => {
+    render(App)
+    // With the drawer down, a toast sits above it.
+    await fireEvent.click(await screen.findByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    expect((await screen.findByText('Salvato')).closest('.toast')).not.toHaveClass('top')
+    await new Promise((r) => setTimeout(r, 1100))
+    await more()
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+    await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: '1h fa' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    const toast = (await screen.findByText("La fine è prima dell'inizio")).closest('.toast')!
+    expect(toast).toHaveClass('top')
+  })
+
   it('Inizio "Adesso" with an end picked in the past is still refused', async () => {
     render(App)
     await more()
