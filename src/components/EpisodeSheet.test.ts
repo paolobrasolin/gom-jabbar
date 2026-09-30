@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
@@ -141,6 +141,14 @@ describe('Episode sheet', () => {
 })
 
 describe('what an update carries', () => {
+  // The lines say "oggi" and "ieri" by the calendar: at 15:00 a reading an hour or three ago is today, whatever the real clock says.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 30, 15, 0))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
   it('chips start unpressed even when the last reading took them: a tap is a new dose', async () => {
     const e = await addEntry({ at: ago(180), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }] })
     await logUpdate(e.id, [{ pain: 5 }], ago(60), [['heat']])
