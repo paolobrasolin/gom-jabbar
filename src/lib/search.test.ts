@@ -124,6 +124,20 @@ describe('matches', () => {
     expect(matches(right, 'left pain', ctx())).toBe(false)
   })
 
+  it('skips articles, prepositions and the "mal" of "mal di testa" while other words remain', () => {
+    const head = entry({ regions: [[id('head', 'l'), id('head', 'r')]] })
+    for (const q of ['mal di testa', 'male alla testa', 'dolore alla testa', 'la fronte']) expect(hit(head, q), q).toBe(true)
+    expect(hit(head, 'mal di schiena')).toBe(false)
+    const hip = entry({ regions: [[id('hip', 'l')]] })
+    for (const q of ["all'anca", "dolore all'anca sx", "l'anca"]) expect(hit(hip, q), q).toBe(true)
+    expect(hit(hip, "all'anca dx")).toBe(false)
+    // Alone, a skipped word is searched for.
+    expect(hit(entry({ note: 'mal di gola' }), 'mal di')).toBe(true)
+    expect(hit(entry({ note: 'corsa' }), 'di')).toBe(false)
+    prefs.lang = 'en'
+    expect(matches(entry({ regions: [[id('knee', 'l')]] }), 'pain in the knee', ctx())).toBe(true)
+  })
+
   it('binds sides in English too, where they come first', () => {
     prefs.lang = 'en'
     const e = entry({ regions: [[id('knee', 'r'), id('hand', 'l')]] })

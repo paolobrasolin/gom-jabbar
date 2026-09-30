@@ -299,6 +299,7 @@
   "diary.more": "Show more",
   "diary.find": "Search",
   "diary.search": "Search the diary",
+  "diary.searchSkip": "the a an of in on at to with and or my",
   "diary.clear": "Clear",
   "diary.none": "No entries",
   "diary.entries": "{n} entries",
