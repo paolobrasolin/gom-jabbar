@@ -5,6 +5,7 @@ import { prefs } from '../lib/prefs.svelte'
 import { toastState } from '../lib/toast.svelte'
 import { addEntry } from '../lib/entries'
 import { addPreset } from '../lib/presets'
+import { deleteItem } from '../lib/vocab'
 import VocabEditor from './VocabEditor.svelte'
 
 let db: ReturnType<typeof resetDb>
@@ -192,6 +193,23 @@ describe('Vocabulary editor: deleting (§6.4)', () => {
     expect(within(itemOf('Pesantezza')).getByRole('button', { name: 'Elimina Pesantezza' })).toBeInTheDocument()
     // Pain is used, so it stays; unused, it could go like any other.
     expect(within(itemOf('Dolore')).getByText('2 voci')).toBeInTheDocument()
+  })
+
+  it('a tag or a symptom read only on a later layer is in use: no bin, and a delete is refused', async () => {
+    await addEntry({
+      layers: [
+        { regions: ['152'], readings: { pain: 4 }, tags: [] },
+        { regions: ['110'], readings: { pain: 2, stiffness: 3 }, tags: [] },
+        { regions: ['130'], readings: { pain: 1 }, tags: ['rest'] },
+      ],
+    })
+    render(VocabEditor, { table: 'tags' })
+    await waitFor(() => expect(within(itemOf('Riposo')).getByText('1 voce')).toBeInTheDocument())
+    expect(within(itemOf('Riposo')).queryByRole('button', { name: 'Elimina Riposo' })).not.toBeInTheDocument()
+    expect(await deleteItem('tags', 'rest')).toBeUndefined()
+    expect(await deleteItem('symptoms', 'stiffness')).toBeUndefined()
+    expect(await db.tags.get('rest')).toBeDefined()
+    expect(await db.symptoms.get('stiffness')).toBeDefined()
   })
 
   it('deletes with an undo toast, no dialog, and undo puts the item back in its place', async () => {
