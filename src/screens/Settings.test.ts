@@ -231,7 +231,7 @@ describe('Settings preferences', () => {
   it('shows the count of entries and the build version', async () => {
     await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }] })
     await openSettings()
-    expect(await screen.findByText(/1 voci/)).toBeInTheDocument()
+    expect(await screen.findByText(/1 voce\b/)).toBeInTheDocument()
   })
 })
 
@@ -335,11 +335,11 @@ describe('Settings import', () => {
     await pickFile(JSON.stringify(file))
     const sheet = await screen.findByRole('dialog', { name: 'Ripristina' })
     expect(sheet).toHaveTextContent('2 voci nel file del 10 set 2026.')
-    expect(sheet).toHaveTextContent('Unendo: 1 nuove, 0 aggiornate.')
+    expect(sheet).toHaveTextContent('Unendo: 1 nuova, 0 aggiornate.')
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Unisci ai dati attuali' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(2))
     expect((await db.entries.get(mine.id))?.layers[0].readings.pain).toBe(4)
-    expect(await screen.findByText('Ripristinate 1 voci')).toBeInTheDocument()
+    expect(await screen.findByText('Ripristinata 1 voce')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Annulla' })).not.toBeInTheDocument()
   })
@@ -353,10 +353,10 @@ describe('Settings import', () => {
     await pickFile(JSON.stringify(file))
     const sheet = await screen.findByRole('dialog', { name: 'Ripristina' })
     const replace = await within(sheet).findByRole('button', { name: /^Sostituisci tutto/ })
-    await waitFor(() => expect(replace).toHaveTextContent('Sostituisci tutto (1 voci attuali)'))
+    await waitFor(() => expect(replace).toHaveTextContent('Sostituisci tutto (1 voce attuale)'))
     await fireEvent.click(replace)
     await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.id)).toEqual([other.id]))
-    expect(await screen.findByText('Ripristinate 1 voci')).toBeInTheDocument()
+    expect(await screen.findByText('Ripristinata 1 voce')).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
     await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.id)).toEqual([mine.id]))
     expect(await db.symptoms.count()).toBe(9)
@@ -378,7 +378,7 @@ describe('Settings import', () => {
       await new Promise((r) => setTimeout(r, gap))
       replace.click()
       await new Promise((r) => setTimeout(r, 150))
-      expect(screen.getByRole('status')).toHaveTextContent('Ripristinate 1 voci')
+      expect(screen.getByRole('status')).toHaveTextContent('Ripristinata 1 voce')
       await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
       await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.id)).toEqual([mine.id]))
     }
@@ -397,7 +397,7 @@ describe('Settings import', () => {
     merge.click()
     await new Promise((r) => setTimeout(r, 200))
     // Not "Ripristinate 0 voci" from a second merge of the same file.
-    expect(screen.getByRole('status')).toHaveTextContent('Ripristinate 1 voci')
+    expect(screen.getByRole('status')).toHaveTextContent('Ripristinata 1 voce')
     expect(await db.entries.count()).toBe(1)
   })
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t, locale, num } from '../i18n/index.svelte'
+  import { t, locale, num, tn } from '../i18n/index.svelte'
   import { intensityColor } from '../lib/color'
   import type { DayPoint } from '../lib/stats'
 
@@ -87,7 +87,7 @@
       {#if tooltip.max === null}
         <span class="muted">{t('trends.noEntries')}</span>
       {:else}
-        <span>{t('trends.legendMax')} {tooltip.max} · {t('trends.legendMean')} {num(tooltip.mean!, true)} · {t('trends.nEntries', { n: tooltip.count })}</span>
+        <span>{t('trends.legendMax')} {tooltip.max} · {t('trends.legendMean')} {num(tooltip.mean!, true)} · {tn('trends.nEntries', tooltip.count)}</span>
       {/if}
     </div>
   {/if}

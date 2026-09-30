@@ -77,7 +77,7 @@ describe('Report page', () => {
     const sym = screen.getByRole('heading', { name: 'Altri sintomi' }).nextElementSibling!
     expect(sym).toHaveTextContent('Gonfiore')
     expect(sym).toHaveTextContent('5')
-    expect(sym).toHaveTextContent('1 voci')
+    expect(sym).toHaveTextContent('1 voce')
     const tags = screen.getByRole('heading', { name: 'Tag' }).nextElementSibling!
     expect(within(tags as HTMLElement).getByRole('row', { name: /Riposo/ })).toHaveTextContent(/^Riposo\s*1\s*–\s*–$/)
     const notable = screen.getByRole('heading', { name: 'Episodi e note' }).nextElementSibling!

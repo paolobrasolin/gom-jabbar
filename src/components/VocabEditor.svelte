@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t, tl } from '../i18n/index.svelte'
+  import { t, tl, tn } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { addSymptom, addTag, rename, setEnabled, move, usage, deleteItem, restoreItem, type Usage } from '../lib/vocab'
@@ -49,8 +49,8 @@
   }
   function usageText(u: Usage): string {
     const parts = []
-    if (u.entries) parts.push(u.entries === 1 ? t('vocab.entries1') : t('vocab.entriesN', { n: u.entries }))
-    if (u.presets) parts.push(u.presets === 1 ? t('vocab.presets1') : t('vocab.presetsN', { n: u.presets }))
+    if (u.entries) parts.push(tn('vocab.entries', u.entries))
+    if (u.presets) parts.push(tn('vocab.presets', u.presets))
     return parts.join(' · ')
   }
   /** Elimina (§6.4): no dialog, an undo toast that puts the item back as it was. */

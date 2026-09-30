@@ -8,7 +8,7 @@
   import Sheet from '../components/Sheet.svelte'
   import NavMenu from '../components/NavMenu.svelte'
   import Dropdown from '../components/Dropdown.svelte'
-  import { t, tl } from '../i18n/index.svelte'
+  import { t, tl, tn } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs, type Tab } from '../lib/prefs.svelte'
@@ -247,7 +247,7 @@
   {:else if nudge}
     <div class="card row nudge small">
       {#if nudge.drive}
-        <span class="grow">{nudge.days === null ? t('drive.never') : t('backup.nudgeDrive', { n: nudge.days })}</span>
+        <span class="grow">{nudge.days === null ? t('drive.never') : tn('backup.nudgeDrive', nudge.days)}</span>
         <button class="chip small" onclick={driveNow}>{t('drive.backup')}</button>
       {:else}
         <span class="grow">{t('backup.nudge')}</span>

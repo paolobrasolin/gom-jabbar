@@ -344,6 +344,7 @@ Vocabulary editing (Settings → Vocabolario, §6.4): rename inline, enable/disa
 - Italian is the default; device language is detected on first run and can be overridden in settings.
 - Vocabulary labels are one string (§5.2): the seed's are keys, `i18n:vocab.<id>`, translated like any message; a typed name is shown as typed in every language.
 - Dates and numbers through `Intl` with the active locale: a mean is written by `num` to one decimal, "2,5" in Italian and "2.5" in English, never by `toFixed`.
+- A counted message goes through `tn`, which picks `<key>.one` where the language's `Intl.PluralRules` says singular (1 in both languages, 0 is plural) and `<key>` otherwise: "1 voce", "in 1 giorno", "Ripristinata 1 voce"; a test requires the plural beside every singular.
 - A test asserts both message files have identical key sets.
 
 ## 10. Design rules

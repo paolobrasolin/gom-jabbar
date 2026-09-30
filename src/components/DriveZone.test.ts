@@ -147,7 +147,7 @@ describe('Drive zone', () => {
     expect(points[0]).toHaveTextContent('attuale')
     await fireEvent.click(points[0])
     const preview = await screen.findByRole('dialog', { name: 'Ripristina' })
-    expect(preview).toHaveTextContent('1 voci nel file')
+    expect(preview).toHaveTextContent('1 voce nel file')
     await fireEvent.click(within(preview).getByRole('button', { name: 'Unisci ai dati attuali' }))
     await waitFor(async () => expect((await db.entries.get(entry.id))?.note).toBe('da Drive'))
   })

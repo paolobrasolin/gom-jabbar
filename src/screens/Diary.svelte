@@ -2,7 +2,7 @@
   import EditSheet from '../components/EditSheet.svelte'
   import EpisodeSheet from '../components/EpisodeSheet.svelte'
   import EntrySummary from '../components/EntrySummary.svelte'
-  import { t, tl, locale } from '../i18n/index.svelte'
+  import { t, tl, locale, tn } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
@@ -53,7 +53,7 @@
   const count = $derived.by(() => {
     const n = hits.length
     const d = new Set(hits.map((e) => dayKey(e.at))).size
-    return `${n === 1 ? t('diary.entries.one') : t('diary.entries', { n })} · ${d === 1 ? t('diary.days.one') : t('diary.days', { n: d })}`
+    return `${tn('diary.entries', n)} · ${tn('diary.days', d)}`
   })
   /**
    * What a row shows: for an episode, its latest reading and its trail (§5.5); a row logged from a preset is named after
