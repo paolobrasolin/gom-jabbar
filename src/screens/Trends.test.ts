@@ -174,6 +174,18 @@ describe('Trends heatmap and chart', () => {
     expect(document.querySelectorAll('path.hit')).toHaveLength(0)
   })
 
+  it('marks a day at 0 on the baseline, on every range, and leaves a day with nothing logged empty', async () => {
+    await addEntry({ at: at(0), ...legs(0) })
+    await addEntry({ at: at(2), ...legs(5) })
+    await openTrends()
+    const chart = await screen.findByRole('img', { name: 'Dolore per giorno' })
+    await waitFor(() => expect(chart.querySelectorAll('.zero')).toHaveLength(1))
+    expect(chart.querySelector('.zero')).toHaveAttribute('fill', intensityColor(0))
+    expect(chart.querySelectorAll('path.col')).toHaveLength(1)
+    await fireEvent.click(screen.getByRole('button', { name: '365 giorni' }))
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Dolore per giorno' }).querySelectorAll('.zero')).toHaveLength(1))
+  })
+
   it('tapping a day shows its numbers, tapping again hides them', async () => {
     await addEntry({ at: at(0, 9), ...legs(8) })
     await addEntry({ at: at(0, 10), ...legs(4) })
