@@ -124,6 +124,23 @@ describe('backup', () => {
     expect(parsed.vocabulary.tags).toEqual([{ ...tags[0], label: 'i18n:vocab.stress' }])
   })
 
+  it('exports every row, even one lacking the key it is sorted by, in the same order as before', async () => {
+    await addEntry({ at: '2026-09-02T10:00:00.000Z', readings: { pain: 2 } })
+    await addEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 1 } })
+    // Unreachable through the app; an index skips such a row, and a backup must not.
+    await db.entries.put({ id: 'odd', kind: 'chronic', layers: [{ regions: [], readings: { pain: 5 }, tags: [] }], note: '', createdAt: 'x', updatedAt: 'x' } as never)
+    await db.symptoms.put({ id: 'loose', label: 'Loose', category: 'body', enabled: true } as never)
+    await db.tags.put({ id: 'loose', label: 'Loose', group: 'context', enabled: true } as never)
+    await db.presets.put({ id: 'loose', name: 'Loose', layers: [], kind: 'chronic' } as never)
+    await addPreset({ name: 'B', layers: [], kind: 'chronic' })
+    const file = await buildExport()
+    // Sorted as the indexes sorted them (ties by id), a row without the key last.
+    expect(file.entries.map((e) => e.at ?? e.id)).toEqual(['2026-09-01T10:00:00.000Z', '2026-09-02T10:00:00.000Z', 'odd'])
+    expect(file.vocabulary.symptoms.map((x) => x.id)).toEqual([...DEFAULT_SYMPTOMS.map((x) => x.id), 'loose'])
+    expect(file.vocabulary.tags.map((x) => x.id).at(-1)).toBe('loose')
+    expect(file.presets.map((x) => x.name)).toEqual(['B', 'Loose'])
+  })
+
   it('rejects garbage', () => {
     expect(() => parseImport('nope')).toThrow('invalid-json')
     expect(() => parseImport('{"app":"other","entries":[]}')).toThrow('invalid-file')

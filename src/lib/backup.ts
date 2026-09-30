@@ -17,13 +17,29 @@ export type ExportFile = {
   presets: Preset[]
 }
 
+/**
+ * Every row, sorted as the indexes would sort them, ties by id and a row lacking the key last: `orderBy` would skip
+ * such a row, and a backup is the one place nothing may be missing.
+ */
+function sortedBy<T extends { id: string }>(rows: T[], key: (r: T) => string | number | undefined): T[] {
+  const rank = (r: T) => key(r) ?? null
+  return rows.sort((a, b) => {
+    const x = rank(a)
+    const y = rank(b)
+    if (x !== y) return x === null ? 1 : y === null ? -1 : x < y ? -1 : 1
+    // Ids are unique: two rows never tie here.
+    return a.id < b.id ? -1 : 1
+  })
+}
+
 export async function buildExport(): Promise<ExportFile> {
-  const [symptoms, tags, entries, presets] = await Promise.all([
-    db.symptoms.orderBy('order').toArray(),
-    db.tags.orderBy('order').toArray(),
-    db.entries.orderBy('at').toArray(),
-    db.presets.orderBy('order').toArray(),
-  ])
+  const [symptoms, tags, entries, presets] = await db.transaction('r', db.symptoms, db.tags, db.entries, db.presets, () =>
+    Promise.all([db.symptoms.toArray(), db.tags.toArray(), db.entries.toArray(), db.presets.toArray()]),
+  )
+  sortedBy(symptoms, (r) => r.order)
+  sortedBy(tags, (r) => r.order)
+  sortedBy(entries, (r) => r.at)
+  sortedBy(presets, (r) => r.order)
   return { app: 'gom-jabbar', version: EXPORT_VERSION, exportedAt: new Date().toISOString(), vocabulary: { symptoms, tags }, entries, presets }
 }
 
