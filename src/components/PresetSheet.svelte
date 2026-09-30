@@ -8,6 +8,7 @@
   import { logPreset } from '../lib/presets'
   import { deleteEntry } from '../lib/entries'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
+  import { failed } from '../lib/failure'
   import { headline, layerLevel, symptomName } from '../lib/summary'
   import { intensityColor, intensityInk } from '../lib/color'
   import type { Preset, Symptom } from '../lib/types'
@@ -50,11 +51,18 @@
   async function save() {
     if (!current || busy) return
     busy = true
-    const entry = await logPreset(current, levels.map((l) => ({ ...l })), at ?? undefined).finally(() => (busy = false))
+    let entry
+    try {
+      entry = await logPreset(current, levels.map((l) => ({ ...l })), at ?? undefined)
+    } catch (e) {
+      return failed(e)
+    } finally {
+      busy = false
+    }
     haptic(20)
     open = false
     onsaved?.(current)
-    showToast(t('log.saved'), { label: t('log.undo'), run: () => void deleteEntry(entry.id) })
+    showToast(t('log.saved'), { label: t('log.undo'), run: () => void deleteEntry(entry.id).catch(failed) })
   }
 </script>
 

@@ -7,6 +7,7 @@
   import { isMindSymptom } from '../lib/vocabulary'
   import { ICONS } from '../lib/icons'
   import { haptic, showToast } from '../lib/toast.svelte'
+  import { failed } from '../lib/failure'
 
   let { table }: { table: 'symptoms' | 'tags' } = $props()
 
@@ -59,7 +60,7 @@
     const gone = await deleteItem(table, item.id)
     if (!gone) return
     haptic(20)
-    showToast(t('vocab.deleted', { name }), { label: t('log.undo'), run: () => void restoreItem(table, gone) })
+    showToast(t('vocab.deleted', { name }), { label: t('log.undo'), run: () => void restoreItem(table, gone).catch(failed) })
   }
   /** An add in flight: the second tap of a double tap would add the item twice. */
   let adding = false

@@ -15,6 +15,7 @@
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
   import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, timeProblem, type Episode } from '../lib/entries'
   import { showToast, haptic, toastState } from '../lib/toast.svelte'
+  import { failed } from '../lib/failure'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration } from '../lib/time'
   import type { Entry, Preset } from '../lib/types'
@@ -149,9 +150,14 @@
     }
     saving = true
     try {
-      const entry = await addEntry(times)
+      let entry
+      try {
+        entry = await addEntry(times)
+      } catch (e) {
+        return failed(e)
+      }
       haptic(20)
-      showToast(t('log.saved'), { label: t('log.undo'), run: () => void deleteEntry(entry.id) })
+      showToast(t('log.saved'), { label: t('log.undo'), run: () => void deleteEntry(entry.id).catch(failed) })
       reset()
       const mark = (fresh = JSON.stringify(draft))
       setTimeout(() => fresh === mark && (fresh = null), 1000)

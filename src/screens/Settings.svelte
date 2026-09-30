@@ -14,6 +14,7 @@
   import type { Lang } from '../lib/types'
   import { buildExport, parseImport, previewImport, applyImport, shareOrDownload, exportFilename, type ExportFile, type ImportPreview } from '../lib/backup'
   import { showToast, haptic } from '../lib/toast.svelte'
+  import { failed } from '../lib/failure'
   import { deletePreset, restorePreset } from '../lib/presets'
 
   let { cloud, resume = null, onresumed = () => {}, reload }: { cloud: CloudProvider; resume?: Resumed; onresumed?: () => void; reload: () => void } = $props()
@@ -26,7 +27,7 @@
   async function removePreset(id: string) {
     const gone = await deletePreset(id)
     haptic(20)
-    if (gone) showToast(t('preset.deleted'), { label: t('log.undo'), run: () => void restorePreset(gone) })
+    if (gone) showToast(t('preset.deleted'), { label: t('log.undo'), run: () => void restorePreset(gone).catch(failed) })
   }
   const standalone = typeof matchMedia !== 'undefined' && (matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true)
 
@@ -119,7 +120,7 @@
     importOpen = false
     haptic(20)
     const msg = tn('import.done', mode === 'replace' ? res.entries : res.added + res.updated)
-    if (snapshot) showToast(msg, { label: t('log.undo'), run: () => void applyImport(snapshot, 'replace') })
+    if (snapshot) showToast(msg, { label: t('log.undo'), run: () => void applyImport(snapshot, 'replace').catch(failed) })
     else showToast(msg)
   }
 
