@@ -21,14 +21,31 @@
     const m = offered(day).find((c) => Math.abs(Date.parse(c.iso()!) - Date.parse(value)) < 60_000)
     return m?.label ?? `${formatDay(value, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') })} ${formatTime(value, locale())}`
   }
+
+  /**
+   * Scrolls a row sideways just enough to show its pressed chip: an old entry's time is the last chip, and with it
+   * off to the right "Adesso" was the only one in sight, one tap from moving the entry to now.
+   */
+  export function revealPressed(row: HTMLElement | undefined): void {
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (!row || !chip) return
+    const r = row.getBoundingClientRect()
+    const c = chip.getBoundingClientRect()
+    // The row's own padding, so the chip does not sit flush against the edge.
+    const pad = 12
+    if (c.right > r.right) row.scrollLeft += c.right - r.right + pad
+    else if (c.left < r.left) row.scrollLeft -= r.left - c.left + pad
+  }
 </script>
 
 <script lang="ts">
+  import { tick } from 'svelte'
 
   /**
    * One row of chips that picks a time (§6.1): `none` is the chip for `null`, "Adesso" for a time resolved at save or
    * "In corso" for an end not yet reached. When null does not mean now, an "Adesso" chip sets the moment it is pressed.
-   * `label` names the row for assistive tech; `caption` shows it.
+   * `label` names the row for assistive tech; `caption` shows it. `shown`: whether the row is on screen now (a drawer
+   * opening), so the pressed chip is brought into view when it can be measured.
    */
   let {
     value = $bindable(),
@@ -37,9 +54,12 @@
     none,
     nullIsNow = true,
     day = true,
-  }: { value: string | null; label: string; caption?: string; none: string; nullIsNow?: boolean; day?: boolean } = $props()
+    shown = true,
+  }: { value: string | null; label: string; caption?: string; none: string; nullIsNow?: boolean; day?: boolean; shown?: boolean } = $props()
 
-  let showPicker = $state(false)
+  let picking = $state(false)
+  let row = $state<HTMLElement>()
+  let input = $state<HTMLInputElement>()
   const choices = $derived.by((): Choice[] => [
     { key: 'none', label: none, iso: () => null },
     ...(nullIsNow ? [] : [{ key: 'now', label: t('time.now'), iso: () => new Date().toISOString() }]),
@@ -55,21 +75,42 @@
   // A new value from outside (another entry to edit) folds the picker.
   $effect(() => {
     void value
-    showPicker = false
+    picking = false
   })
+  // The pressed chip in sight whenever the row shows or the choice changes.
+  $effect(() => {
+    void active
+    if (shown) void tick().then(() => revealPressed(row))
+  })
+
+  /**
+   * "Scegli…": the field lands below the fold, under the Salva bar, where nothing seemed to happen. Scroll it into
+   * the form's own view and, where the browser can, open its picker straight away (Chrome; jsdom and old Safari cannot).
+   */
+  async function pick() {
+    picking = !picking
+    if (!picking) return
+    await tick()
+    input?.scrollIntoView?.({ block: 'nearest' })
+    try {
+      input?.showPicker?.()
+    } catch {
+      /* not allowed here: the field is in view, a tap opens it */
+    }
+  }
 </script>
 
-<div class="chips time" role="group" aria-label={label}>
+<div class="chips time" role="group" aria-label={label} bind:this={row}>
   {#if caption}<span class="caption">{caption}</span>{/if}
   {#each choices as c (c.key)}
     <button class="chip small" aria-pressed={active === c.key} onclick={() => (value = c.iso())}>{c.label}</button>
   {/each}
-  <button class="chip small" aria-pressed={active === 'custom'} onclick={() => (showPicker = !showPicker)}>
+  <button class="chip small" aria-pressed={active === 'custom'} onclick={pick}>
     {active === 'custom' ? customLabel : t('time.pick')}
   </button>
 </div>
-{#if showPicker}
-  <input type="datetime-local" value={toLocalInput(value ?? new Date().toISOString())} onchange={(e) => (value = fromLocalInput((e.target as HTMLInputElement).value))} />
+{#if picking}
+  <input bind:this={input} type="datetime-local" value={toLocalInput(value ?? new Date().toISOString())} onchange={(e) => (value = fromLocalInput((e.target as HTMLInputElement).value))} />
 {/if}
 
 <style>
