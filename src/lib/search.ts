@@ -46,21 +46,27 @@ function build(e: Entry, ctx: SearchContext): string[][] {
   return [...texts, ...[...keys].map((k) => t(k))].map(words).filter((p) => p.length)
 }
 
-/** The words that say a side, read off the anatomy's own phrases: "sx", "dx" in Italian, "left", "right" in English. */
-function buildSides(t: T): Set<string> {
-  const out = new Set<string>()
+/**
+ * Read off the anatomy's own phrases: the words that say a side ("sx", "dx" in Italian, "left", "right" in English) and
+ * the words that say a place ("ginocchio", "gambe", "dietro"), which a side binds to.
+ */
+function buildWords(t: T): Vocab {
+  const sides = new Set<string>()
+  const all = new Set<string>()
   for (const w of ALL_WORDS) {
     const l = words(t(`part.${w}.l`))
     const r = words(t(`part.${w}.r`))
-    for (const x of l) if (!r.includes(x)) out.add(x)
-    for (const x of r) if (!l.includes(x)) out.add(x)
+    for (const x of l) if (!r.includes(x)) sides.add(x)
+    for (const x of r) if (!l.includes(x)) sides.add(x)
+    for (const x of [...l, ...r, ...words(t(`part.${w}.both`))]) all.add(x)
   }
-  return out
+  return { sides, places: [...all].filter((x) => !sides.has(x)) }
 }
+type Vocab = { sides: Set<string>; places: string[] }
 
 /** Built once per vocabulary and reading: the Diary's live queries hand out new objects only when a row changes. */
 const phrases = new WeakMap<SearchContext, WeakMap<Entry, string[][]>>()
-const sides = new WeakMap<SearchContext, Set<string>>()
+const vocabs = new WeakMap<SearchContext, Vocab>()
 
 function phrasesOf(e: Entry, ctx: SearchContext): string[][] {
   let byEntry = phrases.get(ctx)
@@ -69,25 +75,26 @@ function phrasesOf(e: Entry, ctx: SearchContext): string[][] {
   if (!ps) byEntry.set(e, (ps = build(e, ctx)))
   return ps
 }
-function sidesOf(ctx: SearchContext): Set<string> {
-  let s = sides.get(ctx)
-  if (!s) sides.set(ctx, (s = buildSides(ctx.t)))
-  return s
+function vocabOf(ctx: SearchContext): Vocab {
+  let v = vocabs.get(ctx)
+  if (!v) vocabs.set(ctx, (v = buildWords(ctx.t)))
+  return v
 }
 
 const starts = (p: string[], w: string) => p.some((x) => x.startsWith(w))
 
 /**
- * Every typed word must start a word of the reading. A side binds to the words typed next to it: "ginocchio sx" needs
- * one phrase holding both, so a right knee and a left hand is not a hit. A side typed alone is any side.
+ * Every typed word must start a word of the reading. A side binds to the places typed next to it: "ginocchio sx" needs
+ * one phrase holding both, so a right knee and a left hand is not a hit. A side with no place next to it ("sx" alone,
+ * "dolore sx") is any side.
  */
 export function matches(e: Entry, query: string, ctx: SearchContext): boolean {
   const ws = words(query)
   if (!ws.length) return true
   const ps = phrasesOf(e, ctx)
-  const side = sidesOf(ctx)
+  const { sides: side, places } = vocabOf(ctx)
   return ws.every((w, i) => {
-    const near = [ws[i - 1], ws[i + 1]].filter((n) => n !== undefined && !side.has(n))
+    const near = [ws[i - 1], ws[i + 1]].filter((n) => n !== undefined && !side.has(n) && places.some((p) => p.startsWith(n)))
     if (!side.has(w) || !near.length) return ps.some((p) => starts(p, w))
     return ps.some((p) => starts(p, w) && near.some((n) => starts(p, n)))
   })
