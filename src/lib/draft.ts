@@ -18,6 +18,11 @@ export type EntryDraft = {
   kind: EntryKind
   /** Episode only: its end, null while it is still going. Meaningless on a chronic draft. */
   endedAt: string | null
+  /**
+   * The moment Fine's "Adesso" chip set, while `endedAt` still holds it. A start left at "Adesso" (`at: null`) then
+   * resolves to that moment rather than to the save, which may come minutes later: "now" and "now" are one moment.
+   */
+  endNow?: string
   /** Never empty: the form opens with one layer without regions (§6.1). */
   layers: Layer[]
   /** The layer the map, the sliders and the tag strip edit. */
@@ -56,8 +61,9 @@ export function draftFromEntry(e: Entry): EntryDraft {
 }
 
 export function draftToInput(d: EntryDraft): EntryInput {
+  const endIsNow = d.kind === 'episode' && d.endedAt !== null && d.endedAt === d.endNow
   return {
-    at: d.at ?? new Date().toISOString(),
+    at: d.at ?? (endIsNow ? d.endedAt! : new Date().toISOString()),
     kind: d.kind,
     endedAt: d.kind === 'episode' ? d.endedAt : null,
     layers: copyLayers(d.layers),
