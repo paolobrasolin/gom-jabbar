@@ -102,6 +102,24 @@ describe('StageGesture', () => {
     expect(onSwipe).not.toHaveBeenCalled()
   })
 
+  it('a cancelled finger (the system took the touch) concludes nothing: no stroke, no swipe, no tap', () => {
+    const { g, onStroke, onSwipe } = make()
+    g.down(1, 10, 20, { paint: true })
+    g.move(1, 30, 40)
+    expect(g.cancel(1)).toBe('none')
+    expect(g.stroke).toBeNull()
+    expect(onStroke).not.toHaveBeenCalled()
+    g.down(1, 0, 0)
+    g.move(1, SWIPE * 2, 0)
+    expect(g.cancel(1)).toBe('none')
+    expect(onSwipe).not.toHaveBeenCalled()
+    // Nothing is left behind: the next stroke paints as usual.
+    g.down(1, 10, 20, { paint: true })
+    g.move(1, 30, 40)
+    expect(g.up(1)).toBe('stroke')
+    expect(onStroke).toHaveBeenCalledTimes(1)
+  })
+
   it('a secondary button drags without painting, within the clamp', () => {
     const { g, onStroke, onSwipe } = make()
     g.down(1, 100, 100, { drag: true, paint: true })
