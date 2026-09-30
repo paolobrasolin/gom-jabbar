@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, onTestFinished } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
@@ -184,6 +184,22 @@ describe('Trends heatmap and chart', () => {
     expect(chart.querySelectorAll('path.col')).toHaveLength(1)
     await fireEvent.click(screen.getByRole('button', { name: '365 giorni' }))
     await waitFor(() => expect(screen.getByRole('img', { name: 'Dolore per giorno' }).querySelectorAll('.zero')).toHaveLength(1))
+  })
+
+  it('spaces the dates under the chart so they never run into each other, on every range', async () => {
+    // jsdom lays nothing out: give the chart a phone's width.
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(360)
+    onTestFinished(() => width.mockRestore())
+    await addEntry({ at: at(0), ...legs(3) })
+    await openTrends()
+    for (const r of ['7 giorni', '30 giorni', '90 giorni', '365 giorni']) {
+      await fireEvent.click(screen.getByRole('button', { name: r }))
+      const chart = await screen.findByRole('img', { name: 'Dolore per giorno' })
+      await waitFor(() => expect(chart.querySelectorAll('text.date').length).toBeGreaterThan(1))
+      const xs = Array.from(chart.querySelectorAll('text.date')).map((el) => Number(el.getAttribute('x')))
+      const gap = Math.min(...xs.slice(1).map((x, i) => x - xs[i]))
+      expect(gap, r).toBeGreaterThanOrEqual(r === '7 giorni' ? 28 : 48)
+    }
   })
 
   it('tapping a day shows its numbers, tapping again hides them', async () => {

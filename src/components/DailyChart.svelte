@@ -38,7 +38,11 @@
   const showMean = $derived(n <= 100)
   const dotR = $derived(n <= 35 ? 4 : 3)
 
-  const tickEvery = $derived(n <= 10 ? 1 : n <= 35 ? 7 : n <= 100 ? 14 : 30)
+  /**
+   * A date under the chart every so many days: every day on a week (a weekday is short), else the first step of whole
+   * weeks, months or more that leaves room for a "30 set" between two labels on this width.
+   */
+  const tickEvery = $derived(n <= 10 ? 1 : ([7, 14, 30, 61, 91, 183].find((k) => k * slot >= 48) ?? 183))
   const fmtTick = (d: Date) => new Intl.DateTimeFormat(locale(), n <= 10 ? { weekday: 'short' } : { day: 'numeric', month: 'short' }).format(d)
   const fmtFull = (d: Date) => new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'short' }).format(d)
   const tooltip = $derived(sel !== null && series[sel] ? series[sel] : null)
@@ -62,7 +66,7 @@
         <rect class="zero" x={x(i) - barW / 2} y={padT + plotH - ZERO_H} width={barW} height={ZERO_H} rx={Math.min(1.5, barW / 2)} fill={intensityColor(0)} />
       {/if}
       {#if i % tickEvery === 0 && (n <= 10 || i < n - tickEvery / 2)}
-        <text class="tick" x={x(i)} y={height - 6} text-anchor="middle">{fmtTick(p.date)}</text>
+        <text class="tick date" x={x(i)} y={height - 6} text-anchor="middle">{fmtTick(p.date)}</text>
       {/if}
       {#if interactive}
         <rect
