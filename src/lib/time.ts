@@ -5,8 +5,10 @@ export function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-export function fromLocalInput(v: string): string {
-  return new Date(v).toISOString()
+/** A datetime-local value as an ISO time; null for no time, as a picker cleared on the phone reports. */
+export function fromLocalInput(v: string): string | null {
+  const d = new Date(v)
+  return v && !Number.isNaN(d.getTime()) ? d.toISOString() : null
 }
 
 export function dayKey(iso: string): string {

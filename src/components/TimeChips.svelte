@@ -116,7 +116,7 @@
   </button>
 </div>
 {#if picking}
-  <input bind:this={input} type="datetime-local" max={toLocalInput(new Date().toISOString())} value={toLocalInput(value ?? new Date().toISOString())} onchange={(e) => (value = fromLocalInput((e.target as HTMLInputElement).value))} />
+  <input bind:this={input} type="datetime-local" max={toLocalInput(new Date().toISOString())} value={toLocalInput(value ?? new Date().toISOString())} onchange={(e) => (value = fromLocalInput((e.target as HTMLInputElement).value) ?? value)} />
 {/if}
 
 <style>
