@@ -67,6 +67,27 @@ describe('vocabulary edits on unknown or edge items', async () => {
     await move('tags', first.id, -1)
     expect((await db.tags.orderBy('order').toArray())[0].id).toBe(first.id)
   })
+  it('move items that share an order (an undo after an add, a merge): each tap swaps them in the list as shown', async () => {
+    const db = resetDb()
+    const { deleteItem, restoreItem, addSymptom } = await import('./vocab')
+    const ids = async () => (await db.symptoms.orderBy('order').toArray()).map((s) => s.id)
+    const last = (await db.symptoms.orderBy('order').last())!
+    const gone = (await deleteItem('symptoms', last.id))!
+    const added = await addSymptom('Irritabilità', 'mind')
+    await restoreItem('symptoms', gone)
+    expect(gone.order).toBe(added.order)
+    const before = await ids()
+    const [a, b] = before.slice(-2)
+    await move('symptoms', b, -1)
+    const after = await ids()
+    expect(after.indexOf(b)).toBe(before.indexOf(a))
+    expect(after.indexOf(a)).toBe(before.indexOf(b))
+    await move('symptoms', b, 1)
+    expect(await ids()).toEqual(before)
+    const orders = (await db.symptoms.toArray()).map((s) => s.order)
+    expect(new Set(orders).size).toBe(orders.length)
+  })
+
   it('give a new item a random id that says nothing of its name', async () => {
     resetDb()
     const a = await addTag('Ibuprofene', 'medication')
