@@ -25,14 +25,16 @@
 
   let editingId = $state<string | null>(null)
   let editText = $state('')
+  /** The name as the field opened with it: left unchanged, it is no rename (a seed name would stop following the language). */
+  let shown = ''
   let newText = $state<Record<string, string>>({})
 
   function startEdit(item: Symptom | Tag) {
     editingId = item.id
-    editText = tl(item.label)
+    editText = shown = tl(item.label)
   }
   async function commitEdit() {
-    if (editingId) await rename(table, editingId, editText)
+    if (editingId && editText.trim() !== shown) await rename(table, editingId, editText)
     editingId = null
   }
   function usageText(u: Usage): string {

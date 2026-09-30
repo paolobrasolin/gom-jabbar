@@ -95,6 +95,18 @@ describe('Vocabulary editor: symptoms', () => {
     await waitFor(async () => expect((await db.symptoms.get('stiffness'))?.label).toBe('Rigido'))
   })
 
+  it('leaves a name tapped and left unchanged as it was: a seed name keeps following the language', async () => {
+    render(VocabEditor, { table: 'symptoms' })
+    await fireEvent.click(await screen.findByRole('button', { name: 'Gonfiore' }))
+    const input = screen.getByDisplayValue('Gonfiore')
+    await fireEvent.input(input, { target: { value: ' Gonfiore ' } })
+    await fireEvent.blur(input)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Gonfiore' })).toBeInTheDocument())
+    expect((await db.symptoms.get('swelling'))?.label).toBe('i18n:vocab.swelling')
+    prefs.lang = 'en'
+    await waitFor(() => expect(names()[1]).toBe('Swelling'))
+  })
+
   it('moves a symptom up and down, stopping at the ends', async () => {
     render(VocabEditor, { table: 'symptoms' })
     await screen.findByRole('button', { name: 'Gonfiore' })
