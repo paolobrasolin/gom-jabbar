@@ -313,7 +313,8 @@ describe('Settings import', () => {
     const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 4 } }] })
     const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }] })
     const file = await buildExport()
-    file.exportedAt = '2026-09-10T08:00:00.000Z'
+    // A local time: west of UTC−8 the instant 08:00Z is still the 9th.
+    file.exportedAt = new Date(2026, 8, 10, 8).toISOString()
     await db.entries.delete(other.id)
     await openSettings()
     await pickFile(JSON.stringify(file))
