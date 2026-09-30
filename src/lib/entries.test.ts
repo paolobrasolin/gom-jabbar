@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { resetDb } from './db'
-import { addEntry, updateEntry, editEntry, deleteEntry, restoreEntries, endEpisode, reopenEpisode, activeEpisodes, durationMs, makeEntry, logUpdate, loadEpisode, latest, chainLayers, episodesOf, isHead, isUpdate, isActive } from './entries'
+import { addEntry, updateEntry, editEntry, deleteEntry, restoreEntries, endEpisode, reopenEpisode, activeEpisodes, durationMs, makeEntry, logUpdate, loadEpisode, latest, chainLayers, timeProblem, episodesOf, isHead, isUpdate, isActive } from './entries'
 import { draftFromEntry, draftToInput, emptyDraft } from './draft'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
 import { selectLayer } from './layers'
@@ -123,6 +123,21 @@ describe('entries', () => {
     const ep = (await loadEpisode(e.id))!
     expect(chainLayers(ep)).toEqual([L(['152'], { pain: 3 }, ['badsleep', 'rest', 'heat']), L(['mind'], { fog: 3 })])
     expect(chainLayers({ head: e, updates: [] })).toEqual(e.layers)
+  })
+
+  it("names what is wrong with an episode's times: an end before its start, a reading outside its episode", () => {
+    const T = (h: number) => `2026-01-01T${String(h).padStart(2, '0')}:00:00.000Z`
+    expect(timeProblem({ at: T(10), endedAt: T(9) })).toBe('end-before-start')
+    expect(timeProblem({ at: T(10), endedAt: T(10) })).toBeNull()
+    // The chips work in minutes: an end pressed a moment before Salva resolves "Adesso" is not before the start.
+    expect(timeProblem({ at: '2026-01-01T10:00:30.000Z', endedAt: '2026-01-01T10:00:00.500Z' })).toBeNull()
+    expect(timeProblem({ at: '2026-01-01T10:01:00.000Z', endedAt: '2026-01-01T10:00:59.000Z' })).toBe('end-before-start')
+    expect(timeProblem({ at: T(10), endedAt: null })).toBeNull()
+    expect(timeProblem({ at: T(10) })).toBeNull()
+    // An update may not come before its head, nor a head after its first update.
+    expect(timeProblem({ at: T(8) }, { notBefore: T(9) })).toBe('before-start')
+    expect(timeProblem({ at: T(11) }, { notAfter: T(10) })).toBe('after-update')
+    expect(timeProblem({ at: T(10) }, { notBefore: T(9), notAfter: T(11) })).toBeNull()
   })
 
   it('groups loaded rows into episodes, updates in time order, orphans left out', () => {

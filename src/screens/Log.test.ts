@@ -159,6 +159,9 @@ describe('Episodes with an end', () => {
     let [e] = await db.entries.toArray()
     expect(Date.now() - Date.parse(e.endedAt!)).toBeLessThan(5000)
     await more()
+    // An end needs a start before it: both picked on the same day.
+    await fireEvent.click(within(screen.getByRole('group', { name: 'Inizio' })).getByRole('button', { name: 'Scegli…' }))
+    await fireEvent.change(document.querySelector('input[type="datetime-local"]')!, { target: { value: '2026-09-01T10:00' } })
     await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: 'Scegli…' }))
     const pickers = document.querySelectorAll('input[type="datetime-local"]')
     expect(pickers).toHaveLength(1)
@@ -1419,7 +1422,20 @@ describe('The stage', () => {
   })
 })
 
-describe('Times in the future', () => {
+describe('Times that cannot be', () => {
+  it('an episode that ends before it starts is not saved: it says why and shows the Fine row', async () => {
+    render(App)
+    await more()
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+    const end = screen.getByRole('group', { name: 'Fine' })
+    await fireEvent.click(within(end).getByRole('button', { name: '3h fa' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    expect(await screen.findByText("La fine è prima dell'inizio")).toBeInTheDocument()
+    expect(await db.entries.count()).toBe(0)
+    // Nothing was reset: the draft is there to be fixed.
+    expect(within(end).getByRole('button', { name: '3h fa' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('before 08:00 there is no Stamattina, which would be in the future; from 08:00 there is', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     try {

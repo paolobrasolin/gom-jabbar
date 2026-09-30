@@ -159,6 +159,21 @@ export function chainLayers(ep: Episode): Layer[] {
   return cur.map((l, i) => ({ ...l, tags: i === 0 ? all : [] }))
 }
 
+/** Why an entry's times cannot be saved (§5.5): an end before its start; a reading outside its episode. */
+export type TimeProblem = 'end-before-start' | 'before-start' | 'after-update'
+/**
+ * `notBefore` is the head's start, for an update; `notAfter` the first update, for a head that has one. Equal times
+ * are fine: a reading at the very moment the episode started, an end at its start.
+ */
+export function timeProblem(e: { at: string; endedAt?: string | null }, bounds: { notBefore?: string; notAfter?: string } = {}): TimeProblem | null {
+  // To the minute, as the chips and the picker work: "Adesso" as the end and as the start is the same moment.
+  const t = (iso: string) => Math.floor(Date.parse(iso) / 60_000)
+  if (e.endedAt && t(e.endedAt) < t(e.at)) return 'end-before-start'
+  if (bounds.notBefore && t(e.at) < t(bounds.notBefore)) return 'before-start'
+  if (bounds.notAfter && t(e.at) > t(bounds.notAfter)) return 'after-update'
+  return null
+}
+
 /** Active episodes, oldest first, each with its updates. */
 export function activeEpisodes(): Promise<Episode[]> {
   // One read transaction: a chain deleted between reading the heads and loading them is never half seen.
