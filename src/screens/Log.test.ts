@@ -692,6 +692,45 @@ describe('Presets', () => {
     expect(await screen.findByText(/Le gambe/)).toBeInTheDocument()
   })
 
+  it("the new preset's kind is the kind of the reading the form then logs under it", async () => {
+    // Episodio is sticky (§6.1): the form opens on it, the preset form takes the log form as it stands.
+    prefs.ongoing = true
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
+    await pickPreset('Nuovo preset')
+    const form = await screen.findByRole('dialog', { name: 'Nuovo preset' })
+    await within(within(form).getByRole('group', { name: 'Chiede' })).findByRole('button', { name: 'Dolore' })
+    expect(within(form).getByRole('button', { name: 'Episodio' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(within(form).getByRole('button', { name: 'Cronico' }))
+    await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Schiena' } })
+    await fireEvent.click(within(form).getByRole('button', { name: 'Crea preset' }))
+    await waitFor(() => expect(presetButton()).toHaveAccessibleName('Preset: Schiena'))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    const [p] = await db.presets.toArray()
+    expect(p.kind).toBe('chronic')
+    expect(e).toMatchObject({ presetId: p.id, kind: 'chronic' })
+    expect(e).not.toHaveProperty('endedAt')
+    expect(episodesButton()).not.toBeInTheDocument()
+  })
+
+  it('an episode preset named from a chronic form starts an episode on the next Salva', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
+    await pickPreset('Nuovo preset')
+    const form = await screen.findByRole('dialog', { name: 'Nuovo preset' })
+    await within(within(form).getByRole('group', { name: 'Chiede' })).findByRole('button', { name: 'Dolore' })
+    await fireEvent.click(within(form).getByRole('button', { name: 'Episodio' }))
+    await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Emicrania' } })
+    await fireEvent.click(within(form).getByRole('button', { name: 'Crea preset' }))
+    await waitFor(() => expect(presetButton()).toHaveAccessibleName('Preset: Emicrania'))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    expect(e).toMatchObject({ kind: 'episode', episodeId: e.id, endedAt: null })
+  })
+
   it('undo on the created preset removes it and unlinks the form', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))

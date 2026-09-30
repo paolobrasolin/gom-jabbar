@@ -165,6 +165,8 @@
   /** The form now carries the name: the ordinary Salva logs the first reading under it, and so does its sheet, which then empties the form. Undo on the toast unlinks it. */
   function linkPreset(p: Preset) {
     draft.presetId = p.id
+    // The preset's kind is what its readings are (§5.6): the form follows it, as the preset sheet does.
+    draft.kind = p.kind
   }
   function unlinkPreset(p: Preset) {
     if (draft.presetId === p.id) draft.presetId = undefined
