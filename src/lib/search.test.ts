@@ -37,6 +37,12 @@ describe('fold and words', () => {
     expect(words("  mal   di  Testa, l'ufficio ")).toEqual(['mal', 'di', 'testa', 'l', 'ufficio'])
     expect(words('')).toEqual([])
   })
+
+  it('spells ligatures, ß and compatibility forms out, as a keyboard types them', () => {
+    expect(fold('ﬁsioterapia Straße Ǆ ①')).toBe('fisioterapia strasse dz 1')
+    expect(hit(entry({ note: 'ﬁsioterapia in Straße' }), 'fisio strasse')).toBe(true)
+    expect(hit(entry({ note: 'fisioterapia' }), 'ﬁsio')).toBe(true)
+  })
 })
 
 describe('matches', () => {
