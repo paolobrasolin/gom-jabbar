@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack, type Snippet } from 'svelte'
+  import { untrack, tick, type Snippet } from 'svelte'
   import Stage from './Stage.svelte'
   import ToolButton from './ToolButton.svelte'
   import IntensitySlider from './IntensitySlider.svelte'
@@ -65,6 +65,19 @@
   let view = $state<View>('front')
   /** The drawer pulled up over the stage. */
   let open = $state(false)
+  let formEl = $state<HTMLElement>()
+  /**
+   * Shows a time row that cannot be saved as it is (§5.5, §10): the drawer opens, the row comes into view and its pressed
+   * chip takes the focus. Nothing is changed: the tester fixes it.
+   */
+  export async function pointAt(which: 'start' | 'end') {
+    open = true
+    await tick()
+    const label = which === 'end' ? t('time.end') : draft.kind === 'episode' && lock !== 'reading' ? t('time.start') : t('time.when')
+    const row = formEl?.querySelector<HTMLElement>(`[role="group"][aria-label="${label}"]`)
+    row?.scrollIntoView?.({ block: 'nearest' })
+    row?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus()
+  }
   let stage: Stage | undefined = $state()
   let innerH = $state(0)
   $effect(() => {
@@ -249,7 +262,7 @@
   </button>
 {/snippet}
 
-<div class="form">
+<div class="form" bind:this={formEl}>
   <!-- The stage ends a little above the collapsed drawer, so the two never read as one surface (#37). -->
   <div class="slot" style="bottom: {peek ? peek + 12 : 0}px">
     <Stage bind:this={stage} bind:view {paint} layers={shown} cur={draft.cur} onToggle={onRegion} {onStroke} labels={{ front: t('log.front'), back: t('log.back'), mind: t('log.mind') }}>

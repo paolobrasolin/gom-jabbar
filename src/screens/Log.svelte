@@ -13,7 +13,7 @@
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs, type Tab } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
-  import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, type Episode } from '../lib/entries'
+  import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, timeProblem, type Episode } from '../lib/entries'
   import { showToast, haptic, toastState } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration } from '../lib/time'
@@ -136,8 +136,16 @@
     showToast(t('log.cleared'), { label: t('log.undo'), run: () => (draft = before) })
   }
 
+  let form = $state<EntryForm>()
   async function save() {
     if (saving || cooling) return
+    // An end before the start is not a reading anyone had: say so and show the row, save nothing (§5.5, §10).
+    const times = draftToInput(draft)
+    if (timeProblem({ at: times.at!, endedAt: times.endedAt })) {
+      showToast(t('time.endBeforeStart'))
+      void form?.pointAt('end')
+      return
+    }
     saving = true
     try {
       prefs.ongoing = draft.kind === 'episode'
@@ -251,7 +259,7 @@
   {/if}
 
   <!-- The slot over the frame (#22): the form draws the figure, the frame carries the fast path and the Salva bar. -->
-  <EntryForm bind:draft bind:peek symptoms={symptoms.value} tags={tags.value}>
+  <EntryForm bind:this={form} bind:draft bind:peek symptoms={symptoms.value} tags={tags.value}>
     {#snippet actions()}
       <div class="actions">
         <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>

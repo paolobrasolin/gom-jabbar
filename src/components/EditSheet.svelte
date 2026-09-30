@@ -4,7 +4,7 @@
   import PresetForm, { type PresetSeed } from './PresetForm.svelte'
   import { t } from '../i18n/index.svelte'
   import { draftFromEntry, draftToInput, emptyDraft, type EntryDraft } from '../lib/draft'
-  import { editEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode } from '../lib/entries'
+  import { editEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode, timeProblem, type TimeProblem } from '../lib/entries'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import type { Entry, Layer, Symptom, Tag } from '../lib/types'
 
@@ -33,12 +33,33 @@
     if (!open) entry = null
   })
 
+  let form = $state<EntryForm>()
+  /** What is wrong with the times as edited: an update is bounded by its head, a head by its first update. */
+  async function timesOf(e: Entry, input: { at?: string; kind?: string; endedAt?: string | null }): Promise<TimeProblem | null> {
+    const at = input.at!
+    if (isUpdate(e)) {
+      const head = await loadEpisode(e.episodeId!)
+      return timeProblem({ at }, { notBefore: head?.head.at })
+    }
+    const ep = isHead(e) ? await loadEpisode(e.id) : undefined
+    const endedAt = lock === 'kind' || input.kind === 'episode' ? input.endedAt : null
+    return timeProblem({ at, endedAt }, { notAfter: ep?.updates[0]?.at })
+  }
+
   /** A save in flight: the second tap of a double tap does nothing. */
   let busy = false
   async function save() {
     if (!editing || busy) return
     busy = true
     const input = draftToInput(draft)
+    // A reading stays inside its episode and an end after its start (§5.5): otherwise say so and show the row.
+    const problem = await timesOf(editing, input)
+    if (problem) {
+      busy = false
+      showToast(t(problem === 'end-before-start' ? 'time.endBeforeStart' : problem === 'before-start' ? 'time.beforeStart' : 'time.afterUpdate'))
+      void form?.pointAt(problem === 'end-before-start' ? 'end' : 'start')
+      return
+    }
     const patch: Partial<Entry> = { at: input.at!, layers: input.layers as Layer[], note: input.note! }
     if (lock === 'none') {
       // The kind may change: an episode is its own head with an end; a chronic snapshot has neither.
@@ -66,7 +87,7 @@
 </script>
 
 <Sheet bind:open title={t('diary.edit')} tall>
-  <EntryForm bind:draft {symptoms} {tags} {lock}>
+  <EntryForm bind:this={form} bind:draft {symptoms} {tags} {lock}>
     {#snippet actions()}
       <div class="row">
         <button class="btn danger" onclick={remove}>{t('diary.delete')}</button>
