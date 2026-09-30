@@ -347,6 +347,15 @@ describe('Tag discoverability', () => {
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('an episode row in the menu says what, where, since when, then its tags: a tag never sits where the place goes', async () => {
+    await addEntry({ at: new Date(Date.now() - 30 * 60_000).toISOString(), kind: 'episode', layers: [{ regions: [], readings: { pain: 4 }, tags: ['badsleep'] }] })
+    await addEntry({ at: new Date(Date.now() - 20 * 60_000).toISOString(), kind: 'episode', layers: [{ regions: ['154'], readings: { pain: 6 }, tags: ['badsleep'] }] })
+    render(App)
+    const rows = (await episodeItems()).map((i) => i.textContent!.replace(/\s+/g, ' ').trim())
+    expect(rows).toContainEqual(expect.stringMatching(/^4 da 3\dm · Dormito male$/))
+    expect(rows).toContainEqual(expect.stringMatching(/^6 ginocchio sx · da 2\dm · Dormito male$/))
+  })
+
   it('records remedies from the episode sheet on Aggiorna and Termina', async () => {
     render(App)
     await more()
