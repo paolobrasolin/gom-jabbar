@@ -4,7 +4,7 @@
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale, num, tn } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts } from '../lib/stats'
+  import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, rangeEnd } from '../lib/stats'
   import { durationMs, episodesOf, isHead, isUpdate, isActive, latest, chainLayers } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
@@ -25,7 +25,7 @@
     onclose,
   }: { days: number; from: Date; entries: Entry[]; tags: Tag[]; symptoms: Symptom[]; symptom?: string; onclose: () => void } = $props()
 
-  const to = $derived(new Date(from.getTime() + days * 86_400_000 - 1))
+  const to = $derived(rangeEnd(from, days))
   const fmtDate = (d: Date) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(d)
   const fmtDay = (iso: string) => new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso))
   const symptom = $derived(symptoms.find((s) => s.id === given) ?? symptomsRead(entries, symptoms)[0])

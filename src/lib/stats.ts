@@ -21,6 +21,17 @@ export function rangeStart(days: number, now = new Date()): Date {
   return d
 }
 
+/**
+ * The last moment of a range's last calendar day, counted in days, not in 24-hour steps: the spring clock change makes
+ * one day 23 hours long, and `from` plus 30 × 24 h would land on the day after.
+ */
+export function rangeEnd(from: Date, days: number): Date {
+  const d = new Date(from)
+  d.setDate(d.getDate() + days - 1)
+  d.setHours(23, 59, 59, 999)
+  return d
+}
+
 export function inRange(entries: Entry[], from: Date, to: Date = new Date(8.64e15)): Entry[] {
   const a = from.getTime()
   const b = to.getTime()
