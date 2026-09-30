@@ -60,9 +60,10 @@ function buildWords(t: T): Vocab {
     for (const x of r) if (!l.includes(x)) sides.add(x)
     for (const x of [...l, ...r, ...words(t(`part.${w}.both`))]) all.add(x)
   }
-  return { sides, places: [...all].filter((x) => !sides.has(x)) }
+  return { sides, places: [...all].filter((x) => !sides.has(x)), skip: new Set(words(t('diary.searchSkip'))) }
 }
-type Vocab = { sides: Set<string>; places: string[] }
+/** `skip`: the words a search passes over while others remain, articles and prepositions ("all'anca"), "mal" ("mal di testa"). */
+type Vocab = { sides: Set<string>; places: string[]; skip: Set<string> }
 
 /** Built once per vocabulary and reading: the Diary's live queries hand out new objects only when a row changes. */
 const phrases = new WeakMap<SearchContext, WeakMap<Entry, string[][]>>()
@@ -86,13 +87,15 @@ const starts = (p: string[], w: string) => p.some((x) => x.startsWith(w))
 /**
  * Every typed word must start a word of the reading. A side binds to the places typed next to it: "ginocchio sx" needs
  * one phrase holding both, so a right knee and a left hand is not a hit. A side with no place next to it ("sx" alone,
- * "dolore sx") is any side.
+ * "dolore sx") is any side. Articles, prepositions and "mal" are skipped while other words remain: "mal di testa" is "testa".
  */
 export function matches(e: Entry, query: string, ctx: SearchContext): boolean {
-  const ws = words(query)
-  if (!ws.length) return true
+  const { sides: side, places, skip } = vocabOf(ctx)
+  const typed = words(query)
+  if (!typed.length) return true
+  const kept = typed.filter((w) => !skip.has(w))
+  const ws = kept.length ? kept : typed
   const ps = phrasesOf(e, ctx)
-  const { sides: side, places } = vocabOf(ctx)
   return ws.every((w, i) => {
     const near = [ws[i - 1], ws[i + 1]].filter((n) => n !== undefined && !side.has(n) && places.some((p) => p.startsWith(n)))
     if (!side.has(w) || !near.length) return ps.some((p) => starts(p, w))
