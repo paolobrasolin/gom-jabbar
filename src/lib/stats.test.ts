@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
-import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, rangeStart, inRange, tagCounts, ringWidth, ringStyle } from './stats'
+import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, rangeStart, rangeEnd, inRange, tagCounts, ringWidth, ringStyle } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
 import { presetSeries } from './stats'
 import type { Preset } from './types'
@@ -208,5 +208,23 @@ describe('presetSeries edge cases', () => {
     const upd = { ...makeEntry({ at: '2026-09-09T12:00:00.000Z', kind: 'episode', readings: { pain: 3 } }), episodeId: head.id }
     expect(presetSeries([upd], presets)).toEqual([])
     expect(presetSeries([upd], presets, [head])[0].points.map((p) => p.value)).toEqual([3])
+  })
+})
+
+describe('rangeEnd', () => {
+  it('is the last moment of the range\'s last day, also across the spring clock change', () => {
+    const tz = process.env.TZ
+    process.env.TZ = 'Europe/Rome'
+    try {
+      // 30 days to 8 April 2026 hold 29 March, a day of 23 hours.
+      const now = new Date(2026, 3, 8, 12)
+      const end = rangeEnd(rangeStart(30, now), 30)
+      expect([end.getDate(), end.getMonth(), end.getHours(), end.getMinutes()]).toEqual([8, 3, 23, 59])
+      // Autumn, 25 hours on 25 October.
+      const autumn = rangeEnd(rangeStart(30, new Date(2026, 10, 8, 12)), 30)
+      expect([autumn.getDate(), autumn.getMonth(), autumn.getHours()]).toEqual([8, 10, 23])
+    } finally {
+      process.env.TZ = tz
+    }
   })
 })

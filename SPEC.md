@@ -306,7 +306,7 @@ Range picker: 7, 30, 90, 365 days.
 
 A full-screen overlay in a fixed light palette, opened for the current range and the symptom picked from Trends (§6.3; by itself it reads the first symptom read in range, in the editor's order), with print CSS for A4; `@media print` hides the app behind it. No library. Contents:
 
-1. Header: date range, generated on, and the symptom its figures read, "Sintomo: Gonfiore" (left out when nothing in range reads one).
+1. Header: date range (from the range's first day to its last, counted in calendar days, so a clock change never moves the end to tomorrow), generated on, and the symptom its figures read, "Sintomo: Gonfiore" (left out when nothing in range reads one).
 2. Body heatmap for that symptom (front and back side by side), colour for the mean and a ring for frequency as on Trends (§6.3), strokes as shading (§5.3).
 3. Intensity over time chart.
 4. Summary numbers: entries, mean/max and days ≥ 5 of the symptom (left out when nothing in range reads it, §6.3), episode count and durations; the chart likewise; Altri sintomi without it.
