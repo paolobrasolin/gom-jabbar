@@ -11,6 +11,12 @@ let db: ReturnType<typeof resetDb>
 beforeEach(() => {
   db = resetDb()
   prefs.lang = 'it'
+  // The lines say "oggi" and "ieri" by the calendar: at 15:00 a reading an hour or three ago is today, whatever the real clock says.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 8, 30, 15, 0))
+})
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -159,14 +165,6 @@ describe('Episode sheet', () => {
 })
 
 describe('what an update carries', () => {
-  // The lines say "oggi" and "ieri" by the calendar: at 15:00 a reading an hour or three ago is today, whatever the real clock says.
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date(2026, 8, 30, 15, 0))
-  })
-  afterEach(() => {
-    vi.useRealTimers()
-  })
   it('chips start unpressed even when the last reading took them: a tap is a new dose', async () => {
     const e = await addEntry({ at: ago(180), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }] })
     await logUpdate(e.id, [{ pain: 5 }], ago(60), [['heat']])
