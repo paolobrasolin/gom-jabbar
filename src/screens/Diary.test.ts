@@ -132,11 +132,12 @@ describe('Edit sheet', () => {
     expect(await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ })).toHaveLength(1)
   })
 
-  /** An episode row opens its sheet (§5.5); Modifica zone e note is the way to the form. */
+  /** An episode row opens its sheet (§5.5); the start's line, or Modifica while the start is the only reading, opens its form. */
   async function openHeadForm() {
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ }))[0])
     const ep = await screen.findByRole('dialog', { name: /Episodio/ })
-    await fireEvent.click(within(ep).getByRole('button', { name: 'Modifica' }))
+    const readings = within(ep).queryByLabelText('Letture')
+    await fireEvent.click(readings ? within(readings).getAllByRole('button')[0] : within(ep).getByRole('button', { name: 'Modifica' }))
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
     // The kind and the bounds are on the Altro face (#22).
     await fireEvent.click(within(sheet).getByRole('button', { name: /^Altro/ }))
@@ -209,7 +210,7 @@ describe('Edit sheet', () => {
     await fireEvent.click(rows()[0])
     const ep = await screen.findByRole('dialog', { name: 'Episodio in corso' })
     const points = within(within(ep).getByLabelText('Letture')).getAllByRole('button')
-    expect(points.map((b) => b.textContent?.trim())).toEqual([expect.stringMatching(/^\d\d:\d\d 7 dolore$/), expect.stringMatching(/^\d\d:\d\d 3 dolore$/)])
+    expect(points.map((b) => b.textContent?.trim())).toEqual([expect.stringMatching(/^\d\d:\d\d 7 dolore · coscia sx$/), expect.stringMatching(/^\d\d:\d\d 3 dolore · coscia sx$/)])
     // An update is a reading of its episode: no kind, no end, just when.
     await fireEvent.click(points[1])
     let sheet = await screen.findByRole('dialog', { name: 'Modifica' })
@@ -528,7 +529,7 @@ describe('Times that cannot be, in the edit sheet', () => {
     // The start: moved to now, after its first update.
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
     sheet = await screen.findByRole('dialog', { name: 'Episodio in corso' })
-    await fireEvent.click(within(sheet).getByRole('button', { name: 'Modifica' }))
+    await fireEvent.click(within(within(sheet).getByLabelText('Letture')).getAllByRole('button')[0])
     edit = await screen.findByRole('dialog', { name: 'Modifica' })
     await fireEvent.click(within(edit).getByRole('button', { name: /^Altro/ }))
     await fireEvent.click(within(within(edit).getByRole('group', { name: 'Inizio' })).getByRole('button', { name: 'Adesso' }))
