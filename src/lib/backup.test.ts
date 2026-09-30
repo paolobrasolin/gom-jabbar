@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { resetDb } from './db'
-import { addEntry, updateEntry } from './entries'
+import { addEntry, updateEntry, logUpdate } from './entries'
 import { buildExport, parseImport, previewImport, applyImport, backupReminder, exportFilename, shareOrDownload, REMIND, EXPORT_VERSION } from './backup'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 import { addPreset } from './presets'
@@ -48,6 +48,24 @@ describe('backup', () => {
     expect((await db.entries.get(a.id))?.note).toBe('from file')
     expect((await db.entries.get(b.id))?.note).toBe('newer local')
     expect(await db.entries.count()).toBe(3)
+  })
+
+  it("merge never leaves an update without its episode: a newer start that became chronic stays the episode's start", async () => {
+    const head = await addEntry({ kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }], note: 'inizio' })
+    const update = await logUpdate(head.id, [{ pain: 4 }])
+    const file = await buildExport()
+    // Another history: the start was made chronic, before the update existed there, and edited later than here.
+    const fh = file.entries.find((e) => e.id === head.id)!
+    Object.assign(fh, { kind: 'chronic', note: 'corretta', updatedAt: new Date(Date.now() + 1000).toISOString() })
+    delete fh.episodeId
+    delete fh.endedAt
+    file.entries = file.entries.filter((e) => e.id !== update!.id)
+    await applyImport(file, 'merge')
+    const merged = (await db.entries.get(head.id))!
+    // The newer content arrives; the chain holds.
+    expect(merged.note).toBe('corretta')
+    expect(merged).toMatchObject({ kind: 'episode', episodeId: head.id, endedAt: head.endedAt })
+    expect((await db.entries.get(update!.id))?.episodeId).toBe(head.id)
   })
 
   it('upgrades a version 1 file with regions all the way to layers', async () => {
