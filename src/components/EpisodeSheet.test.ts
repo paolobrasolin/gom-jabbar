@@ -22,6 +22,8 @@ async function seedEpisode() {
   await logUpdate(e.id, [{ pain: 4 }], ago(60))
   return e.id
 }
+/** The readings of the sheet, one line each, whitespace folded. */
+const lines = (sheet: HTMLElement) => within(within(sheet).getByLabelText('Letture')).getAllByRole('button').map((b) => b.textContent!.replace(/\s+/g, ' ').trim())
 async function openSheet() {
   render(App)
   return openEpisode()
@@ -33,10 +35,11 @@ describe('Episode sheet', () => {
     const sheet = await openSheet()
     expect(sheet).toHaveTextContent('coscia sx')
     expect(sheet).toHaveTextContent('da 3h')
-    const points = within(within(sheet).getByLabelText('Letture')).getAllByRole('button').map((s) => s.textContent?.trim())
-    expect(points).toHaveLength(2)
-    expect(points[0]).toMatch(/^\d\d:\d\d 7$/)
-    expect(points[1]).toMatch(/^\d\d:\d\d 4$/)
+    // Each reading names its symptom, pain included, so a switch between symptoms shows.
+    expect(lines(sheet)).toHaveLength(2)
+    expect(lines(sheet)[0]).toMatch(/^\d\d:\d\d 7 dolore$/)
+    expect(lines(sheet)[1]).toMatch(/^\d\d:\d\d 4 dolore$/)
+    expect(within(sheet).getByText("Com'è adesso")).toBeInTheDocument()
     expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('4')
   })
 
@@ -91,13 +94,13 @@ describe('Episode sheet', () => {
     expect(within(ended).getByLabelText('Letture')).toBeInTheDocument()
     expect(within(ended).queryByRole('slider')).not.toBeInTheDocument()
     expect(within(ended).queryByRole('button', { name: 'Aggiorna' })).not.toBeInTheDocument()
-    expect(within(ended).getByRole('button', { name: 'Modifica zone e note' })).toBeInTheDocument()
+    expect(within(ended).getByRole('button', { name: 'Modifica' })).toBeInTheDocument()
   })
 
   it('Modifica hands the head to the edit sheet', async () => {
     await seedEpisode()
     const sheet = await openSheet()
-    await fireEvent.click(within(sheet).getByRole('button', { name: 'Modifica zone e note' }))
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Modifica' }))
     expect(screen.queryByRole('dialog', { name: 'Episodio in corso' })).not.toBeInTheDocument()
     const edit = await screen.findByRole('dialog', { name: 'Modifica' })
     expect(within(edit).getByRole('slider', { name: 'Dolore' })).toHaveValue('7')
@@ -134,6 +137,56 @@ describe('Episode sheet', () => {
     const sliders = within(sheet).getAllByRole('slider').map((s) => s.getAttribute('aria-label'))
     expect(sliders).toEqual(['Dolore', 'Gonfiore', 'Ghost'])
     expect(within(sheet).queryByLabelText('Letture')).not.toBeInTheDocument()
+  })
+})
+
+describe('what an update carries', () => {
+  it('chips start unpressed even when the last reading took them: a tap is a new dose', async () => {
+    const e = await addEntry({ at: ago(180), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }] })
+    await logUpdate(e.id, [{ pain: 5 }], ago(60), [['heat']])
+    const sheet = await openSheet()
+    expect(within(sheet).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'false')
+    expect(lines(sheet)[1]).toMatch(/^\d\d:\d\d 5 dolore · Calore$/)
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Calore' }))
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
+    await waitFor(async () => expect((await updates()).map((u) => u.layers[0].tags)).toEqual([['heat'], ['heat']]))
+  })
+
+  it("the start's context stays on the start: shown in the summary, never copied", async () => {
+    const e = await addEntry({ at: ago(180), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 }, tags: ['badsleep'] }] })
+    const sheet = await openSheet()
+    expect(sheet).toHaveTextContent('da 3h · Dormito male')
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
+    await waitFor(async () => expect((await updates()).map((u) => u.layers)).toEqual([[{ regions: ['152'], readings: { pain: 7 }, tags: [] }]]))
+    expect((await db.entries.get(e.id))?.layers[0].tags).toEqual(['badsleep'])
+  })
+
+  it('an episode that never read pain gets no pain slider, and no pain 0', async () => {
+    await addEntry({ at: ago(60), kind: 'episode', layers: [{ regions: ['152'], readings: { swelling: 5 } }] })
+    const sheet = await openSheet()
+    expect(within(sheet).getAllByRole('slider').map((s) => s.getAttribute('aria-label'))).toEqual(['Gonfiore'])
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
+    await waitFor(async () => expect((await updates()).map((u) => u.layers[0].readings)).toEqual([{ swelling: 5 }]))
+  })
+
+  it('a note goes with the update and shows on its line', async () => {
+    await seedEpisode()
+    let sheet = await openSheet()
+    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'meglio dopo il caffè' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
+    await waitFor(async () => expect((await updates()).map((u) => u.note)).toEqual(['', 'meglio dopo il caffè']))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    sheet = await openEpisode()
+    expect(lines(sheet)[2]).toMatch(/^\d\d:\d\d 4 dolore · meglio dopo il caffè$/)
+    expect(within(sheet).getByRole('textbox', { name: 'Note' })).toHaveValue('')
+  })
+
+  it('an episode over more than one day says the day on its readings', async () => {
+    const e = await addEntry({ at: ago(60 * 50), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }] })
+    await logUpdate(e.id, [{ pain: 4 }], ago(30))
+    const sheet = await openSheet()
+    expect(lines(sheet)[0]).not.toMatch(/^\d\d:\d\d /)
+    expect(lines(sheet)[1]).toMatch(/^oggi \d\d:\d\d 4 dolore$/i)
   })
 })
 

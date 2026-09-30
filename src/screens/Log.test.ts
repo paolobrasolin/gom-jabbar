@@ -314,7 +314,7 @@ describe('The drawer', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     const sheet = await openEpisode()
-    expect(within(sheet).getByRole('button', { name: 'Modifica zone e note' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Modifica' })).toBeInTheDocument()
   })
 })
 
@@ -349,15 +349,16 @@ describe('Tag discoverability', () => {
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
     await waitFor(async () => expect(mergedTags((await lastUpdate())!.layers)).toEqual(['rest']))
     await waitFor(async () => expect((await episodeItems())[0]).toHaveTextContent('Riposo'))
+    // Nothing is carried: the sheet opens with every chip unpressed, and a chip is what is done now.
     sheet = await openEpisode()
-    expect(await within(sheet).findByRole('button', { name: 'Riposo' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await within(sheet).findByRole('button', { name: 'Riposo' })).toHaveAttribute('aria-pressed', 'false')
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Calore' }))
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Termina adesso' }))
     // A remedy chosen at the end is one more reading, then the head gets its end.
     await waitFor(async () => {
       const [h] = await heads()
       expect(h.endedAt).not.toBeNull()
-      expect(mergedTags((await lastUpdate())!.layers)).toEqual(['rest', 'heat'])
+      expect(mergedTags((await lastUpdate())!.layers)).toEqual(['heat'])
     })
   })
 })
@@ -444,13 +445,13 @@ describe('No special symptom (#36)', () => {
     expect((await db.entries.toArray())[0].layers).toEqual([{ regions: ['152', '153'], readings: {}, tags: [] }])
   })
 
-  it('the episode sheet leads a body layer with the first body symptom, pain off', async () => {
+  it('the episode sheet offers only what the episode has read, pain off', async () => {
     await db.symptoms.update('pain', { enabled: false })
     await addEntry({ kind: 'episode', layers: [{ regions: ['152'], readings: { fatigue: 4 } }] })
     render(App)
     const sheet = await openEpisode()
-    expect(within(sheet).getAllByRole('slider')).toHaveLength(2)
-    expect(within(sheet).getByRole('slider', { name: 'Gonfiore' })).toHaveValue('0')
+    // Only what the episode has read: no slider, and so no invented 0, for the headline it never had.
+    expect(within(sheet).getAllByRole('slider')).toHaveLength(1)
     expect(within(sheet).getByRole('slider', { name: 'Stanchezza' })).toHaveValue('4')
     expect(within(sheet).queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
   })
