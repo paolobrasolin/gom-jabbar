@@ -84,8 +84,12 @@
     if (!open) peek = innerH
   })
   const curStrokes = $derived(draft.layers[draft.cur]?.strokes?.length ?? 0)
-  /** Gestures of this draft, newest last: how many pieces each added and the count it left, so Annulla tratto can take a whole gesture back. */
-  let gestures: { n: number; total: number }[] = []
+  /**
+   * Gestures of this draft, newest last: the layer each painted, how many pieces it added and the count that layer was
+   * left with, so Annulla tratto takes back a whole gesture of the current layer and never another layer's.
+   */
+  let gestures: { layer: number; n: number; total: number }[] = []
+  const layerPieces = () => draft.layers[draft.cur]?.strokes?.length ?? 0
   // A new draft (save, clear, another entry to edit) folds everything away and opens on the view holding most of it.
   $effect(() => {
     void draft
@@ -174,16 +178,17 @@
     withPaintToast(() => apply(toggleFull(st())))
   }
   function onStroke(raw: RawStroke) {
-    const before = pieceCount(draft.layers)
+    const before = layerPieces()
     apply(addStroke(st(), raw))
-    const total = pieceCount(draft.layers)
-    if (total > before) gestures.push({ n: total - before, total })
+    const total = layerPieces()
+    if (total > before) gestures.push({ layer: draft.cur, n: total - before, total })
     haptic(6)
   }
-  /** The last gesture, while its pieces are still the last ones; otherwise one piece. */
+  /** The current layer's last gesture, while its pieces are still that layer's last ones; otherwise one piece. */
   function onUndoStroke() {
-    const last = gestures.pop()
-    const n = last && last.total === pieceCount(draft.layers) ? last.n : 1
+    const i = gestures.findLastIndex((g) => g.layer === draft.cur)
+    const last = i < 0 ? undefined : gestures.splice(i, 1)[0]
+    const n = last && last.total === layerPieces() ? last.n : 1
     apply(undoStroke(st(), n))
   }
   function onClearDrawing() {
