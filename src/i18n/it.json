@@ -189,7 +189,7 @@
   "trends.tags": "Tag",
   "trends.withTag": "giorni con",
   "trends.withoutTag": "giorni senza",
-  "trends.days": "giorni",
+  "trends.tagDays": "{a} con · {b} senza",
   "trends.descriptive": "Solo descrittivo: medie del massimo giornaliero, non una relazione di causa.",
   "trends.tagsNeedData": "Servono almeno {n} giorni con e {n} senza un tag per confrontarli.",
   "trends.symptoms": "Altri sintomi",

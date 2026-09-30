@@ -230,10 +230,11 @@ describe('Trends tags and symptoms', () => {
 
   it('compares days with and without a tag once both sides have 5 days', async () => {
     for (let n = 0; n < 5; n++) await addEntry({ at: at(n), ...legs(8, { tags: ['rest'] }) })
-    for (let n = 5; n < 10; n++) await addEntry({ at: at(n), ...legs(2) })
+    for (let n = 5; n < 11; n++) await addEntry({ at: at(n), ...legs(2) })
     await openTrends()
     const card = (await screen.findByText('giorni con')).closest('.card')!
-    expect(card).toHaveTextContent('Riposo (5/5 giorni)')
+    // Day counts that say what they count: "(5/6 giorni)" read as a date, the 5th of June.
+    expect(card.querySelector('.name')).toHaveTextContent(/^Riposo · 5 con · 6 senza$/)
     const bars = Array.from(card.querySelectorAll('.bar')).map((b) => b.getAttribute('style'))
     expect(bars).toEqual(['width: 80%;', 'width: 20%;'])
     expect(Array.from(card.querySelectorAll('.val')).map((v) => v.textContent)).toEqual(['8,0', '2,0'])

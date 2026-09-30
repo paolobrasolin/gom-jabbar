@@ -13,7 +13,7 @@
   </div>
   {#each rows as r (r.tag.id)}
     <div class="trow">
-      <div class="name">{tl(r.tag.label)} <span class="small muted">({r.withN}/{r.withoutN} {t('trends.days')})</span></div>
+      <div class="name">{tl(r.tag.label)} <span class="small muted">· {t('trends.tagDays', { a: r.withN, b: r.withoutN })}</span></div>
       <div class="bars">
         <div class="bar with" style="width: {pct(r.withMean)}"></div><span class="val small">{num(r.withMean, true)}</span>
       </div>
