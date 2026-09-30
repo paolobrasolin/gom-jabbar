@@ -21,6 +21,9 @@
   const y = (v: number) => padT + plotH - (v / 10) * plotH
   const x = (i: number) => padL + i * slot + slot / 2
 
+  /** How tall the mark of a day read at 0 stands on the baseline. */
+  const ZERO_H = 3
+
   /** Top-rounded column from the baseline. */
   function column(i: number, v: number): string {
     const h = Math.max(0, (v / 10) * plotH)
@@ -28,7 +31,6 @@
     const x0 = x(i) - barW / 2
     const top = y(v)
     const base = padT + plotH
-    if (h === 0) return ''
     return `M ${x0} ${base} V ${top + r} Q ${x0} ${top} ${x0 + r} ${top} H ${x0 + barW - r} Q ${x0 + barW} ${top} ${x0 + barW} ${top + r} V ${base} Z`
   }
 
@@ -53,8 +55,11 @@
       <text class="tick" x={padL - 6} y={y(g) + 4} text-anchor="end">{g}</text>
     {/each}
     {#each series as p, i (p.day)}
-      {#if p.max !== null}
-        <path d={column(i, p.max)} fill={intensityColor(p.max)} />
+      {#if p.max !== null && p.max > 0}
+        <path class="col" d={column(i, p.max)} fill={intensityColor(p.max)} />
+      {:else if p.max === 0}
+        <!-- A day read at 0 is a day, not a gap: a flat mark on the baseline, on every range (§6.3). -->
+        <rect class="zero" x={x(i) - barW / 2} y={padT + plotH - ZERO_H} width={barW} height={ZERO_H} rx={Math.min(1.5, barW / 2)} fill={intensityColor(0)} />
       {/if}
       {#if i % tickEvery === 0 && (n <= 10 || i < n - tickEvery / 2)}
         <text class="tick" x={x(i)} y={height - 6} text-anchor="middle">{fmtTick(p.date)}</text>
