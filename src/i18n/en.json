@@ -109,6 +109,7 @@
   "vocab.addPlaceholder": "New…",
   "vocab.delete": "Delete {name}",
   "vocab.deleted": "Deleted: {name}",
+  "vocab.exists": "“{name}” is already there",
   "vocab.entries1": "1 entry",
   "vocab.entriesN": "{n} entries",
   "vocab.presets1": "1 preset",

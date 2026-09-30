@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
-import { toastState } from '../lib/toast.svelte'
+import { toastState, dismissToast } from '../lib/toast.svelte'
 import { addEntry } from '../lib/entries'
 import { addPreset } from '../lib/presets'
 import { deleteItem } from '../lib/vocab'
@@ -12,6 +12,7 @@ let db: ReturnType<typeof resetDb>
 beforeEach(() => {
   db = resetDb()
   prefs.lang = 'it'
+  dismissToast()
 })
 
 const names = () => Array.from(document.querySelectorAll('.item .name')).map((b) => b.textContent)
@@ -147,6 +148,39 @@ describe('Vocabulary editor: symptoms', () => {
     await fireEvent.input(input, { target: { value: 'Crampo' } })
     await fireEvent.keyDown(input, { key: 'Enter' })
     await waitFor(async () => expect((await db.symptoms.orderBy('order').last())?.label).toBe('Crampo'))
+  })
+})
+
+describe('Vocabulary editor: names are unique', () => {
+  it('refuses to add a name the list already has, in any case and any group, and says so', async () => {
+    render(VocabEditor, { table: 'symptoms' })
+    await screen.findByRole('button', { name: 'Dolore' })
+    const fields = screen.getAllByPlaceholderText('Nuovo…')
+    await fireEvent.input(fields[1], { target: { value: ' dolore ' } })
+    await fireEvent.keyDown(fields[1], { key: 'Enter' })
+    await waitFor(() => expect(toastState.current?.message).toBe('«Dolore» c\'è già'))
+    expect(await db.symptoms.count()).toBe(9)
+    expect(fields[1]).toHaveValue(' dolore ')
+  })
+
+  it('refuses to rename an item to another item\'s name, leaving it as it was', async () => {
+    render(VocabEditor, { table: 'tags' })
+    await fireEvent.click(await screen.findByRole('button', { name: 'Stress' }))
+    const input = screen.getByDisplayValue('Stress')
+    await fireEvent.input(input, { target: { value: 'CALORE' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(toastState.current?.message).toBe('«Calore» c\'è già'))
+    expect((await db.tags.get('stress'))?.label).toBe('i18n:vocab.stress')
+    expect(screen.getByRole('button', { name: 'Stress' })).toBeInTheDocument()
+  })
+
+  it('lets an item be renamed to its own name in another case', async () => {
+    render(VocabEditor, { table: 'tags' })
+    await fireEvent.click(await screen.findByRole('button', { name: 'Stress' }))
+    const input = screen.getByDisplayValue('Stress')
+    await fireEvent.input(input, { target: { value: 'STRESS' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(async () => expect((await db.tags.get('stress'))?.label).toBe('STRESS'))
   })
 })
 
