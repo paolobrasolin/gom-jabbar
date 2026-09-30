@@ -1388,6 +1388,25 @@ describe('The stage', () => {
     expect(strokes()).toHaveLength(0)
   })
 
+  it("Annulla tratto takes back the current layer's own last gesture, never another layer's", async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
+    const front = screen.getByRole('group', { name: 'Davanti' })
+    await paint(front, centre('110'), centre('112'))
+    const onA = strokes().length
+    await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
+    await paint(screen.getByRole('group', { name: 'Davanti' }), centre('152'), centre('160'))
+    const onB = strokes().length - onA
+    expect(onB).not.toBe(onA)
+    // Back on the first layer: its gesture goes, the second layer's paint stays.
+    await fireEvent.click(document.querySelectorAll<HTMLElement>('.chip.area')[0])
+    await fireEvent.click(screen.getByRole('button', { name: 'Annulla tratto' }))
+    expect(strokes()).toHaveLength(onB)
+    await fireEvent.click(document.querySelectorAll<HTMLElement>('.chip.area')[1])
+    await fireEvent.click(screen.getByRole('button', { name: 'Annulla tratto' }))
+    expect(strokes()).toHaveLength(0)
+  })
+
   it('two fingers pan and pinch without painting, from the fitted figure; a turn fits it again', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Spalla sx' }))
