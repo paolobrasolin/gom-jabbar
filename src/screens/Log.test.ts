@@ -833,6 +833,8 @@ describe('Presets', () => {
     const [e] = await db.entries.toArray()
     expect(e.layers[0].regions).toEqual([...LEG_IDS].sort())
     await fireEvent.keyDown(window, { key: 'Escape' })
+    // The closed sheet gives its history step back after the current task; a back in the same task would spend it.
+    await waitFor(() => expect(history.state?.sheet).toBeUndefined())
     await back()
     expect(presetButton()).toHaveAccessibleName('Preset')
     const chip = await presetItem(/Le gambe/)
