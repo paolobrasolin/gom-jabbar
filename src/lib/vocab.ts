@@ -38,22 +38,26 @@ export async function setEnabled(table: Table, id: string, enabled: boolean): Pr
   await db[table].update(id, { enabled })
 }
 
-/** Swap order with the previous or next item in the same list (tags: same group; symptoms: same category). */
+/**
+ * Swap with the previous or next item in the same list (tags: same group; symptoms: same category), as the list shows
+ * them: by order, ties by id. Two items can share an order (an undone delete after an add, a merge import), so the swap
+ * renumbers the whole table 0, 1, 2… instead of trading the two numbers.
+ */
 export async function move(table: Table, id: string, dir: -1 | 1): Promise<void> {
-  const all = (await db[table].orderBy('order').toArray()) as (Symptom | Tag)[]
-  const me = all.find((x) => x.id === id)
-  if (!me) return
-  const list =
-    table === 'tags'
-      ? all.filter((x) => (x as Tag).group === (me as Tag).group)
-      : all.filter((x) => isMindSymptom(x as Symptom) === isMindSymptom(me as Symptom))
-  const i = list.indexOf(me)
-  const j = i + dir
-  if (j < 0 || j >= list.length) return
-  const other = list[j]
   await db.transaction('rw', db[table], async () => {
-    await db[table].update(me.id, { order: other.order })
-    await db[table].update(other.id, { order: me.order })
+    const all = (await db[table].orderBy('order').toArray()) as (Symptom | Tag)[]
+    const me = all.find((x) => x.id === id)
+    if (!me) return
+    const list =
+      table === 'tags'
+        ? all.filter((x) => (x as Tag).group === (me as Tag).group)
+        : all.filter((x) => isMindSymptom(x as Symptom) === isMindSymptom(me as Symptom))
+    const other = list[list.indexOf(me) + dir]
+    if (!other) return
+    const i = all.indexOf(me)
+    const j = all.indexOf(other)
+    ;[all[i], all[j]] = [all[j], all[i]]
+    for (const [order, x] of all.entries()) if (x.order !== order) await db[table].update(x.id, { order })
   })
 }
 
