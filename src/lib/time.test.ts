@@ -6,6 +6,9 @@ describe('time', () => {
     const iso = new Date(2026, 8, 15, 14, 5).toISOString()
     expect(toLocalInput(iso)).toBe('2026-09-15T14:05')
     expect(fromLocalInput('2026-09-15T14:05')).toBe(iso)
+    // Android's picker has a Cancella: the field then reports nothing, which is no time at all.
+    expect(fromLocalInput('')).toBeNull()
+    expect(fromLocalInput('not a time')).toBeNull()
   })
 
   it('keys and compares days in local time', () => {

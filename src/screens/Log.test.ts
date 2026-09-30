@@ -182,6 +182,16 @@ describe('Episodes with an end', () => {
     expect(await db.entries.count()).toBe(0)
   })
 
+  it('a picker cleared on the phone changes nothing: the time stays as it was', async () => {
+    render(App)
+    await more()
+    const start = screen.getByRole('group', { name: 'Quando' })
+    await fireEvent.click(within(start).getByRole('button', { name: '3h fa' }))
+    await fireEvent.click(within(start).getByRole('button', { name: 'Scegli…' }))
+    await fireEvent.change(document.querySelector('input[type="datetime-local"]')!, { target: { value: '' } })
+    expect(within(start).getByRole('button', { name: '3h fa' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('Adesso as an end is the moment it was pressed, and the picker sets any end', async () => {
     render(App)
     await more()
