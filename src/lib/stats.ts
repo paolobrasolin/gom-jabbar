@@ -190,10 +190,11 @@ export type PresetPoint = { at: number; value: number }
 
 /**
  * One line per preset that has samples: the preset's first symptom over time, samples only, no carry-forward. An update
- * of an episode opened from a preset is a sample of it. A sample without the reading is skipped: no reading is not a 0.
+ * of an episode opened from a preset is a sample of it, even when the episode began before the range: `earlier` holds
+ * the heads outside `entries`. A sample without the reading is skipped: no reading is not a 0.
  */
-export function presetSeries(entries: Entry[], presets: Preset[]): { preset: Preset; points: PresetPoint[] }[] {
-  const heads = new Map(entries.filter((e) => e.presetId && e.episodeId === e.id).map((e) => [e.id, e]))
+export function presetSeries(entries: Entry[], presets: Preset[], earlier: Entry[] = []): { preset: Preset; points: PresetPoint[] }[] {
+  const heads = new Map([...earlier, ...entries].filter((e) => e.presetId && e.episodeId === e.id).map((e) => [e.id, e]))
   return presets
     .map((preset) => {
       // Pain when any layer asks for it, else the first thing its first layer asks (§6.3).

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/sve
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { addPreset, logPreset } from '../lib/presets'
-import { addEntry, endEpisode, type EntryInput } from '../lib/entries'
+import { addEntry, endEpisode, logUpdate, type EntryInput } from '../lib/entries'
 import { intensityColor } from '../lib/color'
 import { go } from '../test/nav'
 import App from '../App.svelte'
@@ -266,6 +266,19 @@ describe('Trends presets', () => {
     const card = (await screen.findByText('Per preset')).closest('.card')!
     await waitFor(() => expect(card.querySelectorAll('circle')).toHaveLength(1))
     expect(card.querySelector('circle')).toHaveAttribute('fill', intensityColor(5))
+  })
+
+  it("counts an episode's updates in range when the episode, opened from a preset, began before it", async () => {
+    const p = await addPreset({ name: 'Emicrania', layers: [{ regions: ['100'], asks: ['pain'] }], kind: 'episode' })
+    const head = await logPreset(p, [{ pain: 7 }], at(9))
+    await logUpdate(head.id, [{ pain: 5 }], at(3))
+    await logUpdate(head.id, [{ pain: 2 }], at(1))
+    render(App)
+    await go('Andamento')
+    await fireEvent.click(await screen.findByRole('button', { name: '7 giorni' }))
+    const card = (await screen.findByText('Per preset')).closest('.card')!
+    expect(card).toHaveTextContent('Emicrania')
+    await waitFor(() => expect(card.querySelectorAll('circle')).toHaveLength(2))
   })
 })
 
