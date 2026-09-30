@@ -37,8 +37,8 @@ describe('Episode sheet', () => {
     expect(sheet).toHaveTextContent('da 3h')
     // Each reading names its symptom, pain included, so a switch between symptoms shows.
     expect(lines(sheet)).toHaveLength(2)
-    expect(lines(sheet)[0]).toMatch(/^\d\d:\d\d 7 dolore$/)
-    expect(lines(sheet)[1]).toMatch(/^\d\d:\d\d 4 dolore$/)
+    expect(lines(sheet)[0]).toMatch(/^\d\d:\d\d 7 dolore · coscia sx$/)
+    expect(lines(sheet)[1]).toMatch(/^\d\d:\d\d 4 dolore · coscia sx$/)
     expect(within(sheet).getByText("Com'è adesso")).toBeInTheDocument()
     expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('4')
   })
@@ -94,11 +94,29 @@ describe('Episode sheet', () => {
     expect(within(ended).getByLabelText('Letture')).toBeInTheDocument()
     expect(within(ended).queryByRole('slider')).not.toBeInTheDocument()
     expect(within(ended).queryByRole('button', { name: 'Aggiorna' })).not.toBeInTheDocument()
-    expect(within(ended).getByRole('button', { name: 'Modifica' })).toBeInTheDocument()
+    // Each reading is edited from its own line: no Modifica beside a summary it would not open.
+    expect(within(ended).queryByRole('button', { name: 'Modifica' })).not.toBeInTheDocument()
   })
 
-  it('Modifica hands the head to the edit sheet', async () => {
+  it('a reading is an entry: its line opens it, and an edit shows on that line and nowhere else', async () => {
     await seedEpisode()
+    let sheet = await openSheet()
+    expect(within(sheet).queryByRole('button', { name: 'Modifica' })).not.toBeInTheDocument()
+    await fireEvent.click(within(within(sheet).getByLabelText('Letture')).getAllByRole('button')[0])
+    const edit = await screen.findByRole('dialog', { name: 'Modifica' })
+    expect(within(edit).getByRole('slider', { name: 'Dolore' })).toHaveValue('7')
+    // The start moves to the right thigh; the update keeps the left one.
+    await fireEvent.click(within(edit).getByRole('button', { name: 'Coscia sx' }))
+    await fireEvent.click(within(edit).getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.click(within(edit).getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    sheet = await openEpisode()
+    expect(lines(sheet)[0]).toMatch(/^\d\d:\d\d 7 dolore · coscia dx$/)
+    expect(lines(sheet)[1]).toMatch(/^\d\d:\d\d 4 dolore · coscia sx$/)
+  })
+
+  it('Modifica hands the head to the edit sheet while it is the only reading', async () => {
+    await addEntry({ at: ago(180), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }] })
     const sheet = await openSheet()
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Modifica' }))
     expect(screen.queryByRole('dialog', { name: 'Episodio in corso' })).not.toBeInTheDocument()
@@ -154,7 +172,7 @@ describe('what an update carries', () => {
     await logUpdate(e.id, [{ pain: 5 }], ago(60), [['heat']])
     const sheet = await openSheet()
     expect(within(sheet).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'false')
-    expect(lines(sheet)[1]).toMatch(/^\d\d:\d\d 5 dolore · Calore$/)
+    expect(lines(sheet)[1]).toMatch(/^\d\d:\d\d 5 dolore · coscia sx · Calore$/)
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Calore' }))
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
     await waitFor(async () => expect((await updates()).map((u) => u.layers[0].tags)).toEqual([['heat'], ['heat']]))
@@ -185,7 +203,7 @@ describe('what an update carries', () => {
     await waitFor(async () => expect((await updates()).map((u) => u.note)).toEqual(['', 'meglio dopo il caffè']))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     sheet = await openEpisode()
-    expect(lines(sheet)[2]).toMatch(/^\d\d:\d\d 4 dolore · meglio dopo il caffè$/)
+    expect(lines(sheet)[2]).toMatch(/^\d\d:\d\d 4 dolore · coscia sx · meglio dopo il caffè$/)
     expect(within(sheet).getByRole('textbox', { name: 'Note' })).toHaveValue('')
   })
 
@@ -194,7 +212,7 @@ describe('what an update carries', () => {
     await logUpdate(e.id, [{ pain: 4 }], ago(30))
     const sheet = await openSheet()
     expect(lines(sheet)[0]).not.toMatch(/^\d\d:\d\d /)
-    expect(lines(sheet)[1]).toMatch(/^oggi \d\d:\d\d 4 dolore$/i)
+    expect(lines(sheet)[1]).toMatch(/^oggi \d\d:\d\d 4 dolore · coscia sx$/i)
   })
 })
 

@@ -5,7 +5,7 @@
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { endEpisode, reopenEpisode, logUpdate, loadEpisode, deleteEntry, latest, durationMs, isActive, type Episode } from '../lib/entries'
-  import { entryHeadline, headline, symptomName, layerLevel } from '../lib/summary'
+  import { entryHeadline, headline, symptomName, layerLevel, regionText } from '../lib/summary'
   import { maxReadings, showsCategory } from '../lib/layers'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import { formatDuration, formatTime, formatDay } from '../lib/time'
@@ -86,12 +86,16 @@
   const manyDays = $derived(!!ep && new Set([ep.head, ...ep.updates].map((e) => new Date(e.at).toDateString())).size > 1)
   const when = (iso: string) =>
     manyDays ? `${formatDay(iso, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') })} ${formatTime(iso, locale())}` : formatTime(iso, locale())
-  /** Every reading, each editable: its highest symptom, named; what was done then; its note. */
+  /**
+   * Every reading, each an entry edited from its own line (§5.5): its highest symptom, named; its places, so an edit
+   * shows where it was made; what was done then; its note.
+   */
   const points = $derived(
     (ep ? [ep.head, ...ep.updates] : []).map((e) => {
       const h = headline(maxReadings(e.layers.map((l) => l.readings)))
+      const where = e.layers.filter((l) => l.regions.length).map((l) => regionText(l.regions, t))
       const done = [...new Set(e.layers.flatMap((l) => l.tags))].filter((id) => groupOf(id) !== 'context').map(tagName)
-      return { entry: e, value: h.value, name: named(h.id), done, note: e.note }
+      return { entry: e, value: h.value, name: named(h.id), where, done, note: e.note }
     }),
   )
   /** Sliders of the current layer in vocabulary order; a symptom missing from the vocabulary still gets one, named by its id. */
@@ -150,7 +154,8 @@
     <div class="card small">
       <div class="head">
         <div class="grow"><EntrySummary lead={symptomName(hl.id, symptoms, tl)} layers={now.layers} tagDefs={[]} /></div>
-        <button class="edit" onclick={() => edit(ep!.head)}>{t('episode.editShort')}</button>
+        <!-- Only while the start is what the card shows: with several readings each line opens its own. -->
+        {#if points.length <= 1}<button class="edit" onclick={() => edit(ep!.head)}>{t('episode.editShort')}</button>{/if}
       </div>
       <div class="muted">{active ? t('episode.since', { d: formatDuration(durationMs(ep.head) ?? 0, units) }) : formatDuration(durationMs(ep.head) ?? 0, units)}{#if context.length}{' · '}{context.map(tagName).join(', ')}{/if}</div>
       {#if points.length > 1}
@@ -160,7 +165,7 @@
             <button class="point" onclick={() => edit(p.entry)}>
               <span class="time">{when(p.entry.at)}</span>
               <span class="pill" style="--c: {intensityColor(p.value)}; --ink-on: {intensityInk(p.value)}">{p.value}</span>
-              <span class="what">{[p.name, ...(p.done.length ? [p.done.join(', ')] : [])].join(' · ')}{#if p.note}{' · '}<i>{p.note}</i>{/if}</span>
+              <span class="what">{[p.name, ...p.where, ...(p.done.length ? [p.done.join(', ')] : [])].join(' · ')}{#if p.note}{' · '}<i>{p.note}</i>{/if}</span>
             </button>
           </li>
         {/each}
