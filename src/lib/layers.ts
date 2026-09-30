@@ -20,6 +20,12 @@ export type Layer = {
   strokes?: Stroke[]
   /** Preset form only (§5.6): the sliders this layer will ask for. Entries never carry it: `finalize` leaves it out. */
   asks?: string[]
+  /**
+   * Edit forms only: this layer as it was loaded from a stored entry. A reading the layer does not show is kept when
+   * the stored layer did not show it either and held it at that value: an edit never drops what the entry already had,
+   * and a reading the tester could see still goes with its region (§6.1 item 8). Never stored: `finalize` leaves it out.
+   */
+  had?: { regions: string[]; readings: Record<string, number> }
 }
 
 /** Form state: the layers and which one the map, the sliders and the tag strip edit. */
@@ -163,7 +169,8 @@ export function finalize(layers: Layer[], symptoms?: Symptom[]): Layer[] {
     const readings: Record<string, number> = {}
     for (const [id, v] of Object.entries(l.readings)) {
       const c = category?.get(id)
-      if (typeof v !== 'number' || (c && !showsCategory(l, c))) continue
+      const kept = !!c && !!l.had && !showsCategory(l.had, c) && l.had.readings[id] === v
+      if (typeof v !== 'number' || (c && !showsCategory(l, c) && !kept)) continue
       readings[id] = clamp(v)
     }
     return {

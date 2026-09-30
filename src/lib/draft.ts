@@ -47,7 +47,8 @@ export function draftFromEntry(e: Entry): EntryDraft {
     at: e.at,
     kind: e.kind,
     endedAt: e.endedAt ?? null,
-    layers: e.layers.length ? copyLayers(e.layers) : [newLayer()],
+    // Each layer remembers what it held, so a save keeps the readings the form does not show there.
+    layers: e.layers.length ? copyLayers(e.layers).map((l) => ({ ...l, had: { regions: [...l.regions], readings: { ...l.readings } } })) : [newLayer()],
     cur: 0,
     note: e.note,
     ...(e.presetId ? { presetId: e.presetId } : {}),

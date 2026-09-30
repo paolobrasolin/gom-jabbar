@@ -4,7 +4,7 @@
   import PresetForm, { type PresetSeed } from './PresetForm.svelte'
   import { t } from '../i18n/index.svelte'
   import { draftFromEntry, draftToInput, emptyDraft, type EntryDraft } from '../lib/draft'
-  import { updateEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode } from '../lib/entries'
+  import { editEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode } from '../lib/entries'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import type { Entry, Layer, Symptom, Tag } from '../lib/types'
 
@@ -45,10 +45,11 @@
     } else if (lock === 'kind') {
       patch.endedAt = input.endedAt
     }
-    await updateEntry(editing.id, patch)
+    const { before } = await editEntry(editing.id, patch)
     haptic(20)
     open = false
-    showToast(t('log.saved'))
+    // An edit is undone like any other change: the row goes back exactly as it was.
+    showToast(t('log.saved'), before && { label: t('log.undo'), run: () => void restoreEntries([before]) })
   }
 
   /** Deleting a head takes its updates along; the toast brings them all back. */
