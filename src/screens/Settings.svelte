@@ -6,7 +6,7 @@
   import type { CloudProvider, Resumed } from '../lib/cloud'
   import { driveInUse } from '../lib/cloudBackup'
   import { resetAll } from '../lib/reset'
-  import { t, locale } from '../i18n/index.svelte'
+  import { t, locale, tn } from '../i18n/index.svelte'
   import { prefs, savePrefs, type Theme } from '../lib/prefs.svelte'
   import type { FigureId } from '../lib/figures'
   import { db } from '../lib/db'
@@ -118,7 +118,7 @@
     }
     importOpen = false
     haptic(20)
-    const msg = t('import.done', { n: mode === 'replace' ? res.entries : res.added + res.updated })
+    const msg = tn('import.done', mode === 'replace' ? res.entries : res.added + res.updated)
     if (snapshot) showToast(msg, { label: t('log.undo'), run: () => void applyImport(snapshot, 'replace') })
     else showToast(msg)
   }
@@ -152,7 +152,7 @@
   <!-- One card, two zones (§6.4): Drive first, the one-tap path the banner uses; then the file on the share sheet. -->
   <section class="card" aria-labelledby="backup-title">
     <p class="small muted label" id="backup-title">{t('settings.backup')}</p>
-    <p class="small muted">{t('settings.dataNote')} · {t('settings.entriesCount', { n: count.value })}</p>
+    <p class="small muted">{t('settings.dataNote')} · {tn('settings.entriesCount', count.value)}</p>
     <p class="small muted">{lastBackup ? t('settings.lastBackup', { d: lastBackup }) : t('settings.neverBackedUp')}</p>
     {#if cloud.available}
       <DriveZone {cloud} resumed={resume} {onresumed} onrestore={openImport} />
@@ -243,11 +243,11 @@
 <Sheet bind:open={importOpen} title={t('import.title')}>
   {#if pending}
     <div class="card small">
-      <p>{t('import.summary', { n: pending.preview.entries, d: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(new Date(pending.file.exportedAt)) })}</p>
-      <p class="muted">{t('import.mergeInfo', { a: pending.preview.added, u: pending.preview.updated })}</p>
+      <p>{tn('import.summary', pending.preview.entries, { d: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(new Date(pending.file.exportedAt)) })}</p>
+      <p class="muted">{t('import.mergeInfo', { a: tn('import.added', pending.preview.added), u: tn('import.updated', pending.preview.updated) })}</p>
     </div>
     <button class="btn primary block" onclick={() => doImport('merge')} disabled={busy}>{t('import.merge')}</button>
-    <button class="btn block" onclick={() => doImport('replace')} disabled={busy}>{t('import.replace', { n: count.value })}</button>
+    <button class="btn block" onclick={() => doImport('replace')} disabled={busy}>{tn('import.replace', count.value)}</button>
   {/if}
 </Sheet>
 

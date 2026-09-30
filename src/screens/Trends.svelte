@@ -4,7 +4,7 @@
   import TagCompare from '../components/TagCompare.svelte'
   import Report from '../components/Report.svelte'
   import PresetLines from '../components/PresetLines.svelte'
-  import { t, tl, num } from '../i18n/index.svelte'
+  import { t, tl, num, tn } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
@@ -70,7 +70,7 @@
     {/if}
 
     <div class="tiles">
-      <div class="card tile"><span class="small muted">{t('trends.entries')}</span><b>{summary.entries}</b><span class="small muted">{t('trends.onDays', { n: summary.daysWithEntries })}</span></div>
+      <div class="card tile"><span class="small muted">{t('trends.entries')}</span><b>{summary.entries}</b><span class="small muted">{tn('trends.onDays', summary.daysWithEntries)}</span></div>
       {#if read}
         <div class="card tile"><span class="small muted">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="small muted">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
         <div class="card tile"><span class="small muted">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="small muted">{t('trends.badDaysHint')}</span></div>
@@ -119,7 +119,7 @@
         <p class="small muted label">{t('trends.symptoms')}</p>
         <div class="sym">
           {#each symMeans as s (s.symptom.id)}
-            <div class="row"><span class="name grow">{tl(s.symptom.label)}</span><span class="small muted">{t('trends.nEntries', { n: s.count })}</span><b class="val">{fmt1(s.mean)}</b></div>
+            <div class="row"><span class="name grow">{tl(s.symptom.label)}</span><span class="small muted">{tn('trends.nEntries', s.count)}</span><b class="val">{fmt1(s.mean)}</b></div>
           {/each}
         </div>
       </div>

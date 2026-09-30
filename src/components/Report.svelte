@@ -2,7 +2,7 @@
   import BodyMap from './BodyMap.svelte'
   import DailyChart from './DailyChart.svelte'
   import EntrySummary from './EntrySummary.svelte'
-  import { t, tl, locale, num } from '../i18n/index.svelte'
+  import { t, tl, locale, num, tn } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts } from '../lib/stats'
   import { durationMs, episodesOf, isHead, isUpdate, isActive, latest, chainLayers } from '../lib/entries'
@@ -97,7 +97,7 @@
     </header>
 
     <section class="grid4">
-      <div><span class="k">{t('trends.entries')}</span><b>{summary.entries}</b><span class="k">{t('trends.onDays', { n: summary.daysWithEntries })}</span></div>
+      <div><span class="k">{t('trends.entries')}</span><b>{summary.entries}</b><span class="k">{tn('trends.onDays', summary.daysWithEntries)}</span></div>
       {#if read}
         <div><span class="k">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="k">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
         <div><span class="k">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="k">{t('trends.badDaysHint')}</span></div>
@@ -119,7 +119,7 @@
           <h2>{t('trends.symptoms')}</h2>
           <table>
             <tbody>
-              {#each symMeans as s (s.symptom.id)}<tr><td>{tl(s.symptom.label)}</td><td class="num">{fmt1(s.mean)}</td><td class="num muted">{t('trends.nEntries', { n: s.count })}</td></tr>{/each}
+              {#each symMeans as s (s.symptom.id)}<tr><td>{tl(s.symptom.label)}</td><td class="num">{fmt1(s.mean)}</td><td class="num muted">{tn('trends.nEntries', s.count)}</td></tr>{/each}
             </tbody>
           </table>
         {/if}
