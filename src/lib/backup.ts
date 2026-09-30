@@ -1,6 +1,7 @@
 import { db } from './db'
 import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
 import type { Layer } from './layers'
+import { isHead } from './entries'
 import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, oneLabel, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7, type PresetV8 } from './legacy'
 import { upgradeRegions } from './regions'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
@@ -225,9 +226,18 @@ export async function applyImport(file: ExportFile, mode: ImportMode): Promise<I
       return
     }
     const existing = new Map((await db.entries.toArray()).map((e) => [e.id, e]))
-    const toPut = file.entries.filter((e) => {
+    const newer = file.entries.filter((e) => {
       const cur = existing.get(e.id)
       return !cur || e.updatedAt > cur.updatedAt
+    })
+    // Two histories can disagree on what a row is: a newer copy of an episode's start may be chronic in the file while
+    // updates here still point at it. Its content wins, its place in the chain stays, so no update is orphaned (§8).
+    const merged = new Map([...existing, ...newer.map((e) => [e.id, e] as const)])
+    const pointedAt = new Set([...merged.values()].filter((e) => e.episodeId && e.episodeId !== e.id).map((e) => e.episodeId!))
+    const toPut = newer.map((e) => {
+      const cur = existing.get(e.id)
+      const keepsChain = cur && isHead(cur) && !isHead(e) && pointedAt.has(e.id)
+      return keepsChain ? { ...e, kind: 'episode' as const, episodeId: e.id, endedAt: e.endedAt ?? cur.endedAt ?? null } : e
     })
     await db.entries.bulkPut(toPut)
     const haveS = new Set((await db.symptoms.toArray()).map((s) => s.id))
