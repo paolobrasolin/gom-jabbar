@@ -71,9 +71,20 @@
   }
 
   let nameInput: HTMLInputElement | undefined = $state()
+  /** A save in flight: the second tap of a double tap would make a second preset that undo does not reach. */
+  let busy = false
   async function save() {
     // Nothing to create yet: the name is what is missing, so that is where the cursor goes.
     if (!ready) return nameInput?.focus()
+    if (busy) return
+    busy = true
+    try {
+      await store()
+    } finally {
+      busy = false
+    }
+  }
+  async function store() {
     const shaped = { ...draft, layers: draft.layers.map((l) => ({ ...l, asks: asksFor(l) })) }
     const input = presetFromDraft(shaped, name, symptoms)
     haptic(20)

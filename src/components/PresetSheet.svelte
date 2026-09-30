@@ -45,9 +45,12 @@
   /** Each layer as it stands in the sheet, for the summary and the chips: its regions and its levels, no tags. */
   const shown = $derived((current?.layers ?? []).map((l, i) => ({ regions: l.regions, readings: levels[i] ?? {}, tags: [] })))
 
+  /** A save in flight: the second tap of a double tap does nothing. */
+  let busy = false
   async function save() {
-    if (!current) return
-    const entry = await logPreset(current, levels.map((l) => ({ ...l })), at ?? undefined)
+    if (!current || busy) return
+    busy = true
+    const entry = await logPreset(current, levels.map((l) => ({ ...l })), at ?? undefined).finally(() => (busy = false))
     haptic(20)
     open = false
     onsaved?.(current)

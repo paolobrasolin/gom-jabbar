@@ -266,7 +266,7 @@ There is no "Oggi" strip of today's entries either. It duplicated the top of the
 
 Fast path: tap region(s) → drag slider → Salva. Regions are optional; an entry with only intensity is valid.
 
-On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · Annulla" for 5 seconds (on this screen every toast sits over the bottom of the stage, just above the drawer, never over the slider or Salva), form resets but keeps the mirrors and the kind, and fits the figure again. No confirmation dialogs anywhere in the app; destructive actions get an undo toast instead.
+On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · Annulla" for 5 seconds (on this screen every toast sits over the bottom of the stage, just above the drawer, never over the slider or Salva), form resets but keeps the mirrors and the kind, and fits the figure again. For a second after a save Salva is dimmed and ignores the fresh form while nobody touches it, so the second tap of a double tap does not log the empty form; any touch makes it ready at once, so the fast path never waits. Every other button that writes (Aggiorna, Termina, a preset sheet's Salva, the edit sheet's Salva, Crea preset and the preset form's Salva, **+ Aggiungi** in the vocabulary editor, Unisci and Sostituisci tutto) ignores a second tap while the first is being written. No confirmation dialogs anywhere in the app; destructive actions get an undo toast instead.
 
 ### 6.2 Diary
 

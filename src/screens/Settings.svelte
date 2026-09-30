@@ -98,18 +98,23 @@
     }
   }
 
+  /** A restore in flight: the second tap of a double tap does nothing, and the file is read before the first wait. */
   async function doImport(mode: 'merge' | 'replace') {
-    if (!pending) return
+    if (!pending || busy) return
+    busy = true
+    const { file } = pending
     let res: ImportPreview
     let snapshot: ExportFile | null = null
     try {
       snapshot = mode === 'replace' ? await buildExport() : null
-      res = await applyImport(pending.file, mode)
+      res = await applyImport(file, mode)
     } catch (err) {
       const e = err as Error & { inner?: Error }
       console.error('import failed', e.name, e.message, e.inner?.name, e.inner?.message, e)
       showToast(t('import.failed'))
       return
+    } finally {
+      busy = false
     }
     importOpen = false
     haptic(20)
@@ -250,8 +255,8 @@
       <p>{t('import.summary', { n: pending.preview.entries, d: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(new Date(pending.file.exportedAt)) })}</p>
       <p class="muted">{t('import.mergeInfo', { a: pending.preview.added, u: pending.preview.updated })}</p>
     </div>
-    <button class="btn primary block" onclick={() => doImport('merge')}>{t('import.merge')}</button>
-    <button class="btn block" onclick={() => doImport('replace')}>{t('import.replace', { n: count.value })}</button>
+    <button class="btn primary block" onclick={() => doImport('merge')} disabled={busy}>{t('import.merge')}</button>
+    <button class="btn block" onclick={() => doImport('replace')} disabled={busy}>{t('import.replace', { n: count.value })}</button>
   {/if}
 </Sheet>
 

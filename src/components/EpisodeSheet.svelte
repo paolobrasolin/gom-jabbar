@@ -85,19 +85,28 @@
   /** Whether the sliders or the chips moved since the latest reading: Termina then records one more reading first. */
   const changed = $derived(!!now && now.layers.some((l, i) => JSON.stringify(picked[i] ?? l.tags) !== JSON.stringify(l.tags) || Object.entries(levels[i] ?? {}).some(([id, v]) => (l.readings[id] ?? 0) !== v)))
 
+  /** A save in flight: the second tap of a double tap does nothing. */
+  let busy = false
   /** Aggiorna logs a reading on the episode (§5.5); the toast takes it back. */
   async function update() {
-    if (!ep) return
-    const added = await logUpdate(ep.head.id, levels.map((l) => ({ ...l })), undefined, picked.map((p) => [...p]))
+    if (!ep || busy) return
+    busy = true
+    const added = await logUpdate(ep.head.id, levels.map((l) => ({ ...l })), undefined, picked.map((p) => [...p])).finally(() => (busy = false))
     haptic(20)
     open = false
     if (added) showToast(t('episode.updated'), { label: t('log.undo'), run: () => void deleteEntry(added.id) })
   }
   async function end() {
-    if (!ep) return
+    if (!ep || busy) return
+    busy = true
     const id = ep.head.id
-    const added = changed ? await logUpdate(id, levels.map((l) => ({ ...l })), undefined, picked.map((p) => [...p])) : undefined
-    await endEpisode(id)
+    let added
+    try {
+      added = changed ? await logUpdate(id, levels.map((l) => ({ ...l })), undefined, picked.map((p) => [...p])) : undefined
+      await endEpisode(id)
+    } finally {
+      busy = false
+    }
     haptic(20)
     open = false
     showToast(t('episode.ended'), {

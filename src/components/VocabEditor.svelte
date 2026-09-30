@@ -49,11 +49,18 @@
     haptic(20)
     showToast(t('vocab.deleted', { name }), { label: t('log.undo'), run: () => void restoreItem(table, gone) })
   }
+  /** An add in flight: the second tap of a double tap would add the item twice. */
+  let adding = false
   async function add(key: string) {
     const text = (newText[key] ?? '').trim()
-    if (!text) return
-    if (table === 'symptoms') await addSymptom(text, key as SymptomCategory)
-    else await addTag(text, key as TagGroup)
+    if (!text || adding) return
+    adding = true
+    try {
+      if (table === 'symptoms') await addSymptom(text, key as SymptomCategory)
+      else await addTag(text, key as TagGroup)
+    } finally {
+      adding = false
+    }
     newText = { ...newText, [key]: '' }
     haptic(15)
   }

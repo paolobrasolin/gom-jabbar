@@ -105,6 +105,12 @@
       !!draft.presetId,
   )
   let saving = $state(false)
+  /**
+   * U2: the second tap of a double tap lands after the save has finished, on the fresh form. For a moment after a save
+   * Salva ignores a form nobody has touched since; any touch makes it ready at once, so the fast path never waits.
+   */
+  let fresh = $state<string | null>(null)
+  const cooling = $derived(fresh !== null && JSON.stringify(draft) === fresh)
   /** The toast rises to the drawer's edge while the log is on screen. */
   let peek = $state(0)
   $effect(() => {
@@ -131,7 +137,7 @@
   }
 
   async function save() {
-    if (saving) return
+    if (saving || cooling) return
     saving = true
     try {
       prefs.ongoing = draft.kind === 'episode'
@@ -140,6 +146,8 @@
       haptic(20)
       showToast(t('log.saved'), { label: t('log.undo'), run: () => void deleteEntry(entry.id) })
       reset()
+      const mark = (fresh = JSON.stringify(draft))
+      setTimeout(() => fresh === mark && (fresh = null), 1000)
     } finally {
       saving = false
     }
@@ -245,7 +253,7 @@
     {#snippet actions()}
       <div class="actions">
         <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>
-        <button class="btn primary grow" onclick={save} disabled={saving}>{t('log.save')}</button>
+        <button class="btn primary grow" onclick={save} disabled={saving || cooling}>{t('log.save')}</button>
       </div>
     {/snippet}
   </EntryForm>
