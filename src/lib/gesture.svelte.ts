@@ -70,6 +70,18 @@ export class StageGesture {
     if (Math.hypot(p[0] - last[0], p[1] - last[1]) >= 1) this.stroke = [...this.stroke, p]
   }
 
+  /**
+   * A finger the system took (Android's back or home gesture, a notification pulled down): it concludes nothing. The
+   * stroke and the swipe in progress are dropped rather than finished, and a pinch carries on with the fingers left.
+   */
+  cancel(id: number): Lift {
+    if (!this.#pointers.has(id)) return 'none'
+    this.stroke = null
+    this.#start = null
+    this.up(id)
+    return 'none'
+  }
+
   up(id: number): Lift {
     const p = this.#pointers.get(id)
     this.#pointers.delete(id)

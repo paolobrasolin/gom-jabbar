@@ -113,6 +113,10 @@
     const r = gesture.up(e.pointerId)
     lift = r === 'swipe' || r === 'tap' ? r : 'none'
   }
+  function pcancel(e: PointerEvent) {
+    gesture.cancel(e.pointerId)
+    lift = 'none'
+  }
   function pclick(e: MouseEvent) {
     const was = lift
     lift = 'none'
@@ -141,7 +145,7 @@
     onpointerdown={pdown}
     onpointermove={pmove}
     onpointerup={pup}
-    onpointercancel={pup}
+    onpointercancel={pcancel}
     onclickcapture={pclick}
     oncontextmenu={(e) => e.preventDefault()}>
     <g transform="translate({gesture.camera.tx} {gesture.camera.ty}) scale({gesture.camera.k})">

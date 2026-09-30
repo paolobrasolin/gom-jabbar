@@ -1388,6 +1388,17 @@ describe('The stage', () => {
     expect(strokes()).toHaveLength(0)
   })
 
+  it('a touch the system cancels paints nothing', async () => {
+    render(App)
+    await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
+    const front = screen.getByRole('group', { name: 'Davanti' })
+    await fireEvent.pointerDown(front, finger(1, at(front, ...centre('152'))))
+    await fireEvent.pointerMove(front, finger(1, at(front, ...centre('160'))))
+    await fireEvent.pointerCancel(front, finger(1, at(front, ...centre('160'))))
+    expect(strokes()).toHaveLength(0)
+    expect(screen.getByText('Nessuna zona: tocca la figura')).toBeInTheDocument()
+  })
+
   it("Annulla tratto takes back the current layer's own last gesture, never another layer's", async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Disegna' }))
