@@ -10,7 +10,8 @@
       { key: 'h3', label: t('time.hoursAgo', { n: 3 }), iso: () => hoursAgo(3).toISOString() },
       ...(day
         ? [
-            { key: 'morning', label: t('time.thisMorning'), iso: () => thisMorning().toISOString() },
+            // Before 08:00, this morning at 08:00 is still to come: not offered.
+            ...(new Date().getHours() >= 8 ? [{ key: 'morning', label: t('time.thisMorning'), iso: () => thisMorning().toISOString() }] : []),
             { key: 'night', label: t('time.lastNight'), iso: () => lastNight().toISOString() },
           ]
         : []),
@@ -110,7 +111,7 @@
   </button>
 </div>
 {#if picking}
-  <input bind:this={input} type="datetime-local" value={toLocalInput(value ?? new Date().toISOString())} onchange={(e) => (value = fromLocalInput((e.target as HTMLInputElement).value))} />
+  <input bind:this={input} type="datetime-local" max={toLocalInput(new Date().toISOString())} value={toLocalInput(value ?? new Date().toISOString())} onchange={(e) => (value = fromLocalInput((e.target as HTMLInputElement).value))} />
 {/if}
 
 <style>

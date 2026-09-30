@@ -1418,3 +1418,38 @@ describe('The stage', () => {
     prefs.figure = 'female'
   })
 })
+
+describe('Times in the future', () => {
+  it('before 08:00 there is no Stamattina, which would be in the future; from 08:00 there is', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(new Date(2026, 8, 30, 0, 30))
+      const { unmount } = render(App)
+      await more()
+      let when = screen.getByRole('group', { name: 'Quando' })
+      expect(within(when).queryByRole('button', { name: 'Stamattina' })).not.toBeInTheDocument()
+      expect(within(when).getByRole('button', { name: 'Ieri sera' })).toBeInTheDocument()
+      unmount()
+      vi.setSystemTime(new Date(2026, 8, 30, 9, 0))
+      render(App)
+      await more()
+      when = screen.getByRole('group', { name: 'Quando' })
+      expect(within(when).getByRole('button', { name: 'Stamattina' })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("the picker's field offers no time after now", async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(new Date(2026, 8, 30, 9, 5))
+      render(App)
+      await more()
+      await fireEvent.click(within(screen.getByRole('group', { name: 'Quando' })).getByRole('button', { name: 'Scegli…' }))
+      expect(document.querySelector('input[type="datetime-local"]')).toHaveAttribute('max', '2026-09-30T09:05')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
