@@ -31,9 +31,11 @@
   }
   function onPop(e: PopStateEvent) {
     const state = e.state as { screen?: Tab; search?: boolean } | null
-    tab = state?.screen ?? 'log'
+    const to = state?.screen ?? 'log'
+    // A sheet's step is not a screen change: the toast its Salva just showed stays.
+    if (to !== tab) dismissToast()
+    tab = to
     query = state?.search ? (query ?? '') : null
-    dismissToast()
   }
   function openSearch() {
     history.pushState({ screen: 'diary', search: true }, '')

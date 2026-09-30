@@ -152,6 +152,24 @@ describe('Drive zone', () => {
     await waitFor(async () => expect((await db.entries.get(entry.id))?.note).toBe('da Drive'))
   })
 
+  it('the preview a restore point opens stays open: the points sheet gives its step back first', async () => {
+    const entry = await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }] })
+    g.signIn()
+    expect((await g.provider.put(JSON.stringify(await buildExport()))).ok).toBe(true)
+    await db.entries.delete(entry.id)
+    clock += MIN
+    start(g.signIn('restore'))
+    const sheet = await screen.findByRole('dialog', { name: 'Ripristina da Drive' })
+    await fireEvent.click(within(sheet).getAllByRole('button', { name: /kB/ })[0])
+    await screen.findByRole('dialog', { name: 'Ripristina' })
+    await new Promise((r) => setTimeout(r, 150))
+    expect(screen.getByRole('dialog', { name: 'Ripristina' })).toBeInTheDocument()
+    // Back closes the preview, and only the preview.
+    history.back()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { level: 1, name: 'Impostazioni' })).toBeInTheDocument()
+  })
+
   it('says when Drive holds nothing to restore', async () => {
     start(g.signIn('restore'))
     const sheet = await screen.findByRole('dialog', { name: 'Ripristina da Drive' })

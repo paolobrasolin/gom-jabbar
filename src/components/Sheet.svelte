@@ -1,6 +1,40 @@
 <script module lang="ts">
   /** The sheets open, bottom first: Escape closes only the top one, so a sheet over a sheet peels off one at a time. */
   const stack: symbol[] = []
+
+  /**
+   * Sheets in history (§6.2): while n sheets are open the current history entry says `sheet: n`, so Android's back
+   * closes the top sheet and not the screen under it. One entry per level, not per sheet: a sheet closed by Salva,
+   * Escape or the backdrop gives its step back only after the current task, so a sheet that hands over to another
+   * (the episode sheet opening the edit sheet) reuses the step instead of racing an asynchronous `history.back()`.
+   */
+  const level = () => (history.state as { sheet?: number } | null)?.sheet ?? 0
+  function enter(n: number) {
+    const state = { ...(history.state ?? {}), sheet: n }
+    if (level() >= n) history.replaceState(state, '')
+    else history.pushState(state, '')
+  }
+  /** Steps back taken by `settle` and not landed yet. */
+  let returning = 0
+  /** Whether the popstate being dispatched is one of ours: then no sheet closes on it. */
+  let ours = false
+  function settle() {
+    setTimeout(() => {
+      if (level() > stack.length) {
+        returning++
+        history.back()
+      }
+    }, 0)
+  }
+  // Registered before any sheet mounts, so it runs first on every popstate. A sheet that opened while our step back was
+  // in flight (a restore point handing over to the preview after a database read) wrote its level onto the entry being
+  // left: once back has landed, its level goes on again instead of the sheet closing.
+  addEventListener('popstate', () => {
+    ours = returning > 0
+    if (!ours) return
+    returning--
+    if (stack.length > level()) history.pushState({ ...(history.state ?? {}), sheet: stack.length }, '')
+  })
 </script>
 
 <script lang="ts">
@@ -18,6 +52,14 @@
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape' && stack.at(-1) === token) open = false
   }
+  /** Back closed it: its history step is gone already. */
+  let popped = false
+  function onPop() {
+    if (!ours && open && level() <= depth) {
+      popped = true
+      open = false
+    }
+  }
   // Move focus into the sheet when it opens and give it back when it closes.
   $effect(() => {
     if (open && panel) {
@@ -25,15 +67,18 @@
       stack.push(token)
       returnTo = document.activeElement
       panel.focus()
+      popped = false
+      enter(depth + 1)
       return () => {
         stack.splice(stack.indexOf(token), 1)
         if (returnTo instanceof HTMLElement) returnTo.focus()
+        if (!popped) settle()
       }
     }
   })
 </script>
 
-<svelte:window onkeydown={onKey} />
+<svelte:window onkeydown={onKey} onpopstate={onPop} />
 
 {#if open}
   <div class="backdrop" style="z-index: {40 + depth * 2}" onclick={() => (open = false)} role="presentation"></div>

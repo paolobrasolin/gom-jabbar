@@ -31,3 +31,9 @@ for (const g of [globalThis, window] as unknown as Record<string, unknown>[]) {
     }
   }
 }
+
+// A sheet closed or unmounted at the end of a test gives its history step back a moment later (§6). Let it land before
+// the next test starts: its popstate would otherwise reach the next test's app and move it to another screen.
+beforeEach(async () => {
+  for (let i = 0; i < 100 && (history.state as { sheet?: number } | null)?.sheet; i++) await new Promise((r) => setTimeout(r, 10))
+})
