@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import it_ from './it.json'
 import en from './en.json'
-import { t, tl } from './index.svelte'
+import { t, tl, num } from './index.svelte'
 import { prefs } from '../lib/prefs.svelte'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from '../lib/vocabulary'
 
@@ -18,6 +18,12 @@ describe('i18n', () => {
     prefs.lang = 'en'
     expect(t('time.hoursAgo', { n: 3 })).toBe('3h ago')
     expect(t('nope.missing')).toBe('nope.missing')
+  })
+  it("writes a figure as the app's language does: a decimal comma in Italian, a point in English", () => {
+    prefs.lang = 'it'
+    expect([num(2.5), num(6), num(6, true), num(4.75), num(1234)]).toEqual(['2,5', '6', '6,0', '4,8', '1234'])
+    prefs.lang = 'en'
+    expect([num(2.5), num(6), num(6, true), num(4.75)]).toEqual(['2.5', '6', '6.0', '4.8'])
   })
   it('has every seed label in both languages: the keys are user data, added, never renamed or removed', () => {
     for (const x of [...DEFAULT_SYMPTOMS, ...DEFAULT_TAGS]) {

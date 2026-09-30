@@ -59,7 +59,7 @@ describe('Report page', () => {
     // Every reading counts, the episode's update too.
     expect(box('Voci')).toHaveTextContent('4')
     expect(box('Voci')).toHaveTextContent('in 3 giorni')
-    expect(box('Media')).toHaveTextContent('4.8')
+    expect(box('Media')).toHaveTextContent('4,8')
     expect(box('Media')).toHaveTextContent('max 8')
     expect(screen.getByText('Sintomo: Dolore')).toBeInTheDocument()
     expect(box('Giorni ≥ 5')).toHaveTextContent('2')

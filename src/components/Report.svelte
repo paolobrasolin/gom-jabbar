@@ -2,7 +2,7 @@
   import BodyMap from './BodyMap.svelte'
   import DailyChart from './DailyChart.svelte'
   import EntrySummary from './EntrySummary.svelte'
-  import { t, tl, locale } from '../i18n/index.svelte'
+  import { t, tl, locale, num } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts } from '../lib/stats'
   import { durationMs, episodesOf, isHead, isUpdate, isActive, latest, chainLayers } from '../lib/entries'
@@ -40,7 +40,7 @@
   const heat = $derived(regionHeat(entries, sid))
   const strokes = $derived(allStrokes(entries, sid))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
-  const fmt1 = (v: number | null) => (v === null ? '–' : (Math.round(v * 10) / 10).toString())
+  const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
   /** Compact chronological list: episodes and entries with notes; an update is read through its episode. */
   const episodes = $derived(episodesOf(entries))
   const notable = $derived(entries.filter((e) => !isUpdate(e) && (isHead(e) || e.note)).sort((a, b) => a.at.localeCompare(b.at)))
