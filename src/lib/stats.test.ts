@@ -201,4 +201,12 @@ describe('presetSeries edge cases', () => {
     const upd = { ...makeEntry({ at: '2026-09-01T12:00:00.000Z', kind: 'episode', readings: { pain: 3 } }), episodeId: head.id }
     expect(presetSeries([upd, head], presets)[0].points.map((p) => p.value)).toEqual([7, 3])
   })
+
+  it('an update in range counts for its preset when its episode began earlier: the head comes separately', () => {
+    const presets: Preset[] = [{ id: 'x', name: 'X', layers: [{ regions: [], asks: ['pain'] }], kind: 'episode', order: 0 }]
+    const head = makeEntry({ at: '2026-09-01T10:00:00.000Z', kind: 'episode', readings: { pain: 7 }, presetId: 'x' })
+    const upd = { ...makeEntry({ at: '2026-09-09T12:00:00.000Z', kind: 'episode', readings: { pain: 3 } }), episodeId: head.id }
+    expect(presetSeries([upd], presets)).toEqual([])
+    expect(presetSeries([upd], presets, [head])[0].points.map((p) => p.value)).toEqual([3])
+  })
 })

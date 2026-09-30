@@ -22,7 +22,13 @@
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
-  const byPreset = $derived(presetSeries(entries.value, presets.value))
+  /** The heads of episodes begun before the range with updates in it: an update counts for its head's preset (§6.3). */
+  const outside = $derived.by(() => {
+    const ids = new Set(entries.value.map((e) => e.id))
+    return [...new Set(entries.value.flatMap((e) => (e.episodeId && !ids.has(e.episodeId) ? [e.episodeId] : [])))]
+  })
+  const earlier = live(() => outside, async () => (await db.entries.bulkGet(outside)).filter((e) => e !== undefined), [])
+  const byPreset = $derived(presetSeries(entries.value, presets.value, earlier.value))
 
   /**
    * The screen reads one symptom at a time (§6.3, #38): the tiles, the map, the chart and the tag comparison. The picker
