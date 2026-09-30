@@ -5,7 +5,7 @@
 
 {#if toastState.current}
   {@const t = toastState.current}
-  <div class="toast" class:lifted={toastState.lift !== null} style:--lift={toastState.lift !== null ? `${toastState.lift}px` : undefined} role="status">
+  <div class="toast" class:lifted={toastState.lift !== null} class:top={toastState.top} style:--lift={toastState.lift !== null ? `${toastState.lift}px` : undefined} role="status">
     <span class="grow">{t.message}</span>
     {#if t.action}
       <button
@@ -37,6 +37,8 @@
   }
   /* On the log: over the bottom of the stage, just above the drawer, clear of Salva and the slider. */
   .toast.lifted { bottom: calc(var(--lift) + 8px); }
+  /* On the log with the drawer pulled up: over the row of dropdowns, clear of the form. */
+  .toast.top { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
   .action {
     min-height: var(--tap);
     padding: 0 14px;

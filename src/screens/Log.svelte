@@ -113,11 +113,19 @@
    */
   let fresh = $state<string | null>(null)
   const cooling = $derived(fresh !== null && JSON.stringify(draft) === fresh)
-  /** The toast rises to the drawer's edge while the log is on screen. */
+  /**
+   * The toast rises to the drawer's edge while the log is on screen; with the drawer pulled up there is no room above
+   * it, so the toast goes to the top, clear of the rows the drawer shows (the time rows a refusal points at).
+   */
   let peek = $state(0)
+  let opened = $state(false)
   $effect(() => {
-    toastState.lift = peek
-    return () => (toastState.lift = null)
+    toastState.lift = opened ? null : peek
+    toastState.top = opened
+    return () => {
+      toastState.lift = null
+      toastState.top = false
+    }
   })
   let editing = $state.raw<Entry | null>(null)
   let episode = $state.raw<Entry | null>(null)
@@ -264,7 +272,7 @@
   {/if}
 
   <!-- The slot over the frame (#22): the form draws the figure, the frame carries the fast path and the Salva bar. -->
-  <EntryForm bind:this={form} bind:draft bind:peek symptoms={symptoms.value} tags={tags.value}>
+  <EntryForm bind:this={form} bind:draft bind:peek bind:opened symptoms={symptoms.value} tags={tags.value}>
     {#snippet actions()}
       <div class="actions">
         <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>

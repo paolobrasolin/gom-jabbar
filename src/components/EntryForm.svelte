@@ -43,6 +43,7 @@
     reading,
     more,
     peek = $bindable(0),
+    opened = $bindable(false),
   }: {
     draft: EntryDraft
     symptoms?: Symptom[]
@@ -54,6 +55,8 @@
     more?: Snippet
     /** The drawer's collapsed height, measured, so the stage ends where it begins and never moves. */
     peek?: number
+    /** Whether the drawer is pulled up: then it covers the form down to Salva, and a toast has no room above it. */
+    opened?: boolean
   } = $props()
 
   // The strip: every enabled tag, the most used first (§6.1). Expanded, the same tags by group take its place.
@@ -65,6 +68,9 @@
   let view = $state<View>('front')
   /** The drawer pulled up over the stage. */
   let open = $state(false)
+  $effect(() => {
+    opened = open
+  })
   let formEl = $state<HTMLElement>()
   /**
    * Shows a time row that cannot be saved as it is (§5.5, §10): the drawer opens, the row comes into view and its pressed
