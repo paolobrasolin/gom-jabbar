@@ -106,12 +106,11 @@ export async function restoreEntries(rows: Entry[]): Promise<void> {
   await db.entries.bulkPut(rows)
 }
 
-/** Tags per layer, aligned with the entry's layers; a missing list leaves that layer's tags alone. */
+/** Tags per layer, aligned with the entry's layers; a missing list is no tags. */
 export type LayerTags = (string[] | undefined)[]
 
-function withTags(layers: Layer[], tags?: LayerTags): Layer[] {
-  if (!tags) return layers
-  return layers.map((l, i) => (tags[i] ? { ...l, tags: [...tags[i]!] } : l))
+function withTags(layers: Layer[], tags: LayerTags): Layer[] {
+  return layers.map((l, i) => ({ ...l, tags: [...(tags[i] ?? [])] }))
 }
 
 /** End an episode: its head gets the end. */
@@ -131,7 +130,7 @@ export async function reopenEpisode(id: string): Promise<Entry | undefined> {
  * Log a new reading on an episode (§5.5): an update from where it stands, one record of readings per layer over the
  * latest reading's (unmentioned symptoms and layers keep their levels), the tags given replacing that layer's.
  */
-export async function logUpdate(headId: string, readings: (Record<string, number> | undefined)[], at: string = now(), tags?: LayerTags): Promise<Entry | undefined> {
+export async function logUpdate(headId: string, readings: (Record<string, number> | undefined)[], at: string = now(), tags?: LayerTags, note = ''): Promise<Entry | undefined> {
   const ep = await loadEpisode(headId)
   if (!ep) return undefined
   const from = latest(ep)
@@ -141,12 +140,23 @@ export async function logUpdate(headId: string, readings: (Record<string, number
       const next = { ...l.readings, ...(readings[i] ?? {}) }
       return { ...l, readings: next, had: { regions: l.regions, readings: Object.fromEntries(Object.keys(l.readings).map((id) => [id, next[id]])) } }
     }),
-    tags,
+    // Nothing is carried but the levels and the places: tags are what was done now, or the episode's own context (§5.5).
+    tags ?? [],
   )
   const ts = now()
-  const entry: Entry = { id: nanoid(), kind: 'episode', episodeId: headId, at, layers: finalize(layers, await db.symptoms.toArray()), note: '', createdAt: ts, updatedAt: ts }
+  const entry: Entry = { id: nanoid(), kind: 'episode', episodeId: headId, at, layers: finalize(layers, await db.symptoms.toArray()), note: note.trim(), createdAt: ts, updatedAt: ts }
   await db.entries.add(entry)
   return entry
+}
+
+/**
+ * What an episode's row shows (§5.5): its latest reading's layers, with every tag of the episode once, in the order first
+ * met, on the first layer. Updates copy no tags, so the start's context and each dose appear here and nowhere twice.
+ */
+export function chainLayers(ep: Episode): Layer[] {
+  const cur = latest(ep).layers
+  const all = [...new Set([ep.head, ...ep.updates].flatMap((e) => e.layers.flatMap((l) => l.tags)))]
+  return cur.map((l, i) => ({ ...l, tags: i === 0 ? all : [] }))
 }
 
 /** Active episodes, oldest first, each with its updates. */

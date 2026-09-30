@@ -6,7 +6,7 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { durationMs, episodesOf, isHead, isUpdate, isActive, latest } from '../lib/entries'
+  import { durationMs, episodesOf, isHead, isUpdate, isActive, latest, chainLayers } from '../lib/entries'
   import { intensityColor, intensityInk } from '../lib/color'
   import { dayKey, formatDay, formatTime, formatDuration } from '../lib/time'
   import type { Entry } from '../lib/types'
@@ -70,6 +70,7 @@
     const started = !head ? '' : [dayKey(head.at) === dayKey(e.at) ? '' : formatDay(head.at, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') }).toLowerCase(), formatTime(head.at, locale())].filter(Boolean).join(' ')
     return {
       cur, hl, lead, head, started,
+      shown: ep && !searching ? chainLayers(ep) : cur.layers,
       where: !name || cur.layers.length > 1,
       levels: ep && ep.updates.length ? trail([ep.head, ...ep.updates], hl.id) : [],
       dur: durationMs(e),
@@ -108,7 +109,7 @@
               <span class="time muted small">{formatTime(e.at, locale())}</span>
               <span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.hl.value}</span>
               <span class="grow body">
-                <span class="line"><EntrySummary lead={r.lead} layers={r.cur.layers} where={r.where} tagDefs={tags.value} /></span>
+                <span class="line"><EntrySummary lead={r.lead} layers={r.shown} where={r.where} tagDefs={tags.value} /></span>
                 {#if r.dur !== null}
                   <span class="small muted">{isActive(e) ? t('diary.ongoing') : formatDuration(r.dur, units)}{#if r.levels.length}{` · ${r.levels.join(' → ')}`}{/if}</span>
                 {/if}

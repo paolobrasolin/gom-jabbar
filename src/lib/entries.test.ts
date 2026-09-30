@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { resetDb } from './db'
-import { addEntry, updateEntry, editEntry, deleteEntry, restoreEntries, endEpisode, reopenEpisode, activeEpisodes, durationMs, makeEntry, logUpdate, loadEpisode, latest, episodesOf, isHead, isUpdate, isActive } from './entries'
+import { addEntry, updateEntry, editEntry, deleteEntry, restoreEntries, endEpisode, reopenEpisode, activeEpisodes, durationMs, makeEntry, logUpdate, loadEpisode, latest, chainLayers, episodesOf, isHead, isUpdate, isActive } from './entries'
 import { draftFromEntry, draftToInput, emptyDraft } from './draft'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
 import { selectLayer } from './layers'
@@ -93,11 +93,12 @@ describe('entries', () => {
     expect((await db.entries.get(e.id))?.layers).toEqual([L(['152'], { pain: 7, swelling: 3 }), L(['mind'], { fog: 5 })])
     const w = await logUpdate(e.id, [undefined, { fog: 2 }], '2026-01-01T14:00:00.000Z')
     expect(w?.layers.map((l) => l.readings)).toEqual([{ pain: 4, swelling: 6 }, { fog: 2 }])
-    // Tags per layer travel with an update; an omitted list keeps the latest reading's.
+    // Tags are what was done at this reading: given ones are stored, and nothing is copied from the reading before.
     const tagged = await logUpdate(e.id, [{ pain: 3 }], '2026-01-01T15:00:00.000Z', [['rest'], undefined])
     expect(tagged?.layers.map((l) => l.tags)).toEqual([['rest'], []])
     const again = await logUpdate(e.id, [], '2026-01-01T16:00:00.000Z')
-    expect(again?.layers.map((l) => l.tags)).toEqual([['rest'], []])
+    expect(again?.layers.map((l) => l.tags)).toEqual([[], []])
+    expect(again?.layers.map((l) => l.readings)).toEqual([{ pain: 3, swelling: 6 }, { fog: 2 }])
     const ep = await loadEpisode(e.id)
     expect(ep?.head.id).toBe(e.id)
     expect(ep?.updates.map((x) => x.at)).toEqual(['2026-01-01T12:00:00.000Z', '2026-01-01T14:00:00.000Z', '2026-01-01T15:00:00.000Z', '2026-01-01T16:00:00.000Z'])
@@ -105,6 +106,23 @@ describe('entries', () => {
     expect(latest({ head: e, updates: [] }).id).toBe(e.id)
     expect(await logUpdate('nope', [])).toBeUndefined()
     expect(await loadEpisode('nope')).toBeUndefined()
+  })
+
+  it("an update copies the levels and places, never the tags of the start, and keeps its own note", async () => {
+    const e = await addEntry({ kind: 'episode', at: '2026-01-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 7 }, tags: ['badsleep', 'heat'] }] })
+    const u = await logUpdate(e.id, [{ pain: 5 }], '2026-01-01T12:00:00.000Z', undefined, '  meglio dopo il caffè ')
+    expect(u?.layers).toEqual([L(['152'], { pain: 5 })])
+    expect(u?.note).toBe('meglio dopo il caffè')
+    expect((await db.entries.get(e.id))?.layers[0].tags).toEqual(['badsleep', 'heat'])
+  })
+
+  it("an episode's row reads its latest reading's layers, with every tag of the episode once, in order", async () => {
+    const e = await addEntry({ kind: 'episode', at: '2026-01-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 7 }, tags: ['badsleep', 'rest'] }, { regions: ['mind'], readings: { fog: 3 } }] })
+    await logUpdate(e.id, [{ pain: 5 }, undefined], '2026-01-01T12:00:00.000Z', [['heat'], ['rest']])
+    await logUpdate(e.id, [{ pain: 3 }], '2026-01-01T14:00:00.000Z')
+    const ep = (await loadEpisode(e.id))!
+    expect(chainLayers(ep)).toEqual([L(['152'], { pain: 3 }, ['badsleep', 'rest', 'heat']), L(['mind'], { fog: 3 })])
+    expect(chainLayers({ head: e, updates: [] })).toEqual(e.layers)
   })
 
   it('groups loaded rows into episodes, updates in time order, orphans left out', () => {

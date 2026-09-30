@@ -136,7 +136,7 @@ describe('Edit sheet', () => {
   async function openHeadForm() {
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d.*coscia sx/ }))[0])
     const ep = await screen.findByRole('dialog', { name: /Episodio/ })
-    await fireEvent.click(within(ep).getByRole('button', { name: 'Modifica zone e note' }))
+    await fireEvent.click(within(ep).getByRole('button', { name: 'Modifica' }))
     const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
     // The kind and the bounds are on the Altro face (#22).
     await fireEvent.click(within(sheet).getByRole('button', { name: /^Altro/ }))
@@ -209,7 +209,7 @@ describe('Edit sheet', () => {
     await fireEvent.click(rows()[0])
     const ep = await screen.findByRole('dialog', { name: 'Episodio in corso' })
     const points = within(within(ep).getByLabelText('Letture')).getAllByRole('button')
-    expect(points.map((b) => b.textContent?.trim())).toEqual([expect.stringMatching(/^\d\d:\d\d 7$/), expect.stringMatching(/^\d\d:\d\d 3$/)])
+    expect(points.map((b) => b.textContent?.trim())).toEqual([expect.stringMatching(/^\d\d:\d\d 7 dolore$/), expect.stringMatching(/^\d\d:\d\d 3 dolore$/)])
     // An update is a reading of its episode: no kind, no end, just when.
     await fireEvent.click(points[1])
     let sheet = await screen.findByRole('dialog', { name: 'Modifica' })

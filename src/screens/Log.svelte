@@ -13,7 +13,7 @@
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs, type Tab } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
-  import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, type Episode } from '../lib/entries'
+  import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, type Episode } from '../lib/entries'
   import { showToast, haptic, toastState } from '../lib/toast.svelte'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration } from '../lib/time'
@@ -193,7 +193,7 @@
                 episode = ep.head
               }}>
               <span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
-              <span><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={cur.layers} tagDefs={tags.value} /> · {t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })}</span>
+              <span><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={chainLayers(ep)} tagDefs={tags.value} /> · {t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })}</span>
             </button>
           {/each}
         {/snippet}
