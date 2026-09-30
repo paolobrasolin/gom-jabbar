@@ -69,7 +69,7 @@ describe('backup', () => {
     expect(parsed.vocabulary.tags).toEqual(DEFAULT_TAGS)
   })
 
-  it('upgrades a version 6 file: readings by category, tags on the first layer, presets too; a version 7 entry without layers gets one', () => {
+  it('upgrades a version 6 file: readings by category, tags on the first layer, presets too', () => {
     const file = {
       app: 'gom-jabbar',
       version: 6,
@@ -80,8 +80,6 @@ describe('backup', () => {
     const parsed = parseImport(JSON.stringify(file))
     expect(parsed.entries[0].layers).toEqual([{ regions: ['*'], readings: { pain: 4 }, tags: ['t'] }, { regions: ['mind'], readings: { x_mind: 3, fog: 1 }, tags: [] }])
     expect(parsed.presets[0]).toEqual({ id: 'p', name: 'P', layers: [{ regions: ['224'], readings: { pain: 5 }, tags: ['m'], asks: ['pain'] }], kind: 'episode', order: 0 })
-    const bare = parseImport(JSON.stringify({ app: 'gom-jabbar', version: 7, entries: [{ id: 'b', at: '2026-01-01T00:00:00.000Z' }] }))
-    expect(bare.entries[0].layers).toEqual([{ regions: [], readings: { pain: 0 }, tags: [] }])
   })
 
   it('gives symptoms without a category the default for their id, and keeps one that is set', () => {
@@ -139,6 +137,28 @@ describe('backup', () => {
     expect(file.vocabulary.symptoms.map((x) => x.id)).toEqual([...DEFAULT_SYMPTOMS.map((x) => x.id), 'loose'])
     expect(file.vocabulary.tags.map((x) => x.id).at(-1)).toBe('loose')
     expect(file.presets.map((x) => x.name)).toEqual(['B', 'Loose'])
+  })
+
+  it('rejects a file from a newer version with its own error: the app only knows what it has seen', () => {
+    const file = { app: 'gom-jabbar', version: EXPORT_VERSION + 1, entries: [{ id: 'a', at: '2026-01-01T00:00:00.000Z', layers: [{ regions: [], readings: { pain: 3 }, tags: [] }] }] }
+    expect(() => parseImport(JSON.stringify(file))).toThrow('newer-version')
+    expect(parseImport(JSON.stringify({ ...file, version: EXPORT_VERSION })).entries).toHaveLength(1)
+  })
+
+  it('rejects malformed layers since version 7 instead of inventing readings', () => {
+    const at = '2026-01-01T00:00:00.000Z'
+    const withLayers = (layers: unknown, version = EXPORT_VERSION) => JSON.stringify({ app: 'gom-jabbar', version, entries: [{ id: 'a', at, layers }] })
+    // Every layer ever written has regions, readings and tags; no version from 7 on wrote an entry without one.
+    for (const bad of [undefined, [], [{}], [{ where: ['152'] }], [{ regions: ['152'], readings: { pain: '7' }, tags: [] }], [{ regions: '152', readings: {}, tags: [] }], [{ regions: [], readings: {}, tags: 'rest' }], [null]])
+      expect(() => parseImport(withLayers(bad)), JSON.stringify(bad)).toThrow('invalid-entry')
+    expect(() => parseImport(withLayers(undefined, 7))).toThrow('invalid-entry')
+    // A field the code does not know still passes (rule 3), and strokes are optional.
+    const ok = parseImport(withLayers([{ regions: ['152'], readings: { pain: 7 }, tags: [], extra: 1 }]))
+    expect(ok.entries[0].layers).toEqual([{ regions: ['152'], readings: { pain: 7 }, tags: [], extra: 1 }])
+    // A preset's layers since version 9 are a where and what it asks.
+    const preset = (layers: unknown) => JSON.stringify({ app: 'gom-jabbar', version: EXPORT_VERSION, entries: [], presets: [{ id: 'p', name: 'P', kind: 'chronic', order: 0, layers }] })
+    for (const bad of [undefined, [{}], [{ regions: ['152'] }], [{ regions: ['152'], asks: 'pain' }]]) expect(() => parseImport(preset(bad)), JSON.stringify(bad)).toThrow('invalid-preset')
+    expect(parseImport(preset([{ regions: ['152'], asks: ['pain'] }])).presets).toHaveLength(1)
   })
 
   it('rejects garbage', () => {

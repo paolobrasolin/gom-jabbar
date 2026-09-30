@@ -93,8 +93,8 @@
       const file = parseImport(text)
       pending = { file, preview: await previewImport(file) }
       importOpen = true
-    } catch {
-      showToast(t('import.invalid'))
+    } catch (err) {
+      showToast(t((err as Error).message === 'newer-version' ? 'import.newer' : 'import.invalid'))
     }
   }
 

@@ -60,6 +60,8 @@ export function parseImport(text: string): ExportFile {
   const o = raw as Record<string, unknown>
   if (o.app !== 'gom-jabbar' || !Array.isArray(o.entries)) throw new Error('invalid-file')
   const version = typeof o.version === 'number' ? o.version : 1
+  // A file from a newer app (a rollback): its shape is unknown here, so nothing of it is read.
+  if (version > EXPORT_VERSION) throw new Error('newer-version')
   const vocab = (o.vocabulary ?? {}) as Partial<ExportFile['vocabulary']>
   // A file without a vocabulary (no version ever wrote one) reads as carrying the seed; an empty one stays empty (§8).
   const symptoms = Array.isArray(vocab.symptoms) ? vocab.symptoms.map((s) => normalizeSymptom(s, version)) : DEFAULT_SYMPTOMS
@@ -90,10 +92,19 @@ function normalizePreset(p: Row, version: number, categoryOf: CategoryOf): Prese
   }
   if (version < 8) out = presetKind(out as PresetV7)
   if (version < 9) out = presetAsks(out as PresetV8, categoryOf)
+  else if (!Array.isArray(p.layers) || !p.layers.every(isPresetLayer)) throw new Error('invalid-preset')
   return out as Preset
 }
 
 type Row = Record<string, unknown>
+
+const isObject = (x: unknown): x is Row => !!x && typeof x === 'object' && !Array.isArray(x)
+const isStrings = (x: unknown): boolean => Array.isArray(x) && x.every((v) => typeof v === 'string')
+/** A layer as written since version 7: regions, readings as numbers, tags; anything else on it passes untouched. */
+const isLayer = (l: unknown): boolean =>
+  isObject(l) && isStrings(l.regions) && isObject(l.readings) && Object.values(l.readings).every((v) => typeof v === 'number') && isStrings(l.tags)
+/** A preset layer as written since version 9: a where and what it asks. */
+const isPresetLayer = (l: unknown): boolean => isObject(l) && isStrings(l.regions) && isStrings(l.asks)
 
 /**
  * Before version 6 a symptom had no category; it gets the default for its id (fog mind, the rest body). Before version
@@ -129,8 +140,9 @@ const upgradeAreas = (areas: AreaV6[]): AreaV6[] => (Array.isArray(areas) ? area
  */
 function layersOf(e: Row, version: number, categoryOf: CategoryOf): { layers: Layer[]; history?: HistoryPoint[] } {
   if (version >= 7) {
-    const layers = Array.isArray(e.layers) && (e.layers as Layer[]).length ? (e.layers as Layer[]) : [{ regions: [], readings: { [PAIN]: 0 }, tags: [] }]
-    return { layers, history: Array.isArray(e.history) ? (e.history as HistoryPoint[]) : undefined }
+    // Every version from 7 on wrote at least one well-formed layer: anything else is a damaged file, not a reading.
+    if (!Array.isArray(e.layers) || !e.layers.length || !e.layers.every(isLayer)) throw new Error('invalid-entry')
+    return { layers: e.layers as Layer[], history: Array.isArray(e.history) ? (e.history as HistoryPoint[]) : undefined }
   }
   const readings = (e.readings && typeof e.readings === 'object' ? e.readings : { [PAIN]: 0 }) as Record<string, number>
   let areas: AreaV6[] = Array.isArray(e.areas) ? (e.areas as AreaV6[]) : []

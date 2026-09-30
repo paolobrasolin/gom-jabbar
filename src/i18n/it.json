@@ -159,6 +159,7 @@
   "install.android": "Apri il menu del browser (⋮ in alto a destra), poi «Aggiungi a schermata Home» o «Installa app».",
   "install.why": "Installata, l'app si apre dall'icona e il browser non cancella i dati.",
   "import.invalid": "File non valido",
+  "import.newer": "File di una versione più nuova: aggiorna l'app",
   "import.summary": "{n} voci nel file del {d}.",
   "import.mergeInfo": "Unendo: {a} nuove, {u} aggiornate.",
   "import.merge": "Unisci ai dati attuali",

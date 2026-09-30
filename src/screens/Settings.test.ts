@@ -302,6 +302,13 @@ describe('Settings backup', () => {
 })
 
 describe('Settings import', () => {
+  it('says a file from a newer version needs the app updated, and opens nothing', async () => {
+    await openSettings()
+    await pickFile(JSON.stringify({ app: 'gom-jabbar', version: 99, entries: [] }))
+    expect(await screen.findByText("File di una versione più nuova: aggiorna l'app")).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it('rejects a file that is not a backup', async () => {
     await openSettings()
     await pickFile('{"hello": 1}')
