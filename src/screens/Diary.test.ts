@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
@@ -90,6 +90,14 @@ describe('Diary list', () => {
 })
 
 describe('Edit sheet', () => {
+  // An episode's readings say their day when it spans two: at 15:00 an episode begun three hours ago is today's.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 30, 15, 0))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
   it('opens prefilled from a row and saves the changes', async () => {
     const e = await addEntry({ at: ago(60), layers: [L(['152'], 7, ['rest'])], note: 'dopo la corsa' })
     await openDiary()
