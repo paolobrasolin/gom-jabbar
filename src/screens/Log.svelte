@@ -149,7 +149,7 @@
     }
     saving = true
     try {
-      const entry = await addEntry(draftToInput(draft))
+      const entry = await addEntry(times)
       haptic(20)
       showToast(t('log.saved'), { label: t('log.undo'), run: () => void deleteEntry(entry.id) })
       reset()

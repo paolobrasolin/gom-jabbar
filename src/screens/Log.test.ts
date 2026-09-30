@@ -152,6 +152,36 @@ describe('Episodes with an end', () => {
     expect((await db.entries.orderBy('createdAt').last())?.kind).toBe('chronic')
   })
 
+  it('Inizio and Fine both "Adesso" save however long Salva waits: the start is not after an end set by "Adesso"', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(new Date(2026, 8, 30, 15, 0, 50))
+      render(App)
+      await more()
+      await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+      await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: 'Adesso' }))
+      // A minute turns while the note is written.
+      vi.setSystemTime(new Date(2026, 8, 30, 15, 3, 10))
+      await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+      await waitFor(async () => expect(await db.entries.count()).toBe(1))
+      const [e] = await db.entries.toArray()
+      expect(e.endedAt).toBe(new Date(2026, 8, 30, 15, 0, 50).toISOString())
+      expect(e.at).toBe(e.endedAt)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('Inizio "Adesso" with an end picked in the past is still refused', async () => {
+    render(App)
+    await more()
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+    await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: '1h fa' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    expect(await screen.findByText('La fine è prima dell\'inizio')).toBeInTheDocument()
+    expect(await db.entries.count()).toBe(0)
+  })
+
   it('Adesso as an end is the moment it was pressed, and the picker sets any end', async () => {
     render(App)
     await more()

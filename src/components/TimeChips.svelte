@@ -46,7 +46,8 @@
    * One row of chips that picks a time (§6.1): `none` is the chip for `null`, "Adesso" for a time resolved at save or
    * "In corso" for an end not yet reached. When null does not mean now, an "Adesso" chip sets the moment it is pressed.
    * `label` names the row for assistive tech; `caption` shows it. `shown`: whether the row is on screen now (a drawer
-   * opening), so the pressed chip is brought into view when it can be measured.
+   * opening), so the pressed chip is brought into view when it can be measured. `onnow` hears the moment an "Adesso"
+   * chip set.
    */
   let {
     value = $bindable(),
@@ -56,7 +57,8 @@
     nullIsNow = true,
     day = true,
     shown = true,
-  }: { value: string | null; label: string; caption?: string; none: string; nullIsNow?: boolean; day?: boolean; shown?: boolean } = $props()
+    onnow,
+  }: { value: string | null; label: string; caption?: string; none: string; nullIsNow?: boolean; day?: boolean; shown?: boolean; onnow?: (iso: string) => void } = $props()
 
   let picking = $state(false)
   let row = $state<HTMLElement>()
@@ -104,7 +106,10 @@
 <div class="chips time" role="group" aria-label={label} bind:this={row}>
   {#if caption}<span class="caption">{caption}</span>{/if}
   {#each choices as c (c.key)}
-    <button class="chip small" aria-pressed={active === c.key} onclick={() => (value = c.iso())}>{c.label}</button>
+    <button class="chip small" aria-pressed={active === c.key} onclick={() => {
+      value = c.iso()
+      if (c.key === 'now' && value) onnow?.(value)
+    }}>{c.label}</button>
   {/each}
   <button class="chip small" aria-pressed={active === 'custom'} onclick={pick}>
     {active === 'custom' ? customLabel : t('time.pick')}
