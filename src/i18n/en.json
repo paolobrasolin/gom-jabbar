@@ -159,6 +159,7 @@
   "install.android": "Open the browser menu (⋮ top right), then “Add to Home screen” or “Install app”.",
   "install.why": "Once installed, the app opens from its icon and the browser will not delete your data.",
   "import.invalid": "Invalid file",
+  "import.newer": "This file is from a newer version: update the app",
   "import.summary": "{n} entries in the file from {d}.",
   "import.mergeInfo": "Merging: {a} new, {u} updated.",
   "import.merge": "Merge into current data",
