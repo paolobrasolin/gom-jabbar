@@ -87,7 +87,7 @@ describe('Trends by any symptom (#38)', () => {
     const chips = within(await picker()).getAllByRole('button')
     expect(chips.map((c) => c.textContent)).toEqual(['Dolore', 'Gonfiore'])
     expect(chips[0]).toHaveAttribute('aria-pressed', 'true')
-    await waitFor(() => expect(tile('Media')).toHaveTextContent('2.5'))
+    await waitFor(() => expect(tile('Media')).toHaveTextContent('2,5'))
     expect(screen.getByRole('img', { name: 'Dolore per giorno' })).toBeInTheDocument()
     await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
     expect(tile('Media')).toHaveTextContent('5')
@@ -182,7 +182,7 @@ describe('Trends heatmap and chart', () => {
     await fireEvent.pointerDown(today)
     const tip = document.querySelector('.tip')!
     expect(tip).toHaveTextContent(fmtFull(daysAgo(0)))
-    expect(tip).toHaveTextContent('max del giorno 8 · media 6.0 · 2 voci')
+    expect(tip).toHaveTextContent('max del giorno 8 · media 6,0 · 2 voci')
     await fireEvent.pointerDown(screen.getByRole('button', { name: fmtFull(daysAgo(1)) }))
     expect(document.querySelector('.tip')).toHaveTextContent('nessuna voce')
     await fireEvent.pointerDown(screen.getByRole('button', { name: fmtFull(daysAgo(1)) }))
@@ -208,7 +208,7 @@ describe('Trends tags and symptoms', () => {
     expect(card).toHaveTextContent('Riposo (5/5 giorni)')
     const bars = Array.from(card.querySelectorAll('.bar')).map((b) => b.getAttribute('style'))
     expect(bars).toEqual(['width: 80%;', 'width: 20%;'])
-    expect(Array.from(card.querySelectorAll('.val')).map((v) => v.textContent)).toEqual(['8.0', '2.0'])
+    expect(Array.from(card.querySelectorAll('.val')).map((v) => v.textContent)).toEqual(['8,0', '2,0'])
     expect(card).toHaveTextContent('Solo descrittivo')
   })
 

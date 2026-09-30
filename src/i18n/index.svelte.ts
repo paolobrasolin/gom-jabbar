@@ -22,4 +22,9 @@ export function locale(): string {
   return prefs.lang === 'en' ? 'en-GB' : 'it-IT'
 }
 
+/** A figure as the app's language writes it, to one decimal: "2,5" in Italian, "2.5" in English. `fixed` keeps a ".0". */
+export function num(v: number, fixed = false): string {
+  return new Intl.NumberFormat(locale(), { minimumFractionDigits: fixed ? 1 : 0, maximumFractionDigits: 1 }).format(v)
+}
+
 export { messages }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t, tl } from '../i18n/index.svelte'
+  import { t, tl, num } from '../i18n/index.svelte'
   import type { TagComparison } from '../lib/stats'
 
   let { rows }: { rows: TagComparison[] } = $props()
@@ -15,10 +15,10 @@
     <div class="trow">
       <div class="name">{tl(r.tag.label)} <span class="small muted">({r.withN}/{r.withoutN} {t('trends.days')})</span></div>
       <div class="bars">
-        <div class="bar with" style="width: {pct(r.withMean)}"></div><span class="val small">{r.withMean.toFixed(1)}</span>
+        <div class="bar with" style="width: {pct(r.withMean)}"></div><span class="val small">{num(r.withMean, true)}</span>
       </div>
       <div class="bars">
-        <div class="bar without" style="width: {pct(r.withoutMean)}"></div><span class="val small">{r.withoutMean.toFixed(1)}</span>
+        <div class="bar without" style="width: {pct(r.withoutMean)}"></div><span class="val small">{num(r.withoutMean, true)}</span>
       </div>
     </div>
   {/each}

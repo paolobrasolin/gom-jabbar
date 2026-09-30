@@ -4,7 +4,7 @@
   import TagCompare from '../components/TagCompare.svelte'
   import Report from '../components/Report.svelte'
   import PresetLines from '../components/PresetLines.svelte'
-  import { t, tl } from '../i18n/index.svelte'
+  import { t, tl, num } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
@@ -48,7 +48,7 @@
   const strokes = $derived(allStrokes(entries.value, sid))
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
-  const fmt1 = (v: number | null) => (v === null ? '–' : (Math.round(v * 10) / 10).toString())
+  const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
 </script>
 
 <div class="screen">

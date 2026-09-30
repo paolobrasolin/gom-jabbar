@@ -343,7 +343,7 @@ Vocabulary editing (Settings → Vocabolario, §6.4): rename inline, enable/disa
 - Message files `src/i18n/it.json` and `src/i18n/en.json`, flat keys.
 - Italian is the default; device language is detected on first run and can be overridden in settings.
 - Vocabulary labels are one string (§5.2): the seed's are keys, `i18n:vocab.<id>`, translated like any message; a typed name is shown as typed in every language.
-- Dates and numbers through `Intl` with the active locale.
+- Dates and numbers through `Intl` with the active locale: a mean is written by `num` to one decimal, "2,5" in Italian and "2.5" in English, never by `toFixed`.
 - A test asserts both message files have identical key sets.
 
 ## 10. Design rules
