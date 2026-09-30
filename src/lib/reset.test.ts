@@ -35,6 +35,19 @@ describe('resetAll', () => {
     expect(localStorage.length).toBe(0)
   })
 
+  it('clears only its own keys: the sibling apps on the same origin keep theirs', async () => {
+    localStorage.setItem('gj.prefs', '{}')
+    localStorage.setItem('gj.drive.pending', '{}')
+    localStorage.setItem('another.app', 'x')
+    sessionStorage.setItem('gj.anything', 'x')
+    sessionStorage.setItem('another', 'y')
+    await resetAll(fakeGoogle().provider)
+    expect(Object.keys(localStorage)).toEqual(['another.app'])
+    expect(Object.keys(sessionStorage)).toEqual(['another'])
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
   it('revokes the Drive grant first, while the token is still there to revoke, and leaves the file', async () => {
     const g = fakeGoogle()
     g.signIn()

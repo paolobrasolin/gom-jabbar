@@ -11,8 +11,15 @@ export async function resetAll(cloud: CloudProvider): Promise<void> {
   // First, while the token is still in storage: the grant is revoked, not just forgotten.
   await cloud.disconnect()
   await db.delete()
+  forgetOurs(() => localStorage)
+  forgetOurs(() => sessionStorage)
+}
+
+/** Only this app's keys (`gj.*`): other apps on the same origin keep theirs. */
+function forgetOurs(storage: () => Storage): void {
   try {
-    localStorage.clear()
+    const s = storage()
+    for (const k of Object.keys(s)) if (k.startsWith('gj.')) s.removeItem(k)
   } catch {
     /* storage unavailable: nothing was kept there */
   }
