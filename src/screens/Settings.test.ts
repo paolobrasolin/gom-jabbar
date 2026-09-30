@@ -346,6 +346,45 @@ describe('Settings import', () => {
     expect(await db.symptoms.count()).toBe(9)
   })
 
+  it('a double tap on Sostituisci tutto replaces once and keeps the undo', async () => {
+    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }] })
+    const file = await buildExport()
+    await db.entries.delete(other.id)
+    const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 4 } }] })
+    await openSettings()
+    // The second tap lands while the first is in flight. Unguarded, depending on the gap, it failed on the emptied
+    // preview after the replace went through ("Ripristino non riuscito", no undo), or took its undo copy after it.
+    for (const gap of [0, 1, 2, 3, 5]) {
+      await pickFile(JSON.stringify(file))
+      const sheet = await screen.findByRole('dialog', { name: 'Ripristina' })
+      const replace = await within(sheet).findByRole('button', { name: /^Sostituisci tutto/ })
+      replace.click()
+      await new Promise((r) => setTimeout(r, gap))
+      replace.click()
+      await new Promise((r) => setTimeout(r, 150))
+      expect(screen.getByRole('status')).toHaveTextContent('Ripristinate 1 voci')
+      await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+      await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.id)).toEqual([mine.id]))
+    }
+  })
+
+  it('a double tap on Unisci merges once, with no failure message', async () => {
+    const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }] })
+    const file = await buildExport()
+    await db.entries.delete(other.id)
+    await openSettings()
+    await pickFile(JSON.stringify(file))
+    const sheet = await screen.findByRole('dialog', { name: 'Ripristina' })
+    const merge = within(sheet).getByRole('button', { name: 'Unisci ai dati attuali' })
+    merge.click()
+    await new Promise((r) => setTimeout(r, 1))
+    merge.click()
+    await new Promise((r) => setTimeout(r, 200))
+    // Not "Ripristinate 0 voci" from a second merge of the same file.
+    expect(screen.getByRole('status')).toHaveTextContent('Ripristinate 1 voci')
+    expect(await db.entries.count()).toBe(1)
+  })
+
   it('does nothing when the picker is cancelled', async () => {
     await openSettings()
     const input = document.querySelector('input[type="file"]') as HTMLInputElement

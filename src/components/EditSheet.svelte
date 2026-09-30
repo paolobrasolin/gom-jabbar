@@ -33,8 +33,11 @@
     if (!open) entry = null
   })
 
+  /** A save in flight: the second tap of a double tap does nothing. */
+  let busy = false
   async function save() {
-    if (!editing) return
+    if (!editing || busy) return
+    busy = true
     const input = draftToInput(draft)
     const patch: Partial<Entry> = { at: input.at!, layers: input.layers as Layer[], note: input.note! }
     if (lock === 'none') {
@@ -45,7 +48,7 @@
     } else if (lock === 'kind') {
       patch.endedAt = input.endedAt
     }
-    const { before } = await editEntry(editing.id, patch)
+    const { before } = await editEntry(editing.id, patch).finally(() => (busy = false))
     haptic(20)
     open = false
     // An edit is undone like any other change: the row goes back exactly as it was.
