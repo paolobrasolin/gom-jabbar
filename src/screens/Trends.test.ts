@@ -256,6 +256,17 @@ describe('Trends presets', () => {
     expect(card).toHaveTextContent('Schiena')
     expect(card.querySelectorAll('circle')).toHaveLength(2)
   })
+
+  it('keeps a preset line empty of readings it lacks: no dot at 0', async () => {
+    const p = await addPreset({ name: 'Gonfiore', layers: [{ regions: ['152'], asks: ['swelling'] }], kind: 'chronic' })
+    await logPreset(p, [{ swelling: 5 }])
+    await addEntry({ at: at(1), presetId: p.id, layers: [{ regions: ['152'], readings: { pain: 4 } }] })
+    render(App)
+    await go('Andamento')
+    const card = (await screen.findByText('Per preset')).closest('.card')!
+    await waitFor(() => expect(card.querySelectorAll('circle')).toHaveLength(1))
+    expect(card.querySelector('circle')).toHaveAttribute('fill', intensityColor(5))
+  })
 })
 
 describe('Trends strokes', () => {

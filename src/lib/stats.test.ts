@@ -173,16 +173,26 @@ describe('presetSeries', () => {
 })
 
 describe('presetSeries edge cases', () => {
-  it('falls back to pain for a preset without symptoms and to 0 for a missing reading', () => {
+  it('falls back to pain for a preset without symptoms', () => {
+    const presets: Preset[] = [{ id: 'x', name: 'X', layers: [], kind: 'chronic', order: 0 }]
+    const entries = [makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 }, presetId: 'x' })]
+    expect(presetSeries(entries, presets).map((r) => r.points[0].value)).toEqual([3])
+  })
+
+  it('skips a sample without the reading: no reading is not a 0, and a preset with none has no line', () => {
     const presets: Preset[] = [
-      { id: 'x', name: 'X', layers: [], kind: 'chronic', order: 0 },
-      { id: 'y', name: 'Y', layers: [{ regions: [], asks: ['swelling'] }], kind: 'chronic', order: 1 },
+      { id: 'y', name: 'Y', layers: [{ regions: [], asks: ['swelling'] }], kind: 'chronic', order: 0 },
+      { id: 'z', name: 'Z', layers: [{ regions: [], asks: ['swelling'] }], kind: 'chronic', order: 1 },
     ]
     const entries = [
-      makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 }, presetId: 'x' }),
       makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 }, presetId: 'y' }),
+      makeEntry({ at: '2026-09-02T10:00:00.000Z', readings: { swelling: 4 }, presetId: 'y' }),
+      makeEntry({ at: '2026-09-03T10:00:00.000Z', readings: { swelling: 0 }, presetId: 'y' }),
+      makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 }, presetId: 'z' }),
     ]
-    expect(presetSeries(entries, presets).map((r) => r.points[0].value)).toEqual([3, 0])
+    const rows = presetSeries(entries, presets)
+    expect(rows.map((r) => r.preset.id)).toEqual(['y'])
+    expect(rows[0].points.map((p) => p.value)).toEqual([4, 0])
   })
 
   it('an update of an episode opened from a preset is a sample of that preset', () => {
