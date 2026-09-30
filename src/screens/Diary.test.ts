@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
@@ -272,6 +272,73 @@ describe('Edit sheet', () => {
     await waitFor(async () => expect(await db.entries.get(e.id)).toEqual(before))
     await waitFor(() => expect(rows()[0]).toHaveTextContent('dopo la corsa'))
   })
+
+  /** Yesterday at 15:24, local: a time no chip but the custom one matches, "Ieri 15:24". */
+  const yesterday1524 = () => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    d.setHours(15, 24, 0, 0)
+    return d.toISOString()
+  }
+
+  it('the time row scrolls to the pressed chip when the drawer opens, so "Adesso" is not the only one in sight', async () => {
+    await addEntry({ at: yesterday1524(), layers: [L(['152'], 7)] })
+    // jsdom has no layout: the row is 200px wide and its pressed chip sits at 500–600, off to the right.
+    let pressedAt = [500, 600]
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const [left, right] = this.classList.contains('time') ? [0, 200] : this.closest('.time') && this.getAttribute('aria-pressed') === 'true' ? pressedAt : [0, 0]
+      return { left, right, top: 0, bottom: 0, x: left, y: 0, width: right - left, height: 0, toJSON: () => ({}) } as DOMRect
+    })
+    try {
+      await openDiary()
+      await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+      const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
+      await fireEvent.click(within(sheet).getByRole('button', { name: /^Altro/ }))
+      const row = within(sheet).getByRole('group', { name: 'Quando' })
+      expect(within(row).getByRole('button', { name: 'Ieri 15:24' })).toHaveAttribute('aria-pressed', 'true')
+      await waitFor(() => expect(row.scrollLeft).toBe(412))
+      // A chip off to the left is brought back the other way.
+      pressedAt = [-100, -20]
+      await fireEvent.click(within(row).getByRole('button', { name: 'Adesso' }))
+      await waitFor(() => expect(row.scrollLeft).toBe(300))
+    } finally {
+      rect.mockRestore()
+    }
+   }, 10_000)
+
+  it('the time chip opens the picker in sight, above the Salva bar, and asks the browser to show it', async () => {
+    await addEntry({ at: yesterday1524(), layers: [L(['152'], 7)] })
+    // Neither exists in jsdom; Chrome has both.
+    const into = vi.fn()
+    // The first time the browser refuses (no user activation left, say): the field is still there, in view.
+    const picker = vi.fn().mockImplementationOnce(() => {
+      throw new DOMException('no', 'NotAllowedError')
+    })
+    Element.prototype.scrollIntoView = into
+    ;(HTMLInputElement.prototype as { showPicker?: () => void }).showPicker = picker
+    try {
+      await openDiary()
+      await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+      const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
+      await fireEvent.click(within(sheet).getByRole('button', { name: /^Altro/ }))
+      await fireEvent.click(within(within(sheet).getByRole('group', { name: 'Quando' })).getByRole('button', { name: 'Ieri 15:24' }))
+      const input = sheet.querySelector('input[type="datetime-local"]')
+      expect(input).not.toBeNull()
+      await waitFor(() => expect(picker).toHaveBeenCalledTimes(1))
+      expect(picker.mock.contexts[0]).toBe(input)
+      expect(into.mock.contexts.at(-1)).toBe(input)
+      expect(into).toHaveBeenLastCalledWith({ block: 'nearest' })
+      // The chip folds the field and opens it again.
+      const chip = within(within(sheet).getByRole('group', { name: 'Quando' })).getByRole('button', { name: 'Ieri 15:24' })
+      await fireEvent.click(chip)
+      expect(sheet.querySelector('input[type="datetime-local"]')).toBeNull()
+      await fireEvent.click(chip)
+      await waitFor(() => expect(picker).toHaveBeenCalledTimes(2))
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
+      delete (HTMLInputElement.prototype as { showPicker?: unknown }).showPicker
+    }
+   }, 10_000)
 
   it('closes on Escape without touching the entry', async () => {
     const e = await addEntry({ at: ago(60), layers: [L(['152'], 7)] })

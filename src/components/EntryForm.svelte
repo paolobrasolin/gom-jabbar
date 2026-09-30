@@ -371,10 +371,10 @@
             {@render kind()}
             <!-- The time row keeps its caption whatever the kind, so nothing comes and goes: Quando, or Inizio with a Fine row of its own. -->
             {#if draft.kind === 'episode' && lock !== 'reading'}
-              <TimeChips bind:value={draft.at} label={t('time.start')} caption={t('time.start')} none={t('time.now')} />
-              <TimeChips bind:value={draft.endedAt} label={t('time.end')} caption={t('time.end')} none={t('log.ongoing')} nullIsNow={false} day={false} />
+              <TimeChips bind:value={draft.at} label={t('time.start')} caption={t('time.start')} none={t('time.now')} shown={open} />
+              <TimeChips bind:value={draft.endedAt} label={t('time.end')} caption={t('time.end')} none={t('log.ongoing')} nullIsNow={false} day={false} shown={open} />
             {:else}
-              <TimeChips bind:value={draft.at} label={t('time.when')} caption={t('time.when')} none={t('time.now')} />
+              <TimeChips bind:value={draft.at} label={t('time.when')} caption={t('time.when')} none={t('time.now')} shown={open} />
             {/if}
             <textarea class="note" rows="1" placeholder={t('log.notePlaceholder')} bind:value={draft.note} aria-label={t('log.note')}></textarea>
             {@render more?.()}

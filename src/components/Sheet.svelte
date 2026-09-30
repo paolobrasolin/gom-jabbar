@@ -65,7 +65,9 @@
   .title { font-size: 18px; font-weight: 700; margin-bottom: 8px; flex: none; }
   .content { overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
   .sheet.tall { height: 92dvh; }
-  .sheet.tall .content { flex: 1; overflow: hidden; }
+  /* clip, not hidden: the form's drawer reaches 12px past the content box, and a hidden box can still be scrolled by a
+     focused chip or scrollIntoView, shifting the whole sheet sideways and cutting off Elimina and the layer pill. */
+  .sheet.tall .content { flex: 1; overflow: clip; }
   @keyframes up { from { transform: translateY(40px); } }
   @keyframes fade { from { opacity: 0; } }
 </style>
