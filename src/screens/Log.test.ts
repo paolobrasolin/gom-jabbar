@@ -22,7 +22,6 @@ beforeEach(() => {
   prefs.lang = 'it'
   prefs.mirror = true
   prefs.mirrorViews = false
-  prefs.ongoing = false
 })
 /** The two faces of the slot (#22): Altro shows everything past the fast path, Corpo brings the figure back; a new draft opens on Corpo. */
 const more = (scope: { getByRole: typeof screen.getByRole } = screen) => fireEvent.click(scope.getByRole('button', { name: /^Altro/ }))
@@ -142,10 +141,15 @@ describe('Episodes with an end', () => {
     expect(e).toMatchObject({ kind: 'episode', episodeId: e.id })
     expect(Date.parse(e.endedAt!) - Date.parse(e.at)).toBeCloseTo(2 * 3600_000, -4)
     expect(episodesButton()).toBeNull()
-    // The next draft remembers the episode chip, never the end.
+    // The next draft starts over: Cronico, whatever the last save was, so a quick log is never an episode by accident.
     await more()
-    expect(screen.getByRole('button', { name: 'Episodio' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: 'In corso' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Cronico' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('group', { name: 'Fine' })).not.toBeInTheDocument()
+    await body()
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(2))
+    expect((await db.entries.orderBy('createdAt').last())?.kind).toBe('chronic')
   })
 
   it('Adesso as an end is the moment it was pressed, and the picker sets any end', async () => {
@@ -159,6 +163,7 @@ describe('Episodes with an end', () => {
     let [e] = await db.entries.toArray()
     expect(Date.now() - Date.parse(e.endedAt!)).toBeLessThan(5000)
     await more()
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     // An end needs a start before it: both picked on the same day.
     await fireEvent.click(within(screen.getByRole('group', { name: 'Inizio' })).getByRole('button', { name: 'Scegli…' }))
     await fireEvent.change(document.querySelector('input[type="datetime-local"]')!, { target: { value: '2026-09-01T10:00' } })
@@ -697,9 +702,11 @@ describe('Presets', () => {
   })
 
   it("the new preset's kind is the kind of the reading the form then logs under it", async () => {
-    // Episodio is sticky (§6.1): the form opens on it, the preset form takes the log form as it stands.
-    prefs.ongoing = true
+    // The preset form takes the log form as it stands, its kind included.
     render(App)
+    await more()
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+    await body()
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await pickPreset('Nuovo preset')
     const form = await screen.findByRole('dialog', { name: 'Nuovo preset' })
@@ -1467,5 +1474,32 @@ describe('Times that cannot be', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('The kind is chosen per entry', () => {
+  it('a relaunch opens on Cronico, whatever the last save was', async () => {
+    const { unmount } = render(App)
+    await more()
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    unmount()
+    render(App)
+    await more()
+    expect(screen.getByRole('button', { name: 'Cronico' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('Azzera starts the form over, kind included, and its undo brings Episodio back', async () => {
+    render(App)
+    await screen.findByRole('slider', { name: 'Dolore' })
+    await more()
+    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Azzera' }))
+    if (!screen.queryByRole('button', { name: 'Cronico' })) await more()
+    expect(screen.getByRole('button', { name: 'Cronico' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(await screen.findByRole('button', { name: 'Annulla' }))
+    if (!screen.queryByRole('button', { name: 'Episodio' })) await more()
+    expect(screen.getByRole('button', { name: 'Episodio' })).toHaveAttribute('aria-pressed', 'true')
   })
 })
