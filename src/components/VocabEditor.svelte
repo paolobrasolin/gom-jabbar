@@ -33,8 +33,18 @@
     editingId = item.id
     editText = shown = tl(item.label)
   }
+  /**
+   * Another item of the list already called `text`, in the language shown, whatever the case (§5.2): two items with
+   * one name would be two identical sliders or chips. Says so with a toast.
+   */
+  function taken(text: string, except?: string): boolean {
+    const name = text.trim().toLocaleLowerCase()
+    const other = (table === 'symptoms' ? symptoms.value : tags.value).find((x) => x.id !== except && tl(x.label).trim().toLocaleLowerCase() === name)
+    if (other) showToast(t('vocab.exists', { name: tl(other.label) }))
+    return !!other
+  }
   async function commitEdit() {
-    if (editingId && editText.trim() !== shown) await rename(table, editingId, editText)
+    if (editingId && editText.trim() !== shown && !taken(editText, editingId)) await rename(table, editingId, editText)
     editingId = null
   }
   function usageText(u: Usage): string {
@@ -55,7 +65,7 @@
   let adding = false
   async function add(key: string) {
     const text = (newText[key] ?? '').trim()
-    if (!text || adding) return
+    if (!text || adding || taken(text)) return
     adding = true
     try {
       if (table === 'symptoms') await addSymptom(text, key as SymptomCategory)
