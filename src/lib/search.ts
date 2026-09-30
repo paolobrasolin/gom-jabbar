@@ -9,8 +9,11 @@ type T = (k: string, p?: Record<string, string | number>) => string
 /** The vocabulary a reading is found through, disabled items included: history keeps them. `tl` and `t` speak the current language. */
 export type SearchContext = { tags: Tag[]; symptoms: Symptom[]; presets: Preset[]; tl: (l: Label) => string; t: T }
 
-/** Lowercase, without accents: "Perché" and "perche" are the same word to a search. */
-export const fold = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+/**
+ * Lowercase, without accents, spelled out as a keyboard types it: "Perché" and "perche" are the same word to a search,
+ * and so are "ﬁ" and "fi" (compatibility forms, NFKD), "ß" and "ss".
+ */
+export const fold = (s: string): string => s.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/ß/g, 'ss')
 
 /** The words of a text, folded: runs of letters and digits, so "l'ufficio" holds "ufficio". */
 export const words = (text: string): string[] => fold(text).split(/[^\p{L}\p{N}]+/u).filter(Boolean)
