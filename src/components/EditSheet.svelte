@@ -6,6 +6,7 @@
   import { draftFromEntry, draftToInput, emptyDraft, type EntryDraft } from '../lib/draft'
   import { editEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode, timeProblem, type TimeProblem } from '../lib/entries'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
+  import { failed } from '../lib/failure'
   import type { Entry, Layer, Symptom, Tag } from '../lib/types'
 
   let { entry = $bindable(null), symptoms = [], tags = [] }: { entry: Entry | null; symptoms?: Symptom[]; tags?: Tag[] } = $props()
@@ -69,20 +70,32 @@
     } else if (lock === 'kind') {
       patch.endedAt = input.endedAt
     }
-    const { before } = await editEntry(editing.id, patch).finally(() => (busy = false))
+    let before
+    try {
+      ;({ before } = await editEntry(editing.id, patch))
+    } catch (e) {
+      return failed(e)
+    } finally {
+      busy = false
+    }
     haptic(20)
     open = false
     // An edit is undone like any other change: the row goes back exactly as it was.
-    showToast(t('log.saved'), before && { label: t('log.undo'), run: () => void restoreEntries([before]) })
+    showToast(t('log.saved'), before && { label: t('log.undo'), run: () => void restoreEntries([before]).catch(failed) })
   }
 
   /** Deleting a head takes its updates along; the toast brings them all back. */
   async function remove() {
     if (!editing) return
-    const gone = await deleteEntry(editing.id)
+    let gone
+    try {
+      gone = await deleteEntry(editing.id)
+    } catch (e) {
+      return failed(e)
+    }
     open = false
     haptic(20)
-    if (gone.length) showToast(t('diary.deleted'), { label: t('log.undo'), run: () => void restoreEntries(gone) })
+    if (gone.length) showToast(t('diary.deleted'), { label: t('log.undo'), run: () => void restoreEntries(gone).catch(failed) })
   }
 </script>
 

@@ -14,6 +14,7 @@
   import { addPreset, updatePreset, deletePreset, restorePreset, presetFromDraft, defaultAsks } from '../lib/presets'
   import { showsCategory, type Layer } from '../lib/layers'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
+  import { failed } from '../lib/failure'
   import type { Symptom } from '../lib/types'
 
   let {
@@ -80,6 +81,8 @@
     busy = true
     try {
       await store()
+    } catch (e) {
+      failed(e)
     } finally {
       busy = false
     }
@@ -92,7 +95,7 @@
       const before = editing
       const next = await updatePreset(before.id, input)
       open = false
-      if (next) showToast(t('preset.saved'), { label: t('log.undo'), run: () => void restorePreset(before) })
+      if (next) showToast(t('preset.saved'), { label: t('log.undo'), run: () => void restorePreset(before).catch(failed) })
     } else {
       const p = await addPreset(input)
       open = false
@@ -100,7 +103,7 @@
       showToast(t('preset.created'), {
         label: t('log.undo'),
         run: () => {
-          void deletePreset(p.id)
+          void deletePreset(p.id).catch(failed)
           onundo?.(p)
         },
       })

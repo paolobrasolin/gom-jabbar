@@ -8,6 +8,7 @@
   import { entryHeadline, headline, symptomName, layerLevel, regionText } from '../lib/summary'
   import { maxReadings, showsCategory } from '../lib/layers'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
+  import { failed } from '../lib/failure'
   import { formatDuration, formatTime, formatDay } from '../lib/time'
   import { intensityColor, intensityInk } from '../lib/color'
   import { PAIN, type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
@@ -120,10 +121,17 @@
   async function update() {
     if (!ep || busy) return
     busy = true
-    const added = await logUpdate(ep.head.id, levels.map((l) => ({ ...l })), undefined, picked.map((p) => [...p]), note).finally(() => (busy = false))
+    let added
+    try {
+      added = await logUpdate(ep.head.id, levels.map((l) => ({ ...l })), undefined, picked.map((p) => [...p]), note)
+    } catch (e) {
+      return failed(e)
+    } finally {
+      busy = false
+    }
     haptic(20)
     open = false
-    if (added) showToast(t('episode.updated'), { label: t('log.undo'), run: () => void deleteEntry(added.id) })
+    if (added) showToast(t('episode.updated'), { label: t('log.undo'), run: () => void deleteEntry(added.id).catch(failed) })
   }
   async function end() {
     if (!ep || busy) return
@@ -133,6 +141,8 @@
     try {
       added = changed ? await logUpdate(id, levels.map((l) => ({ ...l })), undefined, picked.map((p) => [...p]), note) : undefined
       await endEpisode(id)
+    } catch (e) {
+      return failed(e)
     } finally {
       busy = false
     }
@@ -140,7 +150,7 @@
     open = false
     showToast(t('episode.ended'), {
       label: t('log.undo'),
-      run: () => void reopenEpisode(id).then(() => (added ? deleteEntry(added.id) : undefined)),
+      run: () => void reopenEpisode(id).then(() => (added ? deleteEntry(added.id) : undefined)).catch(failed),
     })
   }
   function edit(e: Entry) {
