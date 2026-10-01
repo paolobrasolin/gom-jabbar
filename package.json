@@ -2,7 +2,7 @@
   "name": "gom-jabbar",
   "private": true,
   "license": "EUPL-1.2",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
