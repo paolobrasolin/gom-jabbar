@@ -118,8 +118,11 @@ describe('forms that create', () => {
     const add = fields[2].closest('.item')!.querySelector('button')!
     add.click()
     add.click()
+    const added = async () => (await db.tags.toArray()).filter((x) => x.label === 'Ibuprofene')
+    // However slow the write, wait for it, then a moment more for a second one that must not come.
+    await waitFor(async () => expect(await added()).toHaveLength(1))
     await wait(50)
-    expect((await db.tags.toArray()).filter((x) => x.label === 'Ibuprofene')).toHaveLength(1)
+    expect(await added()).toHaveLength(1)
     expect(fields[2]).toHaveValue('')
   })
 })
