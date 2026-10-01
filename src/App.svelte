@@ -74,6 +74,12 @@
 <svelte:window onpopstate={onPop} />
 
 <div class="app">
+  {#if reads.failed}
+    <div class="unread" role="alert">
+      <span>{t('app.readError')}</span>
+      <button class="btn small" onclick={reload}>{t('app.reload')}</button>
+    </div>
+  {/if}
   {#if tab !== 'log'}
     <header class="bar">
       <button class="back" aria-label={t('nav.back')} onclick={() => history.back()}>
@@ -95,24 +101,20 @@
       {/if}
     </header>
   {/if}
-  {#if reads.failed}
-    <div class="unread" role="alert">
-      <span>{t('app.readError')}</span>
-      <button class="btn small" onclick={reload}>{t('app.reload')}</button>
-    </div>
-  {/if}
   {#if tab === 'log'}<Log {cloud} navigate={go} />{:else if tab === 'diary'}<Diary query={query ?? ''} />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} {reload} />{/if}
 </div>
 
 <Toast />
 
 <style>
-  /* A failed read (§4.1): over everything at the top, until a reload. */
+  /* A failed read (§4.1): first in the column, above the header, until a reload; the arrow and the menu stay reachable. */
   .unread {
-    position: fixed; top: calc(8px + env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 60;
+    flex: none;
+    margin: calc(8px + env(safe-area-inset-top)) 12px 4px;
     display: flex; align-items: center; gap: 12px;
     padding: 10px 10px 10px 16px; border-radius: var(--radius);
-    background: #d33f3f; color: #fff; box-shadow: var(--shadow);
+    background: #d33f3f; color: #fff;
   }
   .unread span { flex: 1; }
+  .unread .btn { background: #fff; color: #b3261e; font-weight: 600; }
 </style>
