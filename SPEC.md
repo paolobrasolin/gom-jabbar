@@ -42,6 +42,8 @@
 
 Browser targets: Chrome on Android (primary), Safari on iOS 16.4+ (secondary). Desktop browsers should work but are not designed for.
 
+**Updates.** A new release runs as soon as it is installed, without asking (`lib/update.ts`). The app looks for one at every open and every return to the foreground, since Android resumes an installed app far more often than it starts it. Untouched since it came to the foreground, the page reloads into the new release at once (at an open, the old one shows for a moment first); once touched, it waits for the next return to the foreground, so a sheet being edited is never thrown away. The log's draft survives a reload either way (§6.1). No notice: the footer's version says which release is running (§6.4). Until #103 the page kept running the old code and the new one ran only from the open after.
+
 ### 4.1 Persistence rules
 
 - Call `navigator.storage.persist()` at startup, and again on the first launch as an installed app (recorded in `prefs.installedAt`) and when the browser fires `appinstalled`: installed origins are granted persistence without a prompt.
