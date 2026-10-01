@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { resetDb, db } from './db'
 import { addEntry } from './entries'
 import { addPreset } from './presets'
@@ -48,7 +48,18 @@ describe('resetAll', () => {
     sessionStorage.clear()
   })
 
-  it('revokes the Drive grant first, while the token is still there to revoke, and leaves the file', async () => {
+  it('a delete that fails leaves Drive connected: the diary and its backup link go together or not at all', async () => {
+    const g = fakeGoogle()
+    g.signIn()
+    await g.provider.put('the diary')
+    vi.spyOn(db, 'delete').mockRejectedValueOnce(new DOMException('The operation failed.', 'UnknownError'))
+    await expect(resetAll(g.provider)).rejects.toThrow()
+    expect(g.drive.revoked).toEqual([])
+    expect(await g.provider.whoami()).not.toBeNull()
+    vi.restoreAllMocks()
+  })
+
+  it('revokes the Drive grant once the diary is gone, while the token is still there to revoke, and leaves the file', async () => {
     const g = fakeGoogle()
     g.signIn()
     await g.provider.put('the diary')
