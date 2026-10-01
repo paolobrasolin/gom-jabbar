@@ -1,5 +1,5 @@
 import { t } from '../i18n/index.svelte'
-import { showToast } from './toast.svelte'
+import { showFailure } from './toast.svelte'
 
 /**
  * A write that failed (storage full, the database closed by the browser): said in one line, never silent (§4.1). The
@@ -7,5 +7,5 @@ import { showToast } from './toast.svelte'
  */
 export function failed(e: unknown): void {
   console.error(e)
-  showToast(t('error.write'))
+  showFailure(t('error.write'))
 }

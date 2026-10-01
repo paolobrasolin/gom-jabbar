@@ -24,6 +24,9 @@ const TEXT: [string, string][] = [
   ['--accent-ink', '--accent'],
   ['--bg', '--ink'],
   ['--toast-action', '--ink'],
+  // A refusal and a failure each have their own colours (#94).
+  ['--warn-ink', '--warn-bg'],
+  ['--fail-ink', '--fail-bg'],
 ]
 
 describe('theme tokens', () => {

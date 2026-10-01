@@ -13,6 +13,11 @@
   --danger: #c02f2f;
   /* The undo toast is inverted (--ink under --bg): its action takes the other theme's accent. */
   --toast-action: #6c9cff;
+  /* A refusal (the app needs something first) and a failure (nothing happened) each read at a glance (#94). */
+  --warn-bg: #ffe2a3;
+  --warn-ink: #3d2a00;
+  --fail-bg: #c02f2f;
+  --fail-ink: #ffffff;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
   --radius: 14px;
   --radius-s: 10px;
@@ -34,6 +39,10 @@
     --accent-ink: #0b1020;
     --danger: #ff6b6b;
     --toast-action: #2660d9;
+    --warn-bg: #4d3b10;
+    --warn-ink: #ffe2a3;
+    --fail-bg: #ff6b6b;
+    --fail-ink: #1f0606;
     --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
   }
 }
@@ -51,6 +60,10 @@
   --accent-ink: #0b1020;
   --danger: #ff6b6b;
   --toast-action: #2660d9;
+  --warn-bg: #4d3b10;
+  --warn-ink: #ffe2a3;
+  --fail-bg: #ff6b6b;
+  --fail-ink: #1f0606;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
 

@@ -24,9 +24,23 @@ afterEach(() => {
 })
 const ago = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
 const full = () => new DOMException('The quota has been exceeded.', 'QuotaExceededError')
-const said = () => waitFor(() => expect(toastState.current?.message).toBe('Non riuscito: riprova'))
+const said = () => waitFor(() => expect(toastState.current).toMatchObject({ message: 'Non riuscito: riprova', kind: 'failure' }))
 
 describe('a failed write', () => {
+  it('stays until closed: a change of screen does not take it away (#94)', async () => {
+    render(App)
+    await screen.findByRole('slider', { name: 'Dolore' })
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '4' } })
+    vi.spyOn(db.entries, 'add').mockRejectedValueOnce(full())
+    await salva()
+    await said()
+    await go('Diario')
+    expect(screen.getByRole('alert')).toHaveTextContent('Non riuscito: riprova')
+    await fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Chiudi' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('Salva on the log: says so, keeps the draft, and the next Salva saves', async () => {
     render(App)
     await screen.findByRole('slider', { name: 'Dolore' })

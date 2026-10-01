@@ -83,7 +83,7 @@ describe('Cancella tutto', () => {
     await fireEvent.input(within(sheet).getByLabelText('Scrivi «cancella» per confermare'), { target: { value: 'cancella' } })
     const button = within(sheet).getByRole('button', { name: 'Cancella tutto' })
     await fireEvent.click(button)
-    expect(await screen.findByText('Non riuscito: non è stato cancellato niente')).toBeInTheDocument()
+    expect((await screen.findByText('Non riuscito: non è stato cancellato niente')).closest('.toast')).toHaveClass('failure')
     expect(reload).not.toHaveBeenCalled()
     expect(await db.entries.count()).toBe(1)
     expect(button).toBeEnabled()

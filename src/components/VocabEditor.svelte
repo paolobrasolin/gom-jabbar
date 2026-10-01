@@ -6,7 +6,7 @@
   import type { Symptom, SymptomCategory, Tag, TagGroup } from '../lib/types'
   import { isMindSymptom } from '../lib/vocabulary'
   import { ICONS } from '../lib/icons'
-  import { haptic, showToast } from '../lib/toast.svelte'
+  import { showRefusal, haptic, showToast } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
 
   let { table }: { table: 'symptoms' | 'tags' } = $props()
@@ -36,12 +36,12 @@
   }
   /**
    * Another item of the list already called `text`, in the language shown, whatever the case (§5.2): two items with
-   * one name would be two identical sliders or chips. Says so with a toast.
+   * one name would be two identical sliders or chips. Says so (a refusal).
    */
   function taken(text: string, except?: string): boolean {
     const name = text.trim().toLocaleLowerCase()
     const other = (table === 'symptoms' ? symptoms.value : tags.value).find((x) => x.id !== except && tl(x.label).trim().toLocaleLowerCase() === name)
-    if (other) showToast(t('vocab.exists', { name: tl(other.label) }))
+    if (other) showRefusal(t('vocab.exists', { name: tl(other.label) }))
     return !!other
   }
   async function commitEdit() {

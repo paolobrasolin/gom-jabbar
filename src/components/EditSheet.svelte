@@ -6,7 +6,7 @@
   import { t } from '../i18n/index.svelte'
   import { draftFromEntry, draftToInput, emptyDraft, type EntryDraft } from '../lib/draft'
   import { editEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode, timeProblem, type TimeProblem } from '../lib/entries'
-  import { showToast, haptic, dismissToast, toastState } from '../lib/toast.svelte'
+  import { showToast, showRefusal, haptic, dismissToast, toastState } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
   import type { Entry, Layer, Symptom, Tag } from '../lib/types'
 
@@ -69,7 +69,7 @@
     const problem = await timesOf(editing, input)
     if (problem) {
       busy = false
-      showToast(t(problem === 'end-before-start' ? 'time.endBeforeStart' : problem === 'before-start' ? 'time.beforeStart' : 'time.afterUpdate'))
+      showRefusal(t(problem === 'end-before-start' ? 'time.endBeforeStart' : problem === 'before-start' ? 'time.beforeStart' : 'time.afterUpdate'))
       void form?.pointAt(problem === 'end-before-start' ? 'end' : 'start')
       return
     }
