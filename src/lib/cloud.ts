@@ -21,7 +21,8 @@ export type Failure =
 
 export type Result<T> = { ok: true; value: T } | { ok: false; reason: Failure; status?: number; remoteAt?: string }
 
-export type Account = { name: string; email: string }
+/** The Google account the backup lives in: its email only, shown in Settings and handed to Google as the sign-in hint. */
+export type Account = { email: string }
 
 /** A version of the backup that can be downloaded: the current file (`id: 'head'`) or a pinned older one. */
 export type RestorePoint = { id: string; at: string; size: number }
