@@ -4,7 +4,7 @@
   import EntrySummary from '../components/EntrySummary.svelte'
   import { t, tl, locale, tn } from '../i18n/index.svelte'
   import { db } from '../lib/db'
-  import { live } from '../lib/live.svelte'
+  import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { durationMs, episodesOf, isHead, isUpdate, isActive, latest, chainLayers } from '../lib/entries'
   import { intensityColor, intensityInk } from '../lib/color'
@@ -90,7 +90,7 @@
 </script>
 
 <div class="screen" bind:this={scroller}>
-  {#if total.value === 0}
+  {#if total.value === 0 && !reads.failed}
     <div class="empty">
       <p>{t('diary.empty')}</p>
       <p class="muted small">{t('diary.emptyHint')}</p>

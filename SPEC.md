@@ -49,7 +49,7 @@ Browser targets: Chrome on Android (primary), Safari on iOS 16.4+ (secondary). D
 - The icon is a white needle with a drop at the tip on the pain-10 red tile (`public/favicon.svg` is the source; the PNGs are renders of it, the maskable one full-bleed with the art at 78%). The name is final (#12).
 - Chrome's `beforeinstallprompt` is captured at startup (`lib/install.svelte.ts`) and replayed from the nudge; where no prompt exists the nudge opens a sheet with the manual steps (Share → Aggiungi alla schermata Home on iOS, browser menu elsewhere).
 - Every write goes through Dexie; no data in `localStorage` except UI preferences (language, theme, figure, and the like).
-- A write can fail (storage full, the database closed by the browser). Every save and every undo says so in one line, "Non riuscito: riprova" (`lib/failure.ts`), and leaves its form or sheet as it was, so nothing typed is lost and the tap can be repeated.
+- A write can fail (storage full, the database closed by the browser). Every save and every undo says so in one line, "Non riuscito: riprova" (`lib/failure.ts`), and leaves its form or sheet as it was, so nothing typed is lost and the tap can be repeated. A read can fail too: then a notice stays at the top until a reload, "Non riesco a leggere il diario. I dati restano sul telefono: ricarica l'app." with **Ricarica**, and no screen says it is empty (`reads` in `lib/live.svelte.ts`): an empty-looking diary invites a restore over data that is still there.
 - Schema versioning through Dexie migrations. Export format carries a `version` field.
 
 ### 4.2 Backup

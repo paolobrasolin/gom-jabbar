@@ -6,7 +6,7 @@
   import PresetLines from '../components/PresetLines.svelte'
   import { t, tl, num, tn } from '../i18n/index.svelte'
   import { db } from '../lib/db'
-  import { live } from '../lib/live.svelte'
+  import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE } from '../lib/stats'
   import { formatDuration } from '../lib/time'
@@ -59,7 +59,8 @@
   </div>
 
   {#if summary.entries === 0}
-    <div class="card muted small">{t('trends.empty')}</div>
+    <!-- Nothing read is not nothing logged: after a failed read the app's notice says so (§4.1). -->
+    {#if !reads.failed}<div class="card muted small">{t('trends.empty')}</div>{/if}
   {:else}
     {#if choices.length}
       <div class="chips pick" role="group" aria-label={t('trends.heatSymptom')}>
