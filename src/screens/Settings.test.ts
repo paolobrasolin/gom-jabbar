@@ -304,7 +304,7 @@ describe('Settings backup', () => {
     await openSettings()
     await fireEvent.click(screen.getByRole('button', { name: 'Backup su file' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Backup su file' })).toBeEnabled())
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(document.querySelector('.toast')).toBeNull()
     expect(prefs.lastBackupAt).toBeNull()
   })
 })
@@ -424,7 +424,7 @@ describe('Settings import', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     await fireEvent.change(input, { target: { files: [] } })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(document.querySelector('.toast')).toBeNull()
   })
 })
 

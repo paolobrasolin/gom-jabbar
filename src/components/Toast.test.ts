@@ -24,8 +24,26 @@ describe('Toast (#94)', () => {
       show()
       await tick()
       expect(box()).toHaveClass(kind)
-      expect(box()).toHaveAttribute('role', role)
+      // The live region holds the toast; the toast itself has no role (BX9).
+      expect(box()).not.toHaveAttribute('role')
+      expect(box().parentElement).toHaveAttribute('role', role)
     }
+  })
+
+  it('the live regions are in the page before any message, so a screen reader announces the message that appears in them', async () => {
+    render(Toast)
+    const status = document.querySelector('.live[role=status]')!
+    const alert = document.querySelector('.live[role=alert]')!
+    expect(status).toBeEmptyDOMElement()
+    expect(alert).toBeEmptyDOMElement()
+    showToast('Salvato', { label: 'Annulla', run: () => {} })
+    await tick()
+    expect(status).toHaveTextContent('Salvato')
+    expect(document.querySelector('.live[role=status]')).toBe(status)
+    showFailure('Non riuscito: riprova')
+    await tick()
+    expect(alert).toHaveTextContent('Non riuscito: riprova')
+    expect(status).toBeEmptyDOMElement()
   })
 
   it('each kind has its icon, so the kind never rests on colour alone (#94)', async () => {
@@ -61,7 +79,8 @@ describe('Toast (#94)', () => {
     await fireEvent.pointerCancel(box())
     expect(toastState.held).toBe(false)
     await fireEvent.pointerDown(box())
-    await fireEvent.pointerLeave(box())
+    // pointerleave does not bubble: the browser fires it on the region the finger leaves with the toast.
+    await fireEvent.pointerLeave(box().parentElement!)
     expect(toastState.held).toBe(false)
   })
 
