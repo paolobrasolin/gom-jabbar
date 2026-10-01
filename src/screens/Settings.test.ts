@@ -324,6 +324,24 @@ describe('Settings import', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('a restored file is a backup: the last backup becomes its date, unless a later one is known', async () => {
+    await addEntry({ at: '2026-09-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 4 } }] })
+    const file = await buildExport()
+    file.exportedAt = new Date(Date.now() - 2 * 86_400_000).toISOString()
+    prefs.lastBackupAt = null
+    await openSettings()
+    await pickFile(JSON.stringify(file))
+    await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: /Sostituisci tutto/ }))
+    await waitFor(() => expect(prefs.lastBackupAt).toBe(file.exportedAt))
+    // An older file says nothing new about the last backup.
+    const later = new Date(Date.now() - 86_400_000).toISOString()
+    prefs.lastBackupAt = later
+    await pickFile(JSON.stringify(file))
+    await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: 'Unisci ai dati attuali' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(prefs.lastBackupAt).toBe(later)
+  })
+
   it('previews the file and merges it into the current data', async () => {
     const mine = await addEntry({ at: '2026-09-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 4 } }] })
     const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }] })
