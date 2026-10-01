@@ -79,6 +79,8 @@ describe('Report page', () => {
     expect(sym).toHaveTextContent('5')
     expect(sym).toHaveTextContent('1 giorno')
     const tags = screen.getByRole('heading', { name: 'Tag' }).nextElementSibling!
+    // Days a tag was used on, not entries.
+    expect(within(tags as HTMLElement).getByRole('columnheader', { name: 'Giorni' })).toBeInTheDocument()
     expect(within(tags as HTMLElement).getByRole('row', { name: /Riposo/ })).toHaveTextContent(/^Riposo\s*1\s*–\s*–$/)
     const notable = screen.getByRole('heading', { name: 'Episodi e note' }).nextElementSibling!
     const rows = within(notable as HTMLElement).getAllByRole('row')

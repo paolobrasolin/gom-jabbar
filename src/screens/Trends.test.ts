@@ -228,7 +228,7 @@ describe('Trends tags and symptoms', () => {
     for (let n = 4; n < 8; n++) await addEntry({ at: at(n), ...legs(2) })
     await openTrends()
     expect(await screen.findByText('Servono almeno 5 giorni con e 5 senza un tag per confrontarli.')).toBeInTheDocument()
-    expect(await screen.findByText('Riposo · 4')).toBeInTheDocument()
+    expect(await screen.findByText('Riposo · 4 giorni')).toBeInTheDocument()
     expect(screen.queryByText('giorni con')).not.toBeInTheDocument()
   })
 

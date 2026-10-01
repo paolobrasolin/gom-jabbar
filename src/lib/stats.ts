@@ -206,14 +206,19 @@ export function symptomsRead(entries: Entry[], symptoms: Symptom[]): Symptom[] {
   return symptoms.filter((s) => ids.has(s.id)).sort((a, b) => a.order - b.order)
 }
 
-/** Tag usage counts in the range. */
-export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; count: number }[] {
-  const c = new Map<string, number>()
-  for (const e of entries) for (const t of mergedTags(e.layers)) c.set(t, (c.get(t) ?? 0) + 1)
+const GROUP_RANK: Record<Tag['group'], number> = { medication: 0, intervention: 1, context: 2 }
+
+/**
+ * Tag use in the range, in **days** (§6.3): three doses on one day are one day of medication, as clinicians count it
+ * (days per month). Medications first, then remedies, then context; the most used first within each.
+ */
+export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; days: number }[] {
+  const days = new Map<string, Set<string>>()
+  for (const e of entries) for (const t of mergedTags(e.layers)) days.set(t, (days.get(t) ?? new Set()).add(dayKey(e.at)))
   return tags
-    .map((tag) => ({ tag, count: c.get(tag.id) ?? 0 }))
-    .filter((x) => x.count > 0)
-    .sort((a, b) => b.count - a.count)
+    .map((tag) => ({ tag, days: days.get(tag.id)?.size ?? 0 }))
+    .filter((x) => x.days > 0)
+    .sort((a, b) => GROUP_RANK[a.tag.group] - GROUP_RANK[b.tag.group] || b.days - a.days)
 }
 
 export type PresetPoint = { at: number; value: number }
