@@ -205,6 +205,19 @@ describe('Drive zone', () => {
     expect(g.drive.files.size).toBe(1)
   })
 
+  it('disconnecting after the hour Google grants forgets the access here, and says the permission stays with Google', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    start(g.signIn('backup'))
+    await screen.findByText('Backup su Drive fatto')
+    clock += 61 * MIN
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Scollega' }))
+    expect(await screen.findByText('Scollegato qui. Il permesso resta su Google')).toBeInTheDocument()
+    expect(g.drive.revoked).toEqual([])
+    expect(within(card()).getByText(/^Non collegato/)).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Rimuovi' }))
+    expect(open).toHaveBeenCalledWith('https://myaccount.google.com/permissions', '_blank', 'noopener')
+  })
+
   it('names what went wrong in one line', async () => {
     g.drive.failures.push({ match: /GET .*files/, network: true })
     start(g.signIn('backup'))

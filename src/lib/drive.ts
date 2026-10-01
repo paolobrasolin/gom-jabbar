@@ -250,11 +250,13 @@ export function createDrive(deps: DriveDeps): CloudProvider {
     async disconnect() {
       const tok = token()
       save(null)
-      if (!tok) return
+      if (!tok) return false
       try {
-        await deps.fetch(REVOKE, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `token=${encodeURIComponent(tok)}` })
+        const res = await deps.fetch(REVOKE, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `token=${encodeURIComponent(tok)}` })
+        return res.ok
       } catch {
         /* forgotten here anyway; the grant can be revoked from the Google account */
+        return false
       }
     },
   }

@@ -49,6 +49,9 @@ export interface CloudProvider {
   /** Newest first. */
   list(): Promise<Result<RestorePoint[]>>
   get(id: string): Promise<Result<string>>
-  /** Forgets the token, the file and the account on this device; the file stays where it is. */
-  disconnect(): Promise<void>
+  /**
+   * Forgets the token, the file and the account on this device; the file stays where it is. True when it also revoked
+   * the grant with Google, which needs a token still alive: past its hour, the permission stays in the Google account.
+   */
+  disconnect(): Promise<boolean>
 }
