@@ -1,6 +1,6 @@
 import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
 import { REGIONS, FULL_BODY } from './regions'
-import { durationMs } from './entries'
+import { durationMs, isHead } from './entries'
 import { presetOf } from './presets'
 import { mergedReadings, mergedTags } from './layers'
 import { dayKey } from './time'
@@ -88,9 +88,12 @@ export type Summary = {
   max: number | null
   daysAtLeast5: number
   episodes: number
-  meanEpisodeMs: number | null
-  maxEpisodeMs: number | null
-  hoursPerWeek: number | null
+  /**
+   * The median length of the episodes that have ended; null when none has (§6.3). An episode still going on is not a
+   * length yet: counted in `ongoing`, never at its time so far, so a forgotten Termina cannot inflate it.
+   */
+  medianEpisodeMs: number | null
+  ongoing: number
 }
 
 export function summarize(entries: Entry[], days: number, symptom = PAIN, now = Date.now()): Summary {
@@ -99,18 +102,18 @@ export function summarize(entries: Entry[], days: number, symptom = PAIN, now = 
   const vs = read.map((r) => r.v)
   const dayMax = new Map<string, number>()
   for (const { e, v } of read) dayMax.set(dayKey(e.at), Math.max(dayMax.get(dayKey(e.at)) ?? 0, v))
-  const eps = entries.map((e) => durationMs(e, now)).filter((d): d is number => d !== null)
-  const total = eps.reduce((a, b) => a + b, 0)
+  const heads = entries.filter(isHead)
+  const ended = heads.filter((e) => e.endedAt).map((e) => durationMs(e, now)!).sort((a, b) => a - b)
+  const mid = ended.length >> 1
   return {
     entries: entries.length,
     daysWithEntries: series.size,
     mean: dailyMean(read.map(({ e, v }) => ({ at: e.at, v })))?.mean ?? null,
     max: vs.length ? Math.max(...vs) : null,
     daysAtLeast5: [...dayMax.values()].filter((v) => v >= 5).length,
-    episodes: eps.length,
-    meanEpisodeMs: eps.length ? total / eps.length : null,
-    maxEpisodeMs: eps.length ? Math.max(...eps) : null,
-    hoursPerWeek: eps.length ? total / 3_600_000 / (days / 7) : null,
+    episodes: heads.length,
+    medianEpisodeMs: ended.length ? (ended.length % 2 ? ended[mid] : (ended[mid - 1] + ended[mid]) / 2) : null,
+    ongoing: heads.length - ended.length,
   }
 }
 
