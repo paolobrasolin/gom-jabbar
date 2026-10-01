@@ -55,3 +55,11 @@ export async function salva(level = 5) {
   if (head?.getAttribute('aria-valuetext') === 'non indicato') await fireEvent.input(head, { target: { value: String(level) } })
   await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
 }
+
+/** The toast showing, once one is (#94): its live region is always in the page, so look for the toast itself. */
+export const findToast = (): Promise<HTMLElement> =>
+  waitFor(() => {
+    const el = document.querySelector<HTMLElement>('.toast')
+    if (!el) throw new Error('no toast')
+    return el
+  })

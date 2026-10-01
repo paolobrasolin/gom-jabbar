@@ -4,7 +4,7 @@ import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { addEntry, logUpdate, endEpisode, isHead } from '../lib/entries'
 import { addPreset, deletePreset, logPreset } from '../lib/presets'
-import { go, back } from '../test/nav'
+import { go, back, findToast } from '../test/nav'
 import App from '../App.svelte'
 import { mergedReadings, mergedTags } from '../lib/layers'
 
@@ -317,7 +317,7 @@ describe('Edit sheet', () => {
     await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'meglio' } })
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect((await db.entries.get(e.id))?.kind).toBe('chronic'))
-    const toast = await screen.findByRole('status')
+    const toast = await findToast()
     expect(toast).toHaveTextContent('Salvato')
     await fireEvent.click(within(toast).getByRole('button', { name: 'Annulla' }))
     await waitFor(async () => expect(await db.entries.get(e.id)).toEqual(before))

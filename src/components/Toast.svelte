@@ -1,26 +1,29 @@
 <script lang="ts">
-  import { toastState, closeToast, holdToast, releaseToast } from '../lib/toast.svelte'
+  import { toastState, closeToast, holdToast, releaseToast, type Toast } from '../lib/toast.svelte'
   import { t } from '../i18n/index.svelte'
   import MessageIcon from './MessageIcon.svelte'
 
   /** The kind in a shape as well as a colour (§10): an undo is a done with an action. */
   const ICON = { done: 'done', undo: 'done', refusal: 'needs', failure: 'failed' } as const
+  /** A finger on the toast holds its time (#94): an undo being read does not run out. On its region, which has a role. */
+  const hold = { onpointerdown: holdToast, onpointerup: releaseToast, onpointercancel: releaseToast, onpointerleave: releaseToast }
 </script>
 
-{#if toastState.current}
-  {@const m = toastState.current}
-  <!-- A finger on it holds its time (#94): an undo that is being read does not run out. -->
+<!--
+  Two live regions always in the page, empty until a message shows inside one (BX9): a region inserted together with
+  its text is often not announced. A failure is an alert; every other kind a status.
+-->
+<div class="live" role="status" {...hold}>{#if toastState.current && toastState.current.kind !== 'failure'}{@render toast(toastState.current)}{/if}</div>
+<div class="live" role="alert" {...hold}>{#if toastState.current?.kind === 'failure'}{@render toast(toastState.current)}{/if}</div>
+
+{#snippet toast(m: Toast)}
   <div
     class="msg toast {m.kind}"
     class:held={toastState.held}
     class:lifted={toastState.lift !== null}
     class:top={toastState.top}
     style:--lift={toastState.lift !== null ? `${toastState.lift}px` : undefined}
-    role={m.kind === 'failure' ? 'alert' : 'status'}
-    onpointerdown={holdToast}
-    onpointerup={releaseToast}
-    onpointercancel={releaseToast}
-    onpointerleave={releaseToast}>
+>
     <MessageIcon name={ICON[m.kind]} />
     <span class="grow">{m.message}</span>
     {#if m.action}
@@ -38,7 +41,7 @@
       {#key m.id}<span class="time" style:animation-duration="{m.ms}ms" aria-hidden="true"></span>{/key}
     {/if}
   </div>
-{/if}
+{/snippet}
 
 <style>
   .toast {

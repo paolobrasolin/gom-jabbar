@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/sve
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { install, initInstall } from '../lib/install.svelte'
-import { go, back, presetButton, presetItem, pickPreset, episodesButton, episodeItems, openEpisode, salva } from '../test/nav'
+import { go, back, presetButton, presetItem, pickPreset, episodesButton, episodeItems, openEpisode, salva, findToast } from '../test/nav'
 import App from '../App.svelte'
 import { intensityColor } from '../lib/color'
 import { LEG_IDS, REGION_BY_ID, shapeOf, shapeCenter, viewBox } from '../lib/regions'
@@ -334,12 +334,12 @@ describe('The drawer', () => {
     await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     // jsdom measures the drawer at 0px: the lift is there, its value is the drawer's height.
-    expect((await screen.findByRole('status')).style.getPropertyValue('--lift')).toBe('0px')
+    expect((await findToast()).style.getPropertyValue('--lift')).toBe('0px')
     await go('Diario')
     await back()
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Azzera' }))
-    expect((await screen.findByRole('status')).style.getPropertyValue('--lift')).toBe('0px')
+    expect((await findToast()).style.getPropertyValue('--lift')).toBe('0px')
   })
 
   it('shows the toast at its usual height away from the log', async () => {
@@ -347,7 +347,7 @@ describe('The drawer', () => {
     await go('Diario')
     const { showToast } = await import('../lib/toast.svelte')
     showToast('ciao')
-    expect((await screen.findByRole('status')).style.getPropertyValue('--lift')).toBe('')
+    expect((await findToast()).style.getPropertyValue('--lift')).toBe('')
   })
 
   it('Azzera empties the form and the toast undoes it', async () => {

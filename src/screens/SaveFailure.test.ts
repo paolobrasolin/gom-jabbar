@@ -36,9 +36,10 @@ describe('a failed write', () => {
     await salva()
     await said()
     await go('Diario')
-    expect(screen.getByRole('alert')).toHaveTextContent('Non riuscito: riprova')
-    await fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Chiudi' }))
-    expect(screen.queryByRole('alert')).toBeNull()
+    const fail = screen.getByText('Non riuscito: riprova').closest('.toast') as HTMLElement
+    expect(fail.closest('[role=alert]')).not.toBeNull()
+    await fireEvent.click(within(fail).getByRole('button', { name: 'Chiudi' }))
+    expect(screen.queryByText('Non riuscito: riprova')).toBeNull()
   })
 
   it('Salva on the log: says so, keeps the draft, and the next Salva saves', async () => {
@@ -124,14 +125,24 @@ describe('a failed write', () => {
 })
 
 describe('a failed read', () => {
+  it('the notice appears inside an alert region already in the page, so a screen reader announces it', async () => {
+    render(App)
+    await screen.findByRole('slider', { name: 'Dolore' })
+    const region = document.querySelector('.live.unread-slot[role=alert]')!
+    expect(region).toBeEmptyDOMElement()
+    reads.failed = true
+    await waitFor(() => expect(region).toHaveTextContent('Non riesco a leggere il diario'))
+    expect(document.querySelector('.live.unread-slot[role=alert]')).toBe(region)
+  })
+
   it('says the diary could not be read, never that it is empty, and offers a reload', async () => {
     await addEntry({ at: ago(30), layers: [{ regions: ['152'], readings: { pain: 4 } }] })
     vi.spyOn(db.entries, 'count').mockRejectedValue(new DOMException('The database connection is closing.', 'InvalidStateError'))
     const reload = vi.fn()
     render(App, { props: { reload } })
     await go('Diario')
-    const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Non riesco a leggere il diario')
+    const alert = (await screen.findByText(/Non riesco a leggere il diario/)).closest('.msg') as HTMLElement
+    expect(alert.closest('[role=alert]')).not.toBeNull()
     // A failure like any other (#94): red, its icon.
     expect(alert).toHaveClass('msg', 'failure')
     expect(alert.querySelector('svg.icon')).toHaveAttribute('data-icon', 'failed')
@@ -148,7 +159,7 @@ describe('a failed read', () => {
     vi.spyOn(db.entries, 'where').mockImplementation(((key: string) => (key === 'at' ? { aboveOrEqual: () => ({ toArray: closing }) } : where(key))) as never)
     render(App)
     await go('Andamento')
-    expect(await screen.findByRole('alert')).toHaveTextContent('Non riesco a leggere il diario')
+    expect((await screen.findByText(/Non riesco a leggere il diario/)).closest('[role=alert]')).not.toBeNull()
     expect(screen.queryByText('Nessuna voce in questo periodo.')).not.toBeInTheDocument()
   })
 })

@@ -75,13 +75,16 @@
 <svelte:window onpopstate={onPop} />
 
 <div class="app">
-  {#if reads.failed}
-    <div class="msg failure unread" role="alert">
-      <MessageIcon name="failed" />
-      <span class="grow">{t('app.readError')}</span>
-      <button class="btn small" onclick={reload}>{t('app.reload')}</button>
-    </div>
-  {/if}
+  <!-- An alert region always in the page, so the notice is announced when it appears in it (BX9). -->
+  <div class="live unread-slot" role="alert">
+    {#if reads.failed}
+      <div class="msg failure unread">
+        <MessageIcon name="failed" />
+        <span class="grow">{t('app.readError')}</span>
+        <button class="btn small" onclick={reload}>{t('app.reload')}</button>
+      </div>
+    {/if}
+  </div>
   {#if tab !== 'log'}
     <header class="bar">
       <button class="back" aria-label={t('nav.back')} onclick={() => history.back()}>
@@ -111,6 +114,7 @@
 <style>
   /* A failed read (§4.1): first in the column, above the header, until a reload; the arrow and the menu stay reachable. */
   /* A failure that lasts (#94): it stays until the app is reloaded. */
-  .unread { flex: none; margin: calc(8px + env(safe-area-inset-top)) 12px 4px; }
+  .unread-slot { flex: none; }
+  .unread { margin: calc(8px + env(safe-area-inset-top)) 12px 4px; }
   .unread .btn { background: var(--fail-ink); color: var(--fail-bg); font-weight: 600; }
 </style>
