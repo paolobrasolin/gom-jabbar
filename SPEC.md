@@ -124,10 +124,10 @@ Default symptoms (the dictionary's it / en):
 | heaviness | body | Pesantezza | Heaviness |
 | fatigue | body | Stanchezza | Fatigue |
 | fog | mind | Nebbia mentale | Brain fog |
-| tenderness | body | Dolorabilità al tatto | Tenderness |
+| tenderness | body | Male al tocco | Sore to the touch |
 | stiffness | body | Rigidità | Stiffness |
 | anxiety | mind | Ansia | Anxiety |
-| depression | mind | Depressione | Depression |
+| depression | mind | Umore basso | Low mood |
 
 Default tags:
 
@@ -144,8 +144,8 @@ Default tags:
 | period | context | Ciclo | Period |
 | stress | context | Stress | Stress |
 | badsleep | context | Dormito male | Slept badly |
-| standing | context | In piedi a lungo | Standing long |
-| sitting | context | Seduta a lungo | Sitting long |
+| standing | context | A lungo in piedi | Standing for long |
+| sitting | context | A lungo a sedere | Sitting for long |
 | hot_weather | context | Caldo | Hot weather |
 | travel | context | Viaggio | Travel |
 

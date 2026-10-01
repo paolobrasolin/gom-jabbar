@@ -38,6 +38,12 @@ describe('i18n', () => {
   it('has a singular for every counted message, in both languages', () => {
     for (const m of [it_, en] as Record<string, string>[]) for (const k of Object.keys(m).filter((k) => k.endsWith('.one'))) expect(m, k).toHaveProperty([k.slice(0, -4)])
   })
+  it('names the seed in plain words: a feeling, not a diagnosis; nobody gendered', () => {
+    prefs.lang = 'it'
+    expect(['depression', 'sitting', 'standing', 'tenderness'].map((id) => tl(`i18n:vocab.${id}`))).toEqual(['Umore basso', 'A lungo a sedere', 'A lungo in piedi', 'Male al tocco'])
+    prefs.lang = 'en'
+    expect(['depression', 'sitting', 'standing', 'tenderness'].map((id) => tl(`i18n:vocab.${id}`))).toEqual(['Low mood', 'Sitting for long', 'Standing for long', 'Sore to the touch'])
+  })
   it('has every seed label in both languages: the keys are user data, added, never renamed or removed', () => {
     for (const x of [...DEFAULT_SYMPTOMS, ...DEFAULT_TAGS]) {
       const key = x.label.replace(/^i18n:/, '')
