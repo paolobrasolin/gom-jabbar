@@ -89,6 +89,18 @@ describe('Diary list', () => {
   })
 })
 
+describe('Diary window', () => {
+  it('an episode begun before the window but read within it has its row, with its whole trail', async () => {
+    const head = await addEntry({ at: ago(40 * DAY), kind: 'episode', layers: [L(['152'], 7)] })
+    await logUpdate(head.id, [{ pain: 5 }], ago(35 * DAY))
+    await logUpdate(head.id, [{ pain: 2 }], ago(2 * DAY))
+    await openDiary()
+    const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
+    expect(row).toHaveTextContent('7 → 5 → 2')
+    expect(rows()).toHaveLength(1)
+  })
+})
+
 describe('Edit sheet', () => {
   // An episode's readings say their day when it spans two: at 15:00 an episode begun three hours ago is today's.
   beforeEach(() => {
