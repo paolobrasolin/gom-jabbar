@@ -1,6 +1,6 @@
 # Release checklist
 
-Automated on every push: type check, unit tests, build, bundle size gate. A push to `main` also deploys to Pages, and installed phones pick it up on their next open without asking, so only merge into `main` what has passed the manual pass below.
+Automated on every push: type check, unit tests, build, bundle size gate, licence notices. A push to `main` also deploys to Pages, and the installed app switches to the release by itself within seconds of its next open or return to the foreground (SPEC §4). So the manual pass below cannot hold a release back from the tester: it runs right after the deploy, on the live app, and what it finds is fixed by another release. What another release cannot fix, a database upgrade above all, is proven before merging, by the migration tests and their fixtures (CLAUDE.md, "User data is never lost").
 
 Release, from a clean tree on `main`:
 
@@ -12,7 +12,7 @@ git push               # tags follow (push.followTags is set)
 
 The Settings footer shows `Gom Jabbar X.Y.Z · <commit day> · <short commit>`; `-dirty` after the hash means a local build, never a deploy.
 
-Manual, on a real phone, before telling anyone to update:
+Manual, on a real phone, right after the deploy (the tester already has the release):
 
 ## Android (Chrome)
 - [ ] Open the Pages URL, install to the home screen, launch from the icon: opens straight on the log screen, no browser chrome.
