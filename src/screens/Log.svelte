@@ -183,23 +183,12 @@
     }
   }
 
-  /** The preset the form carries: the presets' dropdown shows it pressed and names it to screen readers. */
-  const linked = $derived(presets.value.find((p) => p.id === draft.presetId))
   let presetOpen = $state.raw<Preset | null>(null)
   let presetSeed = $state.raw<PresetSeed | null>(null)
 
   /** Nuovo preset, last in the presets' dropdown (§5.6): name what is on the form, as it stands, empty included. */
   function newPreset() {
     presetSeed = { draft: $state.snapshot(draft) as EntryDraft }
-  }
-  /** The form now carries the name: the ordinary Salva logs the first reading under it, and so does its sheet, which then empties the form. Undo on the toast unlinks it. */
-  function linkPreset(p: Preset) {
-    draft.presetId = p.id
-    // The preset's kind is what its readings are (§5.6): the form follows it, as the preset sheet does.
-    draft.kind = p.kind
-  }
-  function unlinkPreset(p: Preset) {
-    if (draft.presetId === p.id) draft.presetId = undefined
   }
 </script>
 
@@ -229,7 +218,7 @@
         {/snippet}
       </Dropdown>
     {/if}
-    <Dropdown label={linked ? `${t('preset.strip')}: ${linked.name}` : t('preset.strip')} cls={linked ? 'presets linked' : 'presets'} end>
+    <Dropdown label={t('preset.strip')} cls="presets" end>
       {#snippet trigger()}
         <span class="name">{t('preset.strip')}</span>
         {@render chevron()}
@@ -238,15 +227,12 @@
         {#each presets.value as p (p.id)}
           {@const last = lastBy.value[p.id]}
           {@const hl = last ? entryHeadline(last) : null}
-          <button role="menuitem" aria-current={draft.presetId === p.id ? 'true' : undefined} onclick={() => {
+          <button role="menuitem" onclick={() => {
               close()
               presetOpen = p
             }}>
             {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>{:else}<span class="dot empty"></span>{/if}
             <span class="grow">{p.name} · {last ? formatDuration(Math.max(0, tick - Date.parse(last.at)), units) : t('preset.never')}</span>
-            {#if draft.presetId === p.id}
-              <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>
-            {/if}
           </button>
         {/each}
         <button role="menuitem" class="new" onclick={() => {
@@ -294,8 +280,9 @@
   <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
 {/snippet}
 
-<PresetForm bind:seed={presetSeed} symptoms={symptoms.value} oncreate={linkPreset} onundo={unlinkPreset} />
-<PresetSheet bind:preset={presetOpen} symptoms={symptoms.value} onsaved={(p) => draft.presetId === p.id && reset()} />
+<!-- Nuovo preset makes the preset and nothing else: the log form stays a plain entry (§5.6). -->
+<PresetForm bind:seed={presetSeed} symptoms={symptoms.value} />
+<PresetSheet bind:preset={presetOpen} symptoms={symptoms.value} />
 <EpisodeSheet bind:entry={episode} tagDefs={tags.value} symptoms={symptoms.value} onedit={(e) => (editing = e)} />
 <EditSheet bind:entry={editing} symptoms={symptoms.value} tags={tags.value} />
 <Sheet bind:open={howTo} title={t('install.title')}>
@@ -321,13 +308,10 @@
   .top :global(.episodes) { font-weight: 600; max-width: 100%; }
   /* Pressed while the form carries a preset; the menu ticks which one. */
   .top :global(.presets) { max-width: 100%; }
-  .top :global(.presets.linked) { background: var(--accent); color: var(--accent-ink); }
   .dot { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
   .dot.empty { background: var(--surface-2); }
   .dot.plus { background: transparent; border: 1.5px solid var(--border); }
   .dot.plus svg { width: 14px; height: 14px; }
-  [aria-current='true'] { font-weight: 700; }
-  .tick { flex: none; width: 20px; height: 20px; color: var(--accent); }
   /* No tab bar under the drawer any more: it keeps clear of the gesture bar itself. */
   .log :global(.drawer .inner) { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   .actions { display: flex; gap: 10px; flex: none; }

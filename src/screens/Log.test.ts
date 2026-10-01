@@ -707,7 +707,7 @@ describe('Mind and mind symptoms', () => {
 })
 
 describe('Presets', () => {
-  it('the Preset dropdown offers a new preset before any exists; the form is its shape, the chips say what it asks, the first reading is saved from the form', async () => {
+  it('the Preset dropdown offers a new preset before any exists; the form is its shape, the chips say what it asks, the form stays as it was', async () => {
     render(App)
     // Before any preset, the dropdown holds only the way to make one.
     expect(presetButton()).toHaveAccessibleName('Preset')
@@ -749,15 +749,12 @@ describe('Presets', () => {
     const [p] = await db.presets.toArray()
     expect(p).toMatchObject({ name: 'Le gambe', kind: 'chronic' })
     expect(p.layers).toEqual([{ regions: [...LEG_IDS].sort(), asks: ['pain', 'stiffness'] }])
-    // The form is untouched and now carries the name; the ordinary Salva logs the first reading under it.
-    // The button keeps its word and shows the link by its colour; screen readers hear the name, the menu ticks it.
-    expect(presetButton()).toHaveAccessibleName('Preset: Le gambe')
-    expect(presetButton()).toHaveTextContent(/^Preset$/)
-    expect(presetButton()).toHaveClass('linked')
-    const linked = await presetItem(/Le gambe/)
-    expect(linked).toHaveTextContent('mai')
-    expect(linked).toHaveAttribute('aria-current', 'true')
-    expect(linked.querySelector('.tick')).not.toBeNull()
+    // The form is untouched and carries nothing: the preset is made, the log form stays a plain entry (§5.6).
+    expect(presetButton()).toHaveAccessibleName('Preset')
+    expect(presetButton()).not.toHaveClass('linked')
+    const made = await presetItem(/Le gambe/)
+    expect(made).toHaveTextContent('mai')
+    expect(made).not.toHaveAttribute('aria-current')
     // The + of Nuovo preset is drawn, not typed, so it sits in the middle of its circle.
     expect((await presetItem('Nuovo preset')).querySelector('svg')).not.toBeNull()
     await fireEvent.keyDown(await menuOfPresets(), { key: 'Escape' })
@@ -767,57 +764,39 @@ describe('Presets', () => {
     await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e.presetId).toBe(p.id)
+    expect(e).not.toHaveProperty('presetId')
     expect(e.layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: { pain: 5, swelling: 3 }, tags: ['heat'] }])
-    await waitFor(async () => expect(await presetItem(/Le gambe/)).toHaveTextContent(/^5\s*Le gambe · 0m$/))
-    expect(presetButton()).toHaveAccessibleName('Preset')
-    // The diary row is named after it.
-    await go('Diario')
-    expect(await screen.findByText(/Le gambe/)).toBeInTheDocument()
+    // A reading under the preset comes from its own sheet.
+    await pickPreset(/Le gambe/)
+    const sheet = await screen.findByRole('dialog', { name: 'Le gambe' })
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '4' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await presetItem(/Le gambe/)).toHaveTextContent(/^4\s*Le gambe · 0m$/))
   })
 
-  it("the new preset's kind is the kind of the reading the form then logs under it", async () => {
-    // The preset form takes the log form as it stands, its kind included.
+  it('zones changed in the preset form stay in the preset: the log form keeps its own, and its Salva files nothing under the new name', async () => {
     render(App)
-    await more()
-    await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
-    await body()
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await pickPreset('Nuovo preset')
     const form = await screen.findByRole('dialog', { name: 'Nuovo preset' })
     await within(within(form).getByRole('group', { name: 'Chiede' })).findByRole('button', { name: 'Dolore' })
-    expect(within(form).getByRole('button', { name: 'Episodio' })).toHaveAttribute('aria-pressed', 'true')
-    await fireEvent.click(within(form).getByRole('button', { name: 'Cronico' }))
-    await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Schiena' } })
+    // In the preset form: the legs out, the arms in.
+    await fireEvent.click(within(form).getByRole('button', { name: 'Gambe' }))
+    await fireEvent.click(within(form).getByRole('button', { name: 'Braccia' }))
+    await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Braccia' } })
     await fireEvent.click(within(form).getByRole('button', { name: 'Crea preset' }))
-    await waitFor(() => expect(presetButton()).toHaveAccessibleName('Preset: Schiena'))
-    await salva()
-    await waitFor(async () => expect(await db.entries.count()).toBe(1))
-    const [e] = await db.entries.toArray()
+    await waitFor(async () => expect(await db.presets.count()).toBe(1))
     const [p] = await db.presets.toArray()
-    expect(p.kind).toBe('chronic')
-    expect(e).toMatchObject({ presetId: p.id, kind: 'chronic' })
-    expect(e).not.toHaveProperty('endedAt')
-    expect(episodesButton()).not.toBeInTheDocument()
-  })
-
-  it('an episode preset named from a chronic form starts an episode on the next Salva', async () => {
-    render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
-    await pickPreset('Nuovo preset')
-    const form = await screen.findByRole('dialog', { name: 'Nuovo preset' })
-    await within(within(form).getByRole('group', { name: 'Chiede' })).findByRole('button', { name: 'Dolore' })
-    await fireEvent.click(within(form).getByRole('button', { name: 'Episodio' }))
-    await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Emicrania' } })
-    await fireEvent.click(within(form).getByRole('button', { name: 'Crea preset' }))
-    await waitFor(() => expect(presetButton()).toHaveAccessibleName('Preset: Emicrania'))
+    expect(p.layers[0].regions).not.toContain(LEG_IDS[0])
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuovo preset' })).not.toBeInTheDocument())
     await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
-    expect(e).toMatchObject({ kind: 'episode', episodeId: e.id, endedAt: null })
+    expect(e).not.toHaveProperty('presetId')
+    expect(e.layers[0].regions).toEqual([...LEG_IDS].sort())
   })
 
-  it('undo on the created preset removes it and unlinks the form', async () => {
+  it('undo on the created preset removes it; the form never carried it', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await pickPreset('Nuovo preset')
@@ -828,33 +807,8 @@ describe('Presets', () => {
     await waitFor(async () => expect(await db.presets.count()).toBe(1))
     await fireEvent.click(await screen.findByRole('button', { name: 'Annulla' }))
     await waitFor(async () => expect(await db.presets.count()).toBe(0))
-    await waitFor(() => expect(presetButton()).toHaveAccessibleName('Preset'))
     expect(within(await menuOfPresets()).getAllByRole('menuitem')).toHaveLength(1)
-    // Azzera was enabled by the link alone; the entry saved now carries no preset.
     expect(screen.getByRole('button', { name: 'Gambe' })).toHaveAttribute('aria-pressed', 'true')
-    await salva()
-    await waitFor(async () => expect(await db.entries.count()).toBe(1))
-    expect((await db.entries.toArray())[0]).not.toHaveProperty('presetId')
-  })
-
-  it('a link alone makes the form worth clearing, and Azzera drops it', async () => {
-    const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic' })
-    render(App)
-    expect(screen.getByRole('button', { name: 'Azzera' })).toBeDisabled()
-    await pickPreset('Nuovo preset')
-    const form = await screen.findByRole('dialog', { name: 'Nuovo preset' })
-    await within(within(form).getByRole('group', { name: 'Chiede' })).findByRole('button', { name: 'Dolore' })
-    await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Niente' } })
-    await fireEvent.click(within(form).getByRole('button', { name: 'Crea preset' }))
-    await waitFor(async () => expect(await db.presets.count()).toBe(2))
-    await waitFor(() => expect(presetButton()).toHaveAccessibleName('Preset: Niente'))
-    expect(screen.getByRole('button', { name: 'Azzera' })).toBeEnabled()
-    await fireEvent.click(screen.getByRole('button', { name: 'Azzera' }))
-    expect(presetButton()).toHaveAccessibleName('Preset')
-    await salva()
-    await waitFor(async () => expect(await db.entries.count()).toBe(1))
-    expect((await db.entries.toArray())[0]).not.toHaveProperty('presetId')
-    void p
   })
 
   it('an empty form gives an empty shape: no location, pain asked; the time chip is not part of it', async () => {
@@ -999,7 +953,7 @@ describe('Presets', () => {
     await waitFor(async () => expect(await db.presets.count()).toBe(1))
     const [p] = await db.presets.toArray()
     expect(p.layers).toEqual([{ regions: [...LEG_IDS].sort(), asks: ['pain'] }, { regions: ['mind'], asks: [] }])
-    // Logging from the chip's sheet empties the linked form, so the next Salva does not repeat the reading.
+    // Logging from the preset's own sheet.
     await pickPreset(/Gambe e testa/)
     const ps = await screen.findByRole('dialog', { name: 'Gambe e testa' })
     const chips = ps.querySelectorAll<HTMLButtonElement>('.chips.layers .area')
@@ -1010,9 +964,10 @@ describe('Presets', () => {
     await fireEvent.click(within(ps).getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     expect((await db.entries.toArray())[0].layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: { pain: 2 }, tags: [] }, { regions: ['mind'], readings: {}, tags: [] }])
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Gambe' })).toHaveAttribute('aria-pressed', 'false'))
+    // The log form, linked to nothing, stays as it was.
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Azzera' })).toBeEnabled()
     expect(presetButton()).toHaveAccessibleName('Preset')
-    expect(screen.getByRole('button', { name: 'Azzera' })).toBeDisabled()
   })
 
   it('a preset with several layers: the sheet asks each layer its own sliders and saves each its own levels', async () => {

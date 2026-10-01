@@ -20,9 +20,7 @@
   let {
     seed = $bindable(null),
     symptoms = [],
-    oncreate,
-    onundo,
-  }: { seed: PresetSeed | null; symptoms?: Symptom[]; oncreate?: (p: Preset) => void; onundo?: (p: Preset) => void } = $props()
+  }: { seed: PresetSeed | null; symptoms?: Symptom[] } = $props()
 
   let open = $state(false)
   let draft = $state<EntryDraft>(emptyDraft())
@@ -97,16 +95,10 @@
       open = false
       if (next) showToast(t('preset.saved'), { label: t('log.undo'), run: () => void restorePreset(before).catch(failed) })
     } else {
+      // The preset alone: the form it was made from stays as it was, linked to nothing (§5.6).
       const p = await addPreset(input)
       open = false
-      oncreate?.(p)
-      showToast(t('preset.created'), {
-        label: t('log.undo'),
-        run: () => {
-          void deletePreset(p.id).catch(failed)
-          onundo?.(p)
-        },
-      })
+      showToast(t('preset.created'), { label: t('log.undo'), run: () => void deletePreset(p.id).catch(failed) })
     }
   }
 </script>
