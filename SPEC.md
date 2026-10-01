@@ -8,7 +8,7 @@
 2. **Owns its data.** Everything is stored locally and exportable to a file at any time. No accounts, no server, no analytics.
 3. **Works on a phone, offline, always.** Android first, iOS supported. Installed to the home screen, opens instantly.
 4. **Useful at the doctor's.** A one-page printable report for any date range.
-5. **Flexible enough for lipedema, fibromyalgia and whatever else comes up**, without becoming a form builder.
+5. **Flexible enough for more than one chronic condition, and whatever else comes up**, without becoming a form builder.
 
 ## 2. Non-goals (v1)
 
@@ -21,7 +21,7 @@
 ## 3. Users and context
 
 - Primary user: a single person, the tester. Android phone. Italian speaker.
-- Conditions: lipedema, fibromyalgia, others. Pain is often multi-region, symmetric (both legs, both arms), and sometimes full-body. Swelling, heaviness and fatigue matter as much as pain.
+- Conditions: chronic, more than one. Pain is often multi-region, symmetric (both legs, both arms), and sometimes full-body. Swelling, heaviness and fatigue matter as much as pain.
 - Usage pattern: logging happens when they notice, often at bad moments (in pain, tired, in bed). The UI must tolerate imprecision and never punish a quick entry.
 
 ## 4. Platform and stack
