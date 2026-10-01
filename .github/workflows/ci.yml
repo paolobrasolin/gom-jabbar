@@ -5,11 +5,12 @@ on:
     branches-ignore: [main]
   pull_request:
 
+# Actions are pinned by commit, the release in the comment, as in deploy.yml (the repo refuses unpinned ones).
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
       # Runs check, tests, build and the size gate (see flake.nix).
       - run: nix build --print-build-logs
