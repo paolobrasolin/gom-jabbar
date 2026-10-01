@@ -529,7 +529,8 @@ describe('Times that cannot be, in the edit sheet', () => {
     await fireEvent.click(within(edit).getByRole('button', { name: /^Altro/ }))
     await fireEvent.click(within(within(edit).getByRole('group', { name: 'Quando' })).getByRole('button', { name: '3h fa' }))
     await fireEvent.click(within(edit).getByRole('button', { name: 'Salva' }))
-    expect(await screen.findByText("È prima dell'inizio dell'episodio")).toBeInTheDocument()
+    // At the top, clear of the time rows and of Salva at the foot of the sheet.
+    expect((await screen.findByText("È prima dell'inizio dell'episodio")).closest('.toast')).toHaveClass('top')
     expect((await db.entries.get(u!.id))?.at).toBe(u!.at)
     expect(screen.getByRole('dialog', { name: 'Modifica' })).toBeInTheDocument()
     await fireEvent.keyDown(document, { key: 'Escape' })

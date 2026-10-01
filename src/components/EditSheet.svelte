@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import Sheet from './Sheet.svelte'
   import EntryForm from './EntryForm.svelte'
   import PresetForm, { type PresetSeed } from './PresetForm.svelte'
   import { t } from '../i18n/index.svelte'
   import { draftFromEntry, draftToInput, emptyDraft, type EntryDraft } from '../lib/draft'
   import { editEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode, timeProblem, type TimeProblem } from '../lib/entries'
-  import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
+  import { showToast, haptic, dismissToast, toastState } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
   import type { Entry, Layer, Symptom, Tag } from '../lib/types'
 
@@ -35,6 +36,17 @@
   })
 
   let form = $state<EntryForm>()
+  /**
+   * With the form's drawer pulled up it fills the sheet down to Salva: a toast (a refusal pointing at a time row) goes to
+   * the top of the screen, as on the log (§6.1), and back where it was when the sheet closes.
+   */
+  let opened = $state(false)
+  $effect(() => {
+    if (!open || !opened) return
+    const was = untrack(() => toastState.top)
+    toastState.top = true
+    return () => (toastState.top = was)
+  })
   /** What is wrong with the times as edited: an update is bounded by its head, a head by its first update. */
   async function timesOf(e: Entry, input: { at?: string; kind?: string; endedAt?: string | null }): Promise<TimeProblem | null> {
     const at = input.at!
@@ -100,7 +112,7 @@
 </script>
 
 <Sheet bind:open title={t('diary.edit')} tall>
-  <EntryForm bind:this={form} bind:draft {symptoms} {tags} {lock}>
+  <EntryForm bind:this={form} bind:draft bind:opened {symptoms} {tags} {lock}>
     {#snippet actions()}
       <div class="row">
         <button class="btn danger" onclick={remove}>{t('diary.delete')}</button>
