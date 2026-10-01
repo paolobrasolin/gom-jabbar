@@ -13,6 +13,7 @@
   import { live } from '../lib/live.svelte'
   import { prefs, savePrefs, type Tab } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
+  import { loadDraft, storeDraft, pruneUnknown } from '../lib/logDraft'
   import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, timeProblem, type Episode } from '../lib/entries'
   import { showToast, haptic, toastState } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
@@ -93,7 +94,11 @@
   /** The body's headline (§6.1), the first enabled body symptom: a new draft starts it at 5, or where the last save left it. */
   const head = $derived(firstEnabled(symptoms.value, 'body')?.id)
   // Every draft starts Cronico: the kind is chosen per entry, never remembered (§6.1).
-  let draft = $state(emptyDraft())
+  // The draft outlives the log (§6.1): back from another screen, a reload or a kill, it is where it was left.
+  let draft = $state(loadDraft() ?? emptyDraft())
+  $effect(() => {
+    storeDraft($state.snapshot(draft) as EntryDraft)
+  })
   /** Anything worth clearing: a region, a tag or a reading on any layer, a time, a note, a preset just named. */
   const dirty = $derived(
     draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.keys(l.readings).length > 0) ||
@@ -163,7 +168,8 @@
     try {
       let entry
       try {
-        entry = await addEntry(times)
+        // A kept draft may name a tag, a symptom or a preset deleted meanwhile: dropped, never stored dangling.
+        entry = await addEntry(await pruneUnknown(times))
       } catch (e) {
         return failed(e)
       }

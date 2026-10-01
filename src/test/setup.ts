@@ -37,3 +37,12 @@ for (const g of [globalThis, window] as unknown as Record<string, unknown>[]) {
 beforeEach(async () => {
   for (let i = 0; i < 100 && (history.state as { sheet?: number } | null)?.sheet; i++) await new Promise((r) => setTimeout(r, 10))
 })
+
+// The log's draft is mirrored to local storage (§6.1): one test's draft must not come back in the next.
+beforeEach(() => {
+  try {
+    localStorage.removeItem('gj.draft')
+  } catch {
+    /* no storage */
+  }
+})
