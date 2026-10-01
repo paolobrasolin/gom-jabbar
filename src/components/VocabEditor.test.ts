@@ -21,7 +21,7 @@ const itemOf = (name: string) => screen.getByRole('button', { name }).closest('.
 describe('Vocabulary editor: symptoms', () => {
   it('lists the symptoms by category in order, every one switchable, pain included', async () => {
     render(VocabEditor, { table: 'symptoms' })
-    await waitFor(() => expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Dolorabilità al tatto', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Depressione']))
+    await waitFor(() => expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Male al tocco', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Umore basso']))
     const titles = Array.from(document.querySelectorAll('.group-title')).map((p) => p.textContent)
     expect(titles).toEqual(['Corpo', 'Mente'])
     expect(screen.getAllByPlaceholderText('Nuovo…')).toHaveLength(2)
@@ -37,18 +37,18 @@ describe('Vocabulary editor: symptoms', () => {
     await fireEvent.input(fields[1], { target: { value: 'Irritabilità' } })
     await fireEvent.keyDown(fields[1], { key: 'Enter' })
     await waitFor(() => expect(names()).toContain('Irritabilità'))
-    expect(names().slice(-2)).toEqual(['Depressione', 'Irritabilità'])
+    expect(names().slice(-2)).toEqual(['Umore basso', 'Irritabilità'])
     const added = (await db.symptoms.orderBy('order').last())!
     expect(added).toMatchObject({ category: 'mind', label: 'Irritabilità', enabled: true, order: 9 })
     await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
-    await waitFor(() => expect(names().slice(-2)).toEqual(['Irritabilità', 'Depressione']))
+    await waitFor(() => expect(names().slice(-2)).toEqual(['Irritabilità', 'Umore basso']))
     await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
-    await waitFor(() => expect(names().slice(-3)).toEqual(['Irritabilità', 'Ansia', 'Depressione']))
+    await waitFor(() => expect(names().slice(-3)).toEqual(['Irritabilità', 'Ansia', 'Umore basso']))
     await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
-    await waitFor(() => expect(names().slice(-4)).toEqual(['Irritabilità', 'Nebbia mentale', 'Ansia', 'Depressione']))
+    await waitFor(() => expect(names().slice(-4)).toEqual(['Irritabilità', 'Nebbia mentale', 'Ansia', 'Umore basso']))
     await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
     await new Promise((res) => setTimeout(res, 20))
-    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Dolorabilità al tatto', 'Rigidità', 'Irritabilità', 'Nebbia mentale', 'Ansia', 'Depressione'])
+    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Male al tocco', 'Rigidità', 'Irritabilità', 'Nebbia mentale', 'Ansia', 'Umore basso'])
   })
 
   it('switches a symptom off and on', async () => {
@@ -118,7 +118,7 @@ describe('Vocabulary editor: symptoms', () => {
     await fireEvent.click(within(itemOf('Dolore')).getByRole('button', { name: '↑' }))
     await fireEvent.click(within(itemOf('Rigidità')).getByRole('button', { name: '↓' }))
     await new Promise((res) => setTimeout(res, 20))
-    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Dolorabilità al tatto', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Depressione'])
+    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Male al tocco', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Umore basso'])
   })
 
   it('adds a symptom from the field, by button or Enter, ignoring blanks', async () => {
@@ -271,7 +271,7 @@ describe('Vocabulary editor: deleting (§6.4)', () => {
 
   it('can empty a whole group', async () => {
     render(VocabEditor, { table: 'tags' })
-    for (const name of ['Ciclo', 'Stress', 'Dormito male', 'In piedi a lungo', 'Seduta a lungo', 'Caldo', 'Viaggio']) {
+    for (const name of ['Ciclo', 'Stress', 'Dormito male', 'A lungo in piedi', 'A lungo a sedere', 'Caldo', 'Viaggio']) {
       await fireEvent.click(await screen.findByRole('button', { name: `Elimina ${name}` }))
       await waitFor(() => expect(names()).not.toContain(name))
     }
