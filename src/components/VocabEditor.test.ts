@@ -167,9 +167,9 @@ describe('Vocabulary editor: names are unique', () => {
     render(VocabEditor, { table: 'tags' })
     await fireEvent.click(await screen.findByRole('button', { name: 'Stress' }))
     const input = screen.getByDisplayValue('Stress')
-    await fireEvent.input(input, { target: { value: 'CALORE' } })
+    await fireEvent.input(input, { target: { value: 'IMPACCO CALDO' } })
     await fireEvent.keyDown(input, { key: 'Enter' })
-    await waitFor(() => expect(toastState.current?.message).toBe('«Calore» c\'è già'))
+    await waitFor(() => expect(toastState.current?.message).toBe('«Impacco caldo» c\'è già'))
     expect((await db.tags.get('stress'))?.label).toBe('i18n:vocab.stress')
     expect(screen.getByRole('button', { name: 'Stress' })).toBeInTheDocument()
   })
@@ -271,7 +271,7 @@ describe('Vocabulary editor: deleting (§6.4)', () => {
 
   it('can empty a whole group', async () => {
     render(VocabEditor, { table: 'tags' })
-    for (const name of ['Ciclo', 'Stress', 'Dormito male', 'A lungo in piedi', 'A lungo a sedere', 'Caldo', 'Viaggio']) {
+    for (const name of ['Ciclo', 'Stress', 'Dormito male', 'A lungo in piedi', 'A lungo a sedere', 'Clima caldo', 'Viaggio']) {
       await fireEvent.click(await screen.findByRole('button', { name: `Elimina ${name}` }))
       await waitFor(() => expect(names()).not.toContain(name))
     }

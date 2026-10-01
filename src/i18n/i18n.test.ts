@@ -41,8 +41,11 @@ describe('i18n', () => {
   it('names the seed in plain words: a feeling, not a diagnosis; nobody gendered', () => {
     prefs.lang = 'it'
     expect(['depression', 'sitting', 'standing', 'tenderness'].map((id) => tl(`i18n:vocab.${id}`))).toEqual(['Umore basso', 'A lungo a sedere', 'A lungo in piedi', 'Male al tocco'])
+    // A remedy and the weather never share a word alone: "Freddo" next to "Caldo" read as weather.
+    expect(['heat', 'cold', 'hot_weather'].map((id) => tl(`i18n:vocab.${id}`))).toEqual(['Impacco caldo', 'Impacco freddo', 'Clima caldo'])
     prefs.lang = 'en'
     expect(['depression', 'sitting', 'standing', 'tenderness'].map((id) => tl(`i18n:vocab.${id}`))).toEqual(['Low mood', 'Sitting for long', 'Standing for long', 'Sore to the touch'])
+    expect(['heat', 'cold', 'hot_weather'].map((id) => tl(`i18n:vocab.${id}`))).toEqual(['Warm pack', 'Cold pack', 'Hot weather'])
   })
   it('has every seed label in both languages: the keys are user data, added, never renamed or removed', () => {
     for (const x of [...DEFAULT_SYMPTOMS, ...DEFAULT_TAGS]) {

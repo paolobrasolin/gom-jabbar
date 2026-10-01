@@ -398,18 +398,18 @@ describe('Tag discoverability', () => {
     let strip = await screen.findByLabelText('Tag frequenti')
     const names = () => within(strip).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)
     // Every enabled tag, vocabulary order until something has been used.
-    await waitFor(() => expect(names().slice(0, 7)).toEqual(['Tutti i tag', 'Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Calore', 'Freddo']))
+    await waitFor(() => expect(names().slice(0, 7)).toEqual(['Tutti i tag', 'Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Impacco caldo', 'Impacco freddo']))
     expect(names()).toHaveLength(16)
     expect(names().at(-1)).toBe('Viaggio')
-    await fireEvent.click(within(strip).getByRole('button', { name: 'Calore' }))
-    expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(within(strip).getByRole('button', { name: 'Impacco caldo' }))
+    expect(within(strip).getByRole('button', { name: 'Impacco caldo' })).toHaveAttribute('aria-pressed', 'true')
     await salva()
     await waitFor(async () => expect(mergedTags((await db.entries.toArray())[0].layers)).toEqual(['heat']))
     // Once used, a tag is the most frequent: first after the toggle, and the form is clean again (folded: pull it up).
     await more()
     strip = await screen.findByLabelText('Tag frequenti')
-    await waitFor(() => expect(names()[1]).toBe('Calore'))
-    expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'false')
+    await waitFor(() => expect(names()[1]).toBe('Impacco caldo'))
+    expect(within(strip).getByRole('button', { name: 'Impacco caldo' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('an episode row in the menu says what, where, since when, then its tags: a tag never sits where the place goes', async () => {
@@ -434,7 +434,7 @@ describe('Tag discoverability', () => {
     // Nothing is carried: the sheet opens with every chip unpressed, and a chip is what is done now.
     sheet = await openEpisode()
     expect(await within(sheet).findByRole('button', { name: 'Riposo' })).toHaveAttribute('aria-pressed', 'false')
-    await fireEvent.click(within(sheet).getByRole('button', { name: 'Calore' }))
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Impacco caldo' }))
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Termina adesso' }))
     // A remedy chosen at the end is one more reading, then the head gets its end.
     await waitFor(async () => {
@@ -668,8 +668,8 @@ describe('Mind and mind symptoms', () => {
     await more()
     expect(screen.getByRole('button', { name: 'Compressione' })).toHaveAttribute('aria-pressed', 'false')
     await fireEvent.input(screen.getByRole('slider', { name: 'Gonfiore' }), { target: { value: '6' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'Calore' }))
-    expect(screen.getByRole('button', { name: /6\s*gonfiore · cosce · Calore/ })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(screen.getByRole('button', { name: 'Impacco caldo' }))
+    expect(screen.getByRole('button', { name: /6\s*gonfiore · cosce · Impacco caldo/ })).toHaveAttribute('aria-pressed', 'true')
     // Back on the first layer: the legs are still all there, with their tag.
     await fireEvent.click(screen.getByRole('button', { name: /7\s*gambe · Compressione/ }))
     expect(screen.getByRole('button', { name: 'Compressione' })).toHaveAttribute('aria-pressed', 'true')
@@ -685,7 +685,7 @@ describe('Mind and mind symptoms', () => {
     ])
     await go('Diario')
     const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
-    expect(row).toHaveAccessibleName(/7\s*gambe 7 · cosce 6 · Compressione · Calore/)
+    expect(row).toHaveAccessibleName(/7\s*gambe 7 · cosce 6 · Compressione · Impacco caldo/)
   })
 
   it('a mind-only episode is updated from its sheet without a pain slider', async () => {
@@ -716,7 +716,7 @@ describe('Presets', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await more()
     await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
-    await fireEvent.click(await screen.findByRole('button', { name: 'Calore' }))
+    await fireEvent.click(await screen.findByRole('button', { name: 'Impacco caldo' }))
     await pickPreset('Nuovo preset')
     const form = await screen.findByRole('dialog', { name: 'Nuovo preset' })
     // Prefilled from the log form: the legs, pain and swelling asked, no time, tags, sliders or note.
@@ -728,7 +728,7 @@ describe('Presets', () => {
     expect(within(asks).getByRole('button', { name: 'Rigidità' })).toHaveAttribute('aria-pressed', 'false')
     expect(within(asks).queryByRole('button', { name: 'Ansia' })).not.toBeInTheDocument()
     expect(within(form).queryByRole('button', { name: 'Adesso' })).not.toBeInTheDocument()
-    expect(within(form).queryByRole('button', { name: 'Calore' })).not.toBeInTheDocument()
+    expect(within(form).queryByRole('button', { name: 'Impacco caldo' })).not.toBeInTheDocument()
     expect(within(form).queryByRole('slider')).not.toBeInTheDocument()
     expect(within(form).queryByRole('textbox', { name: 'Note' })).not.toBeInTheDocument()
     // Membership is explicit: a symptom at 0 today can still be asked, one above 0 can be left out.
@@ -761,7 +761,7 @@ describe('Presets', () => {
     // The + of Nuovo preset is drawn, not typed, so it sits in the middle of its circle.
     expect((await presetItem('Nuovo preset')).querySelector('svg')).not.toBeNull()
     await fireEvent.keyDown(await menuOfPresets(), { key: 'Escape' })
-    expect(screen.getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Impacco caldo' })).toHaveAttribute('aria-pressed', 'true')
     await body()
     expect(screen.getByRole('button', { name: 'Gambe' })).toHaveAttribute('aria-pressed', 'true')
     await salva()

@@ -137,8 +137,8 @@ Default tags:
 | mld | intervention | Linfodrenaggio | Lymphatic drainage |
 | exercise | intervention | Movimento | Exercise |
 | rest | intervention | Riposo | Rest |
-| heat | intervention | Calore | Heat |
-| cold | intervention | Freddo | Cold |
+| heat | intervention | Impacco caldo | Warm pack |
+| cold | intervention | Impacco freddo | Cold pack |
 | stretching | intervention | Stretching | Stretching |
 | meditation | intervention | Meditazione | Meditation |
 | period | context | Ciclo | Period |
@@ -146,7 +146,7 @@ Default tags:
 | badsleep | context | Dormito male | Slept badly |
 | standing | context | A lungo in piedi | Standing for long |
 | sitting | context | A lungo a sedere | Sitting for long |
-| hot_weather | context | Caldo | Hot weather |
+| hot_weather | context | Clima caldo | Hot weather |
 | travel | context | Viaggio | Travel |
 
 Medications are tags in the `medication` group. None ship by default; the tester adds their own in settings (name only, dose goes in the note if needed).
@@ -271,7 +271,7 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 ### 6.2 Diary
 
-- Reverse-chronological list grouped by day. One row per chronic entry and per episode (its head's time; updates are never rows of their own, §5.5). An episode begun before the days shown but read within them has its row too, at its start, with its whole trail. Each row: time, headline reading as a coloured pill (§5.1; an episode's is its latest reading's), the symptom name when it is not pain, region summary in the words of §5.3 ("collo, spalle", "ginocchio sx", "tutto il corpo"; with several layers each with its level, "gambe 8 · schiena bassa 4"), the tags of every layer, note preview, and for an episode "in corso" or its duration and the trail over its readings ("2h · 7 → 4"). A row logged from a preset leads with the preset's name instead of its regions ("4 · Schiena · Calore"; with several layers the levels stay, "Gambe · cosce 8 · anche 4"), so a chronic stream reads as updates of one named thing (#20); a preset since deleted leaves the row as any other.
+- Reverse-chronological list grouped by day. One row per chronic entry and per episode (its head's time; updates are never rows of their own, §5.5). An episode begun before the days shown but read within them has its row too, at its start, with its whole trail. Each row: time, headline reading as a coloured pill (§5.1; an episode's is its latest reading's), the symptom name when it is not pain, region summary in the words of §5.3 ("collo, spalle", "ginocchio sx", "tutto il corpo"; with several layers each with its level, "gambe 8 · schiena bassa 4"), the tags of every layer, note preview, and for an episode "in corso" or its duration and the trail over its readings ("2h · 7 → 4"). A row logged from a preset leads with the preset's name instead of its regions ("4 · Schiena · Impacco caldo"; with several layers the levels stay, "Gambe · cosce 8 · anche 4"), so a chronic stream reads as updates of one named thing (#20); a preset since deleted leaves the row as any other.
 - Tap a chronic row → edit sheet, the same stage and drawer as Log at a fixed height, prefilled, opening on the view holding most of the entry, with Elimina and Salva in the drawer's bar (Salva closes it with "Salvato · Annulla": undo puts the row back exactly as it was, kind, end and levels included; Elimina's toast brings it back) and, last of the entry's fields, **Crea preset da questa voce**, which opens the preset form over the sheet (§5.6). A sheet over a sheet covers it, backdrop included, and peels off one at a time: Escape and the backdrop close the top one. Tap an episode row → the episode sheet (§5.5), whose Modifica link opens the head's form and whose readings open each update's.
 - Shows the last 30 days; a **Mostra altre** button at the bottom loads 60 more days at a time while older entries exist.
 - **Search** (#10): a 🔍 at the right of the Diary's header bar turns the title into a field, focused; ✕, there while something is typed, empties it; the arrow and Android's back close the search (it is one history entry above the Diary) and leave the Diary as it was. With nothing typed the Diary is unchanged. Every typed word must start a word of the same reading, ignoring case and accents, ligatures and "ß" spelled out ("ﬁ" is "fi", "ß" is "ss"): of its note, the labels of its tags (disabled ones included), its preset's name (a head's or a chronic entry's, so a preset finds each episode once), the names of the symptoms it records above 0 (disabled ones included), and, for each of its regions, every word of the anatomy (§5.3) that covers it, on its side and on both: a left knee is found by "ginocchio", "ginocchio sx", "ginocchia", "gamba", "gamba sx" and "gambe", and "ginocchio" finds a reading summed up as "gamba sx". A side ("sx", "dx"; "left", "right", read off the anatomy's own phrases) binds to the places typed next to it: "ginocchio sx" needs the left knee, not a right knee and something else on the left; a side with no place next to it, typed alone or next to a symptom or a tag, is any side: "dolore sx" is pain and something on the left. Articles, prepositions, "e", "o" and the "mal" of "mal di testa" ("the", "of", "in"… in English; `diary.searchSkip`) are passed over while other words remain, so "mal di testa" is "testa" and "all'anca" is "anca"; typed alone they are searched for. Full body is its own words ("tutto il corpo"), not every region's: a day of pain everywhere is not what a search for the knee is after. No months, no chips, no suggestions: newest first answers "when".

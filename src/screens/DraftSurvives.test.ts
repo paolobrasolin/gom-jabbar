@@ -56,7 +56,7 @@ describe('the log draft', () => {
     render(App)
     await fireEvent.input(await screen.findByRole('slider', { name: 'Dolore' }), { target: { value: '3' } })
     await more()
-    await fireEvent.click((await screen.findAllByRole('button', { name: 'Calore' }))[0])
+    await fireEvent.click((await screen.findAllByRole('button', { name: 'Impacco caldo' }))[0])
     await db.tags.delete('heat')
     await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
