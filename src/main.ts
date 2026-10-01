@@ -6,6 +6,7 @@ import { db } from './lib/db'
 import { t } from './i18n/index.svelte'
 import { initInstall } from './lib/install.svelte'
 import { googleDrive } from './lib/drive'
+import { showStartupError } from './lib/startupError'
 import { keepUpdated } from './lib/update'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -18,10 +19,7 @@ const app = mount(App, { target, props: { resumed } })
 // Surface a storage failure (private windows on old Safari, disabled IndexedDB) instead of a blank, silent app.
 db.open().catch((err) => {
   console.error(err)
-  const p = document.createElement('p')
-  p.textContent = t('app.dbError')
-  p.style.cssText = 'position:fixed;inset:auto 12px 80px;padding:12px 16px;border-radius:12px;background:#d33f3f;color:#fff;z-index:99'
-  document.body.appendChild(p)
+  showStartupError(t('app.dbError'))
 })
 
 // Install prompt capture, first-standalone-launch bookkeeping and the persistent storage request.

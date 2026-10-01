@@ -132,6 +132,9 @@ describe('a failed read', () => {
     await go('Diario')
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Non riesco a leggere il diario')
+    // A failure like any other (#94): red, its icon.
+    expect(alert).toHaveClass('msg', 'failure')
+    expect(alert.querySelector('svg.icon')).toHaveAttribute('data-icon', 'failed')
     expect(screen.queryByText('Ancora nessuna voce.')).not.toBeInTheDocument()
     await fireEvent.click(within(alert).getByRole('button', { name: 'Ricarica' }))
     expect(reload).toHaveBeenCalled()
