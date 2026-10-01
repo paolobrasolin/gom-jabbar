@@ -96,9 +96,9 @@ describe('presets', () => {
     expect(e1).toMatchObject({ presetId: p.id, kind: 'chronic', note: '' })
     expect(e1).not.toHaveProperty('endedAt')
     expect(e1.layers).toEqual([{ ...L([...LEG_IDS].sort(), { pain: 4, swelling: 6 }), strokes }, L(['mind'], { fog: 2 })])
-    // A slider the sheet did not report records 0; a level for a symptom not asked is ignored.
+    // A slider left blank records nothing, not a 0 (§6.1 item 7); a level for a symptom not asked is ignored.
     const e2 = await logPreset(p, [{ pain: 2, stiffness: 9 }, {}], '2026-09-03T10:00:00.000Z')
-    expect(e2.layers.map((l) => l.readings)).toEqual([{ pain: 2, swelling: 0 }, { fog: 0 }])
+    expect(e2.layers.map((l) => l.readings)).toEqual([{ pain: 2 }, {}])
     await addEntry({ readings: { pain: 9 }, at: '2026-09-05T10:00:00.000Z' })
     expect((await lastForPreset(p.id))?.id).toBe(e2.id)
   })

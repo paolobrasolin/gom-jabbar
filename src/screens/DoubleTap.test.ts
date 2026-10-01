@@ -24,7 +24,7 @@ const salva = () => screen.getByRole('button', { name: 'Salva' })
 describe('Log Salva', () => {
   it('a second tap right after a save does not log the empty form', async () => {
     render(App)
-    await screen.findByRole('slider', { name: 'Dolore' })
+    await fireEvent.input(await screen.findByRole('slider', { name: 'Dolore' }), { target: { value: '5' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     await fireEvent.click(salva())
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
@@ -36,17 +36,19 @@ describe('Log Salva', () => {
     expect(await db.entries.count()).toBe(1)
   })
 
-  it('the fast path is intact: any touch after a save makes Salva ready at once, and so does waiting a moment', async () => {
+  it('the fast path is intact: setting a level after a save makes Salva ready at once', async () => {
     render(App)
-    await screen.findByRole('slider', { name: 'Dolore' })
+    await fireEvent.input(await screen.findByRole('slider', { name: 'Dolore' }), { target: { value: '4' } })
     await fireEvent.click(salva())
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '6' } })
     await fireEvent.click(salva())
     await waitFor(async () => expect(await db.entries.count()).toBe(2))
+    // Later, Salva on the blank form asks for a level rather than storing one nobody chose.
     await wait(1100)
     await fireEvent.click(salva())
-    await waitFor(async () => expect(await db.entries.count()).toBe(3))
+    expect(await screen.findByText('Quanto? Sposta la barra')).toBeInTheDocument()
+    expect(await db.entries.count()).toBe(2)
   })
 })
 
@@ -68,6 +70,7 @@ describe('sheet buttons', () => {
     render(App)
     await pickPreset(/Schiena/)
     const sheet = await screen.findByRole('dialog', { name: 'Schiena' })
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '3' } })
     const b = within(sheet).getByRole('button', { name: 'Salva' })
     b.click()
     b.click()

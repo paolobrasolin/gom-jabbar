@@ -70,7 +70,8 @@ export async function restorePreset(p: Preset): Promise<void> {
 export async function logPreset(preset: Preset, levels: Record<string, number>[], at?: string): Promise<Entry> {
   const layers = preset.layers.map((l, i) => {
     const readings: Record<string, number> = {}
-    for (const id of l.asks) readings[id] = levels[i]?.[id] ?? 0
+    // Only what was set: a slider left blank records nothing (§6.1 item 7).
+    for (const id of l.asks) if (levels[i]?.[id] !== undefined) readings[id] = levels[i][id]
     return { regions: [...l.regions], readings, tags: [], ...(l.strokes ? { strokes: l.strokes } : {}) }
   })
   return addEntry({ at, kind: preset.kind, layers, note: '', presetId: preset.id })

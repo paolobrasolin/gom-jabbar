@@ -31,8 +31,8 @@
     untrack(() => {
       dismissToast()
       current = p
-      // Every slider starts at 0 (§5.6): a reading is what it is now, never what it was.
-      levels = p.layers.map((l) => Object.fromEntries(l.asks.map((id) => [id, 0])))
+      // Every slider starts blank (§5.6, §6.1 item 7): a reading is what it is now, never what it was, and only what was set.
+      levels = p.layers.map(() => ({}))
       cur = 0
       at = null
       open = true
@@ -46,10 +46,18 @@
   /** Each layer as it stands in the sheet, for the summary and the chips: its regions and its levels, no tags. */
   const shown = $derived((current?.layers ?? []).map((l, i) => ({ regions: l.regions, readings: levels[i] ?? {}, tags: [] })))
 
+  let sheetEl = $state<HTMLElement>()
   /** A save in flight: the second tap of a double tap does nothing. */
   let busy = false
   async function save() {
     if (!current || busy) return
+    // Nothing measured where something is asked: say so and put the finger on the first slider (§6.1 item 7). A preset
+    // asking nothing is the one-tap "nothing to report" (§5.6) and saves as it is.
+    if (current.layers.some((l) => l.asks.length) && !levels.some((l) => Object.keys(l).length)) {
+      showToast(t('log.noLevel'))
+      sheetEl?.querySelector<HTMLInputElement>('input[type="range"]')?.focus()
+      return
+    }
     busy = true
     let entry
     try {
@@ -78,20 +86,23 @@
         {#each shown as l, i (i)}
           {@const level = layerLevel(l)}
           <button class="chip small area" aria-pressed={i === cur} style="--c: {intensityColor(level)}; --ink-on: {intensityInk(level)}" onclick={() => (cur = i)}>
-            <span class="dot">{level}</span>
+            <span class="dot">{Object.keys(l.readings).length ? level : '–'}</span>
             <EntrySummary lead={symptomName(headline(l.readings).id, symptoms, tl)} layers={[l]} />
           </button>
         {/each}
       </div>
     {/if}
-    {#each current.layers[cur]?.asks ?? [] as id (`${cur}:${id}`)}
-      <IntensitySlider label={label(id)} value={levels[cur]?.[id] ?? 0} onchange={(v) => (levels[cur][id] = v)} />
-    {/each}
+    <div class="sliders" bind:this={sheetEl}>
+      {#each current.layers[cur]?.asks ?? [] as id (`${cur}:${id}`)}
+        <IntensitySlider label={label(id)} value={levels[cur]?.[id] ?? null} onchange={(v) => (levels[cur][id] = v)} />
+      {/each}
+    </div>
     <button class="btn primary block" onclick={save}>{t('common.save')}</button>
   {/if}
 </Sheet>
 
 <style>
+  .sliders { display: contents; }
   .layers { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px; }
   .layers::-webkit-scrollbar { display: none; }
   .area { background: var(--surface-2); color: var(--ink); border-color: transparent; padding-left: 6px; }

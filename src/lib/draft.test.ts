@@ -3,12 +3,9 @@ import { emptyDraft, draftFromEntry, draftToInput } from './draft'
 import { makeEntry } from './entries'
 
 describe('draft conversions', () => {
-  it('a fresh draft is "now", one layer without regions, its headline at 5 when there is one', () => {
-    const d = emptyDraft({ head: 'pain' })
-    expect(d).toEqual({ at: null, kind: 'chronic', endedAt: null, layers: [{ regions: [], readings: { pain: 5 }, tags: [] }], cur: 0, note: '' })
-    expect(emptyDraft({ kind: 'episode', head: 'swelling', level: 2 })).toMatchObject({ kind: 'episode', endedAt: null, layers: [{ readings: { swelling: 2 } }] })
-    // No body symptom enabled, or the vocabulary not read yet: no reading.
-    expect(emptyDraft().layers).toEqual([{ regions: [], readings: {}, tags: [] }])
+  it('a fresh draft is "now", one layer without regions and nothing read: no level nobody chose', () => {
+    expect(emptyDraft()).toEqual({ at: null, kind: 'chronic', endedAt: null, layers: [{ regions: [], readings: {}, tags: [] }], cur: 0, note: '' })
+    expect(emptyDraft({ kind: 'episode' })).toMatchObject({ kind: 'episode', endedAt: null, layers: [{ readings: {} }] })
   })
 
   it('draftFromEntry copies layers so edits do not touch the entry, and always has a layer', () => {

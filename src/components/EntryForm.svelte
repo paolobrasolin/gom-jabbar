@@ -84,6 +84,14 @@
     row?.scrollIntoView?.({ block: 'nearest' })
     row?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus()
   }
+  /** Salva with nothing measured (§6.1 item 7): the headline slider, the first on the form, takes the focus. */
+  export function pointAtLevel() {
+    formEl?.querySelector<HTMLInputElement>('input[type="range"]')?.focus()
+  }
+  /** Whether the form offers anything to measure: a slider for its headline. */
+  export function measures(): boolean {
+    return !!formEl?.querySelector('input[type="range"]')
+  }
   let stage: Stage | undefined = $state()
   let innerH = $state(0)
   $effect(() => {
@@ -216,9 +224,9 @@
   function onTag(id: string) {
     apply(toggleTag(st(), id))
   }
-  /** A new layer starts at the body's headline level of this one, like the first did (§5.4), and the next thing to do is choose where. */
+  /** A new layer starts with nothing read, like the first (§5.4, §6.1 item 7): the next thing to do is choose where. */
   function onAddLayer() {
-    apply(addLayer(st(), bodyHead ? { [bodyHead.id]: cur.readings[bodyHead.id] ?? 0 } : {}))
+    apply(addLayer(st(), {}))
     open = false
   }
 
@@ -249,7 +257,7 @@
 </script>
 
 {#snippet slider(s: Symptom)}
-  <IntensitySlider label={tl(s.label)} value={cur.readings[s.id] ?? 0} onchange={(v) => onReading(s.id, v)} />
+  <IntensitySlider label={tl(s.label)} value={cur.readings[s.id] ?? null} onchange={(v) => onReading(s.id, v)} />
 {/snippet}
 
 <!-- The kind (§5.1): one switch with two halves, since an entry is one or the other. -->
@@ -318,7 +326,7 @@
                 aria-pressed={i === draft.cur}
                 style="--c: {intensityColor(level)}; --ink-on: {intensityInk(level)}"
                 onclick={() => apply(selectLayer(st(), i))}>
-                {#if mode !== 'preset'}<span class="dot">{level}</span>{/if}
+                {#if mode !== 'preset'}<span class="dot">{Object.keys(l.readings).length ? level : '–'}</span>{/if}
                 {#if l.regions.length}<EntrySummary lead={symptomName(headline(l.readings).id, symptoms, tl)} layers={[l]} tagDefs={tags} />{:else}<span class="muted">…</span>{/if}
               </button>
             {/each}
@@ -351,7 +359,7 @@
             {@render reading()}
           {:else if mode !== 'preset'}
             {#if headSym}
-              <IntensitySlider value={cur.readings[headSym.id] ?? 0} label={headLabel} onchange={(v) => onReading(headSym!.id, v)} />
+              <IntensitySlider value={cur.readings[headSym.id] ?? null} label={headLabel} onchange={(v) => onReading(headSym!.id, v)} />
             {/if}
             <div class="rest" inert={!open} aria-hidden={!open}>
               {#each rest as s (s.id)}{@render slider(s)}{/each}

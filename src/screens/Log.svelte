@@ -94,13 +94,9 @@
   const head = $derived(firstEnabled(symptoms.value, 'body')?.id)
   // Every draft starts Cronico: the kind is chosen per entry, never remembered (§6.1).
   let draft = $state(emptyDraft())
-  // The vocabulary is read after the first draft is made: a draft that has no reading yet gets its headline then.
-  $effect(() => {
-    if (head && draft.layers.length === 1 && !Object.keys(draft.layers[0].readings).length) draft.layers[0].readings[head] = 5
-  })
-  /** Anything worth clearing: a region, a tag or a reading other than the headline on any layer, a time, a note, a preset just named. The headline's level alone is not. */
+  /** Anything worth clearing: a region, a tag or a reading on any layer, a time, a note, a preset just named. */
   const dirty = $derived(
-    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.entries(l.readings).some(([id, v]) => id !== head && v > 0)) ||
+    draft.layers.some((l) => l.regions.length > 0 || l.tags.length > 0 || Object.keys(l.readings).length > 0) ||
       draft.at !== null ||
       draft.endedAt !== null ||
       draft.note.trim() !== '' ||
@@ -133,14 +129,14 @@
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
 
   function reset() {
-    draft = emptyDraft({ head, level: head ? draft.layers[draft.cur]?.readings[head] : undefined })
+    draft = emptyDraft()
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
   }
 
   /** Azzera: back to an empty form, undoable from the toast (no confirmation dialogs, §6.1). */
   function clear() {
     const before = $state.snapshot(draft) as EntryDraft
-    draft = emptyDraft({ head })
+    draft = emptyDraft()
     document.querySelectorAll<HTMLElement>('.form .chips').forEach((el) => (el.scrollLeft = 0))
     haptic(20)
     showToast(t('log.cleared'), { label: t('log.undo'), run: () => (draft = before) })
@@ -151,6 +147,13 @@
     if (saving || cooling) return
     // An end before the start is not a reading anyone had: say so and show the row, save nothing (§5.5, §10).
     const times = draftToInput(draft)
+    // Nothing measured where there is something to measure: no value nobody chose is stored (§6.1 item 7). Say so and
+    // put the finger on the slider. With no symptom on for the form, a place alone is a reading of its own.
+    if (!times.layers?.some((l) => Object.keys(l.readings ?? {}).length) && form?.measures()) {
+      showToast(t('log.noLevel'))
+      form?.pointAtLevel()
+      return
+    }
     if (timeProblem({ at: times.at!, endedAt: times.endedAt })) {
       showToast(t('time.endBeforeStart'))
       void form?.pointAt('end')

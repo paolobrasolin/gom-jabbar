@@ -7,7 +7,7 @@ import { addEntry } from '../lib/entries'
 import { addPreset } from '../lib/presets'
 import { dismissToast, toastState } from '../lib/toast.svelte'
 import { reads } from '../lib/live.svelte'
-import { go, openEpisode, pickPreset, presetItem } from '../test/nav'
+import { go, openEpisode, pickPreset, presetItem, salva } from '../test/nav'
 import App from '../App.svelte'
 
 let db: ReturnType<typeof resetDb>
@@ -32,12 +32,12 @@ describe('a failed write', () => {
     await screen.findByRole('slider', { name: 'Dolore' })
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     vi.spyOn(db.entries, 'add').mockRejectedValueOnce(full())
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await said()
     expect(await db.entries.count()).toBe(0)
     expect(screen.getByRole('button', { name: 'Coscia dx' })).toHaveAttribute('aria-pressed', 'true')
     await new Promise((r) => setTimeout(r, 50))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
   })
 
@@ -78,6 +78,7 @@ describe('a failed write', () => {
     render(App)
     await pickPreset(/Schiena/)
     const sheet = await screen.findByRole('dialog', { name: 'Schiena' })
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '3' } })
     vi.spyOn(db.entries, 'add').mockRejectedValueOnce(full())
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
     await said()
@@ -99,7 +100,7 @@ describe('a failed write', () => {
     render(App)
     await screen.findByRole('slider', { name: 'Dolore' })
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     vi.spyOn(db.entries, 'bulkDelete').mockRejectedValueOnce(full())
     await fireEvent.click(await screen.findByRole('button', { name: 'Annulla' }))

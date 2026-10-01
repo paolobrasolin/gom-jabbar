@@ -1,4 +1,4 @@
-import { screen, fireEvent, within } from '@testing-library/svelte'
+import { screen, fireEvent, within, waitFor } from '@testing-library/svelte'
 
 /** Log is home (#37): its menu opens the other screens. */
 export async function go(name: 'Diario' | 'Andamento' | 'Impostazioni') {
@@ -36,4 +36,22 @@ export async function episodeItems() {
 export async function openEpisode(i = 0) {
   await fireEvent.click((await episodeItems())[i])
   return screen.findByRole('dialog', { name: 'Episodio in corso' })
+}
+
+/**
+ * Salva on the log, the headline given a level first when it has none: sliders start blank and Salva refuses a form with
+ * nothing measured (§6.1 item 7). For tests about something else than the level itself.
+ */
+export async function salva(level = 5) {
+  // The headline arrives with the vocabulary, after the first frame; a form with no symptom on has none at all.
+  const head = await waitFor(
+    () => {
+      const el = [...document.querySelectorAll<HTMLInputElement>('input[type="range"]')].find((i) => !i.closest('[role="dialog"]'))
+      if (!el) throw new Error('no headline slider yet')
+      return el
+    },
+    { timeout: 300 },
+  ).catch(() => undefined)
+  if (head?.getAttribute('aria-valuetext') === 'non indicato') await fireEvent.input(head, { target: { value: String(level) } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
 }

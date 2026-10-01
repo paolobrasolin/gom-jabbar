@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/sve
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { install, initInstall } from '../lib/install.svelte'
-import { go, back, presetButton, presetItem, pickPreset, episodesButton, episodeItems, openEpisode } from '../test/nav'
+import { go, back, presetButton, presetItem, pickPreset, episodesButton, episodeItems, openEpisode, salva } from '../test/nav'
 import App from '../App.svelte'
 import { intensityColor } from '../lib/color'
 import { LEG_IDS, REGION_BY_ID, shapeOf, shapeCenter, viewBox } from '../lib/regions'
@@ -45,7 +45,7 @@ describe('Log fast path', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     const slider = screen.getByRole('slider', { name: 'Dolore' })
     await fireEvent.input(slider, { target: { value: '7' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toEqual([{ regions: ['152', '153'], readings: { pain: 7 }, tags: [] }])
@@ -65,7 +65,7 @@ describe('Log fast path', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Spalla sx' }))
     await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '3' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toHaveLength(2)
@@ -76,7 +76,7 @@ describe('Log fast path', () => {
 
   it('undo removes the saved entry', async () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     await fireEvent.click(await screen.findByRole('button', { name: 'Annulla' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(0))
@@ -90,7 +90,7 @@ describe('Log fast path', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Tutto il corpo' }))
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(() => expect(episodesButton()).toHaveAccessibleName('1 in corso'))
     const button = episodesButton()!
     expect(screen.getByRole('button', { name: 'Menu' }).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -135,7 +135,7 @@ describe('Episodes with an end', () => {
     await fireEvent.click(within(screen.getByRole('group', { name: 'Inizio' })).getByRole('button', { name: '3h fa' }))
     await fireEvent.click(within(end).getByRole('button', { name: '1h fa' }))
     expect(within(end).getByRole('button', { name: '1h fa' })).toHaveAttribute('aria-pressed', 'true')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e).toMatchObject({ kind: 'episode', episodeId: e.id })
@@ -147,7 +147,7 @@ describe('Episodes with an end', () => {
     expect(screen.queryByRole('group', { name: 'Fine' })).not.toBeInTheDocument()
     await body()
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(2))
     expect((await db.entries.orderBy('createdAt').last())?.kind).toBe('chronic')
   })
@@ -162,7 +162,7 @@ describe('Episodes with an end', () => {
       await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: 'Adesso' }))
       // A minute turns while the note is written.
       vi.setSystemTime(new Date(2026, 8, 30, 15, 3, 10))
-      await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+      await salva()
       await waitFor(async () => expect(await db.entries.count()).toBe(1))
       const [e] = await db.entries.toArray()
       expect(e.endedAt).toBe(new Date(2026, 8, 30, 15, 0, 50).toISOString())
@@ -175,7 +175,7 @@ describe('Episodes with an end', () => {
   it("a save's toast still showing when the drawer opens moves to the top, off the kind switch", async () => {
     render(App)
     await fireEvent.click(await screen.findByRole('button', { name: 'Coscia dx' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     const toast = (await screen.findByText('Salvato')).closest('.toast')!
     expect(toast).not.toHaveClass('top')
     await more()
@@ -186,13 +186,13 @@ describe('Episodes with an end', () => {
     render(App)
     // With the drawer down, a toast sits above it.
     await fireEvent.click(await screen.findByRole('button', { name: 'Coscia dx' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     expect((await screen.findByText('Salvato')).closest('.toast')).not.toHaveClass('top')
     await new Promise((r) => setTimeout(r, 1100))
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: '1h fa' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     const toast = (await screen.findByText("La fine è prima dell'inizio")).closest('.toast')!
     expect(toast).toHaveClass('top')
   })
@@ -202,7 +202,7 @@ describe('Episodes with an end', () => {
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: '1h fa' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     expect(await screen.findByText('La fine è prima dell\'inizio')).toBeInTheDocument()
     expect(await db.entries.count()).toBe(0)
   })
@@ -223,7 +223,7 @@ describe('Episodes with an end', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     const end = screen.getByRole('group', { name: 'Fine' })
     await fireEvent.click(within(end).getByRole('button', { name: 'Adesso' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     let [e] = await db.entries.toArray()
     expect(Date.now() - Date.parse(e.endedAt!)).toBeLessThan(5000)
@@ -236,7 +236,7 @@ describe('Episodes with an end', () => {
     const pickers = document.querySelectorAll('input[type="datetime-local"]')
     expect(pickers).toHaveLength(1)
     await fireEvent.change(pickers[0], { target: { value: '2026-09-01T12:30' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(2))
     e = (await db.entries.orderBy('createdAt').last())!
     expect(new Date(e.endedAt!).getHours()).toBe(12)
@@ -275,7 +275,7 @@ describe('The drawer', () => {
     await fireEvent.click(handle)
     expect(screen.queryByRole('slider', { name: 'Gonfiore' })).not.toBeInTheDocument()
     await fireEvent.click(handle)
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     expect(screen.getByRole('button', { name: /^Altro/ })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('slider', { name: 'Gonfiore' })).not.toBeInTheDocument()
@@ -297,7 +297,7 @@ describe('The drawer', () => {
     // The symptom sliders come from a live query: on a slow runner they land after the tag strip.
     await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '4' } })
     await fireEvent.input(screen.getByRole('textbox', { name: 'Note' }), { target: { value: 'dopo la corsa' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toEqual([{ regions: [], readings: { pain: 5, swelling: 4 }, tags: ['rest'] }])
@@ -324,14 +324,14 @@ describe('The drawer', () => {
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(chip)
     expect(chip).toHaveAttribute('aria-pressed', 'false')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(mergedTags((await db.entries.toArray())[0].layers)).toEqual([]))
   })
 
   it('shows the toast just above the drawer, over the stage, not over the slider (#23)', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     // jsdom measures the drawer at 0px: the lift is there, its value is the drawer's height.
     expect((await screen.findByRole('status')).style.getPropertyValue('--lift')).toBe('0px')
@@ -365,9 +365,9 @@ describe('The drawer', () => {
     await fireEvent.click(clear)
     expect(screen.getByRole('button', { name: 'Coscia dx' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByText('Nessuna zona: tocca la figura')).toBeInTheDocument()
-    expect(screen.getByRole('slider', { name: 'Dolore' })).toHaveValue('5')
+    expect(screen.getByRole('slider', { name: 'Dolore' })).toHaveAttribute('aria-valuetext', 'non indicato')
     await more()
-    expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveValue('0')
+    expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveAttribute('aria-valuetext', 'non indicato')
     expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('')
     expect(clear).toBeDisabled()
     expect(await db.entries.count()).toBe(0)
@@ -385,7 +385,7 @@ describe('The drawer', () => {
     render(App)
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     const sheet = await openEpisode()
     expect(within(sheet).getByRole('button', { name: 'Modifica' })).toBeInTheDocument()
   })
@@ -403,7 +403,7 @@ describe('Tag discoverability', () => {
     expect(names().at(-1)).toBe('Viaggio')
     await fireEvent.click(within(strip).getByRole('button', { name: 'Calore' }))
     expect(within(strip).getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'true')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(mergedTags((await db.entries.toArray())[0].layers)).toEqual(['heat']))
     // Once used, a tag is the most frequent: first after the toggle, and the form is clean again (folded: pull it up).
     await more()
@@ -425,7 +425,7 @@ describe('Tag discoverability', () => {
     render(App)
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     let sheet = await openEpisode()
     await fireEvent.click(await within(sheet).findByRole('button', { name: 'Riposo' }))
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
@@ -451,7 +451,7 @@ describe('Headline reading', () => {
     await more()
     await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '0' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     await go('Diario')
     const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
@@ -463,7 +463,7 @@ describe('Headline reading', () => {
     await more()
     await fireEvent.input(await screen.findByRole('slider', { name: 'Gonfiore' }), { target: { value: '3' } })
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     const sheet = await openEpisode()
     expect(within(sheet).getByRole('slider', { name: 'Dolore' })).toHaveValue('5')
     expect(within(sheet).queryByRole('slider', { name: 'Stanchezza' })).not.toBeInTheDocument()
@@ -481,11 +481,11 @@ describe('Headline reading', () => {
 })
 
 describe('No special symptom (#36)', () => {
-  it('with pain off, the first body symptom is the headline: it starts at 5, it is what gets saved', async () => {
+  it('with pain off, the first body symptom is the headline: it starts blank, it is what gets saved', async () => {
     await db.symptoms.update('pain', { enabled: false })
     render(App)
     const head = await screen.findByRole('slider', { name: 'Gonfiore' })
-    expect(head).toHaveValue('5')
+    expect(head).toHaveAttribute('aria-valuetext', 'non indicato')
     expect(screen.queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
     await more()
     expect(await screen.findByRole('slider', { name: 'Pesantezza' })).toBeInTheDocument()
@@ -493,26 +493,26 @@ describe('No special symptom (#36)', () => {
     await body()
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     await fireEvent.input(screen.getByRole('slider', { name: 'Gonfiore' }), { target: { value: '7' } })
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     expect((await db.entries.toArray())[0].layers).toEqual([{ regions: ['152', '153'], readings: { swelling: 7 }, tags: [] }])
-    // The next draft starts where this one left off, and that alone is nothing to clear.
-    await waitFor(() => expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveValue('7'))
+    // The next draft starts blank, not at the last level, and is nothing to clear.
+    await waitFor(() => expect(screen.getByRole('slider', { name: 'Gonfiore' })).toHaveAttribute('aria-valuetext', 'non indicato'))
     expect(screen.queryByRole('button', { name: 'Azzera' })).toBeDisabled()
-    // A second zone starts at the first one's level.
+    // A second zone starts blank too.
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Spalla sx' }))
-    expect(screen.getByRole('slider', { name: /^Gonfiore/ })).toHaveValue('7')
+    expect(screen.getByRole('slider', { name: /^Gonfiore/ })).toHaveAttribute('aria-valuetext', 'non indicato')
   })
 
   it('the headline follows the vocabulary order: a symptom moved above pain leads', async () => {
     await db.symptoms.update('swelling', { order: -1 })
     render(App)
-    expect(await screen.findByRole('slider', { name: 'Gonfiore' })).toHaveValue('5')
+    expect(await screen.findByRole('slider', { name: 'Gonfiore' })).toHaveAttribute('aria-valuetext', 'non indicato')
     expect(screen.queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
     await more()
-    expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveValue('0')
+    expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveAttribute('aria-valuetext', 'non indicato')
   })
 
   it('with no body symptom on, an unlocated layer leads with the first mind symptom and starts at nothing', async () => {
@@ -522,7 +522,7 @@ describe('No special symptom (#36)', () => {
     expect(head).toHaveValue('0')
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     expect(screen.queryByRole('slider')).not.toBeInTheDocument()
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     expect((await db.entries.toArray())[0].layers).toEqual([{ regions: ['152', '153'], readings: {}, tags: [] }])
   })
@@ -562,12 +562,12 @@ describe('Mind and mind symptoms', () => {
     expect(screen.queryByRole('slider', { name: 'Nebbia mentale' })).toHaveValue('6')
     expect(screen.queryByRole('slider', { name: 'Gonfiore' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /6\s*nebbia mentale · mente/ })).toHaveAttribute('aria-pressed', 'true')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toEqual([{ regions: ['mind'], readings: { fog: 6 }, tags: [] }])
-    // The form is back to both kinds, the pain level untouched by the detour.
-    expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveValue('5')
+    // The form is back to both kinds, blank again.
+    expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveAttribute('aria-valuetext', 'non indicato')
     await go('Diario')
     const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
     expect(row).toHaveAccessibleName(/6\s*nebbia mentale · mente/)
@@ -586,7 +586,8 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.input(await screen.findByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '4' } })
     expect(screen.getByRole('slider', { name: 'Gonfiore' })).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /mente/ })).toHaveLength(1)
-    expect(screen.getByRole('button', { name: /5\s*cosce, mente/ })).toHaveAttribute('aria-pressed', 'true')
+    // Pain not set yet: the fog leads the chip.
+    expect(screen.getByRole('button', { name: /4\s*nebbia mentale · cosce, mente/ })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '7' } })
     expect(screen.getByRole('button', { name: /7\s*cosce, mente/ })).toHaveAttribute('aria-pressed', 'true')
     // A knee joins the same layer; the mind slider stays.
@@ -599,7 +600,7 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Tutto il corpo' }))
     expect(screen.getByRole('button', { name: 'Mente' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /7\s*tutto il corpo, mente/ })).toHaveAttribute('aria-pressed', 'true')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toEqual([{ regions: ['*', 'mind'], readings: { pain: 7, fog: 4 }, tags: [] }])
@@ -618,10 +619,10 @@ describe('Mind and mind symptoms', () => {
     expect(screen.queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
     await more()
-    // Fog 6 beats the pain at 5: the chip is the layer's headline, named like the diary pill.
+    // Fog 6 leads, pain not set: the chip is the layer's headline, named like the diary pill.
     expect(screen.getByRole('button', { name: /6\s*nebbia mentale · cosce, mente/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getAllByRole('button', { name: /mente/ })).toHaveLength(1)
-    expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveValue('5')
+    expect(await screen.findByRole('slider', { name: 'Dolore' })).toHaveAttribute('aria-valuetext', 'non indicato')
     expect(screen.getByRole('slider', { name: 'Nebbia mentale' })).toHaveValue('6')
     await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
     expect(screen.getByRole('button', { name: /8\s*cosce, mente/ })).toBeInTheDocument()
@@ -630,7 +631,7 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Mente' }))
     expect(screen.getByRole('button', { name: /8\s*cosce$/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('slider', { name: 'Nebbia mentale' })).not.toBeInTheDocument()
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toEqual([{ regions: ['152', '153'], readings: { pain: 8 }, tags: [] }])
@@ -675,7 +676,7 @@ describe('Mind and mind symptoms', () => {
     await body()
     expect(screen.getByRole('button', { name: 'Coscia dx' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('slider', { name: /^Dolore/ })).toHaveValue('7')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers).toEqual([
@@ -693,7 +694,7 @@ describe('Mind and mind symptoms', () => {
     await fireEvent.input(await screen.findByRole('slider', { name: 'Nebbia mentale' }), { target: { value: '6' } })
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     expect((await episodeItems())[0]).toHaveTextContent(/^6\s*nebbia mentale · mente/)
     const sheet = await openEpisode()
     expect(within(sheet).queryByRole('slider', { name: 'Dolore' })).not.toBeInTheDocument()
@@ -763,7 +764,7 @@ describe('Presets', () => {
     expect(screen.getByRole('button', { name: 'Calore' })).toHaveAttribute('aria-pressed', 'true')
     await body()
     expect(screen.getByRole('button', { name: 'Gambe' })).toHaveAttribute('aria-pressed', 'true')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.presetId).toBe(p.id)
@@ -790,7 +791,7 @@ describe('Presets', () => {
     await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Schiena' } })
     await fireEvent.click(within(form).getByRole('button', { name: 'Crea preset' }))
     await waitFor(() => expect(presetButton()).toHaveAccessibleName('Preset: Schiena'))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     const [p] = await db.presets.toArray()
@@ -810,7 +811,7 @@ describe('Presets', () => {
     await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Emicrania' } })
     await fireEvent.click(within(form).getByRole('button', { name: 'Crea preset' }))
     await waitFor(() => expect(presetButton()).toHaveAccessibleName('Preset: Emicrania'))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e).toMatchObject({ kind: 'episode', episodeId: e.id, endedAt: null })
@@ -831,7 +832,7 @@ describe('Presets', () => {
     expect(within(await menuOfPresets()).getAllByRole('menuitem')).toHaveLength(1)
     // Azzera was enabled by the link alone; the entry saved now carries no preset.
     expect(screen.getByRole('button', { name: 'Gambe' })).toHaveAttribute('aria-pressed', 'true')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     expect((await db.entries.toArray())[0]).not.toHaveProperty('presetId')
   })
@@ -850,7 +851,7 @@ describe('Presets', () => {
     expect(screen.getByRole('button', { name: 'Azzera' })).toBeEnabled()
     await fireEvent.click(screen.getByRole('button', { name: 'Azzera' }))
     expect(presetButton()).toHaveAccessibleName('Preset')
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     expect((await db.entries.toArray())[0]).not.toHaveProperty('presetId')
     void p
@@ -879,7 +880,7 @@ describe('Presets', () => {
   it('creates a preset from a saved entry in the diary; the edit sheet stays open and is not saved', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Gambe' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     await go('Diario')
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
@@ -933,6 +934,7 @@ describe('Presets', () => {
     const ps = await screen.findByRole('dialog', { name: 'Schiena' })
     expect(within(ps).getByRole('button', { name: 'Adesso' })).toHaveAttribute('aria-pressed', 'true')
     await fireEvent.click(within(ps).getByRole('button', { name: 'Ieri sera' }))
+    await fireEvent.input(within(ps).getByRole('slider', { name: 'Dolore' }), { target: { value: '4' } })
     await fireEvent.click(within(ps).getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
@@ -1002,11 +1004,12 @@ describe('Presets', () => {
     const ps = await screen.findByRole('dialog', { name: 'Gambe e testa' })
     const chips = ps.querySelectorAll<HTMLButtonElement>('.chips.layers .area')
     expect(chips).toHaveLength(2)
+    await fireEvent.input(within(ps).getByRole('slider', { name: 'Dolore' }), { target: { value: '2' } })
     await fireEvent.click(chips[1])
     expect(within(ps).queryByRole('slider')).not.toBeInTheDocument()
     await fireEvent.click(within(ps).getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
-    expect((await db.entries.toArray())[0].layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: { pain: 0 }, tags: [] }, { regions: ['mind'], readings: {}, tags: [] }])
+    expect((await db.entries.toArray())[0].layers).toEqual([{ regions: [...LEG_IDS].sort(), readings: { pain: 2 }, tags: [] }, { regions: ['mind'], readings: {}, tags: [] }])
     await waitFor(() => expect(screen.getByRole('button', { name: 'Gambe' })).toHaveAttribute('aria-pressed', 'false'))
     expect(presetButton()).toHaveAccessibleName('Preset')
     expect(screen.getByRole('button', { name: 'Azzera' })).toBeDisabled()
@@ -1153,7 +1156,7 @@ describe('The stage', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Ingrandisci' }))
     expect(Number(front.getAttribute('data-k'))).toBeCloseTo(k * 1.5, 5)
     expect(screen.getByRole('button', { name: 'Adatta' })).toBeEnabled()
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     expect(Number(screen.getByRole('group', { name: 'Davanti' }).getAttribute('data-k'))).toBeCloseTo(k, 5)
     // A swipe across the skin turns it; the click a mouse fires afterwards, on whatever segment is now under it, is swallowed.
@@ -1388,7 +1391,7 @@ describe('The stage', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Davanti' }))
     expect(strokes()).toHaveLength(3)
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     const r1 = (n: number) => Math.round(n * 10) / 10
@@ -1494,7 +1497,7 @@ describe('The stage', () => {
     expect(await screen.findByText('Disegno cancellato')).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
     expect(strokes()).toHaveLength(4)
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     const [e] = await db.entries.toArray()
     expect(e.layers[0].regions).toEqual(['*'])
@@ -1545,7 +1548,7 @@ describe('Times that cannot be', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     const end = screen.getByRole('group', { name: 'Fine' })
     await fireEvent.click(within(end).getByRole('button', { name: '3h fa' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     expect(await screen.findByText("La fine è prima dell'inizio")).toBeInTheDocument()
     expect(await db.entries.count()).toBe(0)
     // Nothing was reset: the draft is there to be fixed.
@@ -1591,7 +1594,7 @@ describe('The kind is chosen per entry', () => {
     const { unmount } = render(App)
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await salva()
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     unmount()
     render(App)
