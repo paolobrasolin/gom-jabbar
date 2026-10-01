@@ -24,6 +24,19 @@
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const presets = live(() => null, () => db.presets.toArray(), [])
+  /**
+   * An episode begun before the window and read within it (§6.2): its whole chain is loaded too, so it has its row, at
+   * its start, with its full trail. Outside a search an update is never a row of its own, so without its start it vanished.
+   */
+  const reaching = $derived.by(() => {
+    const ids = new Set(entries.value.map((e) => e.id))
+    return [...new Set(entries.value.flatMap((e) => (e.episodeId && !ids.has(e.episodeId) ? [e.episodeId] : [])))]
+  })
+  const chains = live(() => reaching, () => (reaching.length ? db.entries.where('episodeId').anyOf(reaching).toArray() : Promise.resolve([])), [] as Entry[])
+  const loaded = $derived.by(() => {
+    const ids = new Set(entries.value.map((e) => e.id))
+    return [...entries.value, ...chains.value.filter((e) => !ids.has(e.id))].sort((a, b) => b.at.localeCompare(a.at))
+  })
 
   /** A search runs over the whole table, and lists readings: an update is a hit of its own (§6.2). */
   const searching = $derived(words(query).length > 0)
@@ -35,10 +48,10 @@
   const hits = $derived(searching ? search(all.value, query, ctx) : [])
 
   /** The episodes among the rows loaded: outside a search an update is read through its head, never a row of its own (§6.2). */
-  const episodes = $derived(episodesOf(searching ? all.value : entries.value))
+  const episodes = $derived(episodesOf(searching ? all.value : loaded))
   const groups = $derived.by(() => {
     const out: { key: string; label: string; items: Entry[] }[] = []
-    for (const e of searching ? hits : entries.value.filter((e) => !isUpdate(e))) {
+    for (const e of searching ? hits : loaded.filter((e) => !isUpdate(e))) {
       const key = dayKey(e.at)
       let g = out[out.length - 1]
       if (!g || g.key !== key) {
