@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid'
 import { db } from './db'
 import { finalize, newLayer, type Layer, type Stroke } from './layers'
 import type { Entry, EntryKind, Symptom } from './types'
+import { entryHeadline } from './summary'
 
 export type LayerInput = { regions?: string[]; readings?: Record<string, number>; tags?: string[]; strokes?: Stroke[] }
 
@@ -77,6 +78,16 @@ export type Episode = { head: Entry; updates: Entry[] }
 
 /** The most recent reading of an episode: what the card and the sheet show. */
 export const latest = (ep: Episode): Entry => ep.updates[ep.updates.length - 1] ?? ep.head
+
+/**
+ * The reading an episode is shown by (§5.5): while it goes on, the latest, how it is now; once it has ended, its worst,
+ * the reading with the highest headline (the later of equals), so a migraine that peaked at 8 is not shown at the 2 it
+ * ended on.
+ */
+export function shownReading(ep: Episode): Entry {
+  if (!ep.head.endedAt) return latest(ep)
+  return [ep.head, ...ep.updates].reduce((best, e) => (entryHeadline(e).value >= entryHeadline(best).value ? e : best))
+}
 
 /** Every episode among `entries`, by head id: updates whose head is not among them are left out. */
 export function episodesOf(entries: Entry[]): Map<string, Episode> {

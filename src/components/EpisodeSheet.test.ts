@@ -133,6 +133,20 @@ describe('Episode sheet', () => {
     expect(within(sheet).getByRole('button', { name: 'Modifica' })).toBeInTheDocument()
   })
 
+  it('an ended episode leads with the worst it got; an ongoing one with how it is now', async () => {
+    const e = await addEntry({ at: ago(300), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 6 } }] })
+    await logUpdate(e.id, [{ pain: 9 }], ago(240))
+    await logUpdate(e.id, [{ pain: 3 }], ago(200))
+    let sheet = await openSheet()
+    expect(sheet.querySelector('.head .pill')).toHaveTextContent('3')
+    await fireEvent.keyDown(window, { key: 'Escape' })
+    await endEpisode(e.id, ago(180))
+    await go('Diario')
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+    sheet = await screen.findByRole('dialog', { name: 'Episodio' })
+    expect(sheet.querySelector('.head .pill')).toHaveTextContent('9')
+  })
+
   it('an episode that ended on another day says which', async () => {
     const e = await addEntry({ at: ago(36 * 60), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 6 } }] })
     await endEpisode(e.id, ago(30 * 60))

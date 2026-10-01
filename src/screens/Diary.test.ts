@@ -67,7 +67,8 @@ describe('Diary list', () => {
     expect(swelling.querySelector('.pill')).toHaveTextContent('6')
     await waitFor(() => expect(swelling).toHaveTextContent('gonfiore'))
     expect(swelling).toHaveTextContent('in corso')
-    expect(episode.querySelector('.pill')).toHaveTextContent('4')
+    // Ended: the worst it got, not the 4 it ended on.
+    expect(episode.querySelector('.pill')).toHaveTextContent('7')
     expect(episode).toHaveTextContent('coscia sx · Riposo')
     expect(episode).toHaveTextContent('2h · 7 → 4')
     expect(episode).toHaveTextContent('dopo la corsa')
@@ -86,6 +87,21 @@ describe('Diary list', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Mostra altre' }))
     await waitFor(() => expect(rows()).toHaveLength(3))
     expect(screen.queryByRole('button', { name: 'Mostra altre' })).not.toBeInTheDocument()
+  })
+})
+
+describe('Episode rows', () => {
+  it('an ongoing episode shows how it is now; an ended one shows the worst it got, with the trail', async () => {
+    const e = await addEntry({ at: ago(5 * 60), kind: 'episode', layers: [L(['152'], 7)] })
+    await logUpdate(e.id, [{ pain: 8 }], ago(4 * 60))
+    await logUpdate(e.id, [{ pain: 2 }], ago(3 * 60))
+    await openDiary()
+    let row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
+    expect(row.querySelector('.pill')).toHaveTextContent('2')
+    await endEpisode(e.id, ago(2 * 60))
+    await waitFor(() => expect(rows()[0].querySelector('.pill')).toHaveTextContent('8'))
+    row = rows()[0]
+    expect(row).toHaveTextContent('7 → 8 → 2')
   })
 })
 

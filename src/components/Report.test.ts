@@ -84,7 +84,8 @@ describe('Report page', () => {
     const rows = within(notable as HTMLElement).getAllByRole('row')
     expect(rows).toHaveLength(2)
     expect(rows[0]).toHaveTextContent('cosce · 2h · 6 → 3')
-    expect(rows[0].querySelector('.pill')).toHaveTextContent('3')
+    // Ended: the worst it got, not the 3 it ended on.
+    expect(rows[0].querySelector('.pill')).toHaveTextContent('6')
     expect(rows[1]).toHaveTextContent('coscia sx · Riposo')
     expect(rows[1]).toHaveTextContent('nota uno')
   })
