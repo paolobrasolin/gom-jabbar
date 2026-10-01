@@ -59,8 +59,8 @@ describe('Report page', () => {
     // Every reading counts, the episode's update too.
     expect(box('Voci')).toHaveTextContent('4')
     expect(box('Voci')).toHaveTextContent('in 3 giorni')
-    expect(box('Media')).toHaveTextContent('4,8')
-    expect(box('Media')).toHaveTextContent('max 8')
+    expect(box('Media giornaliera')).toHaveTextContent('4,8')
+    expect(box('Media giornaliera')).toHaveTextContent('max 8')
     expect(screen.getByText('Sintomo: Dolore')).toBeInTheDocument()
     expect(box('Giorni ≥ 5')).toHaveTextContent('2')
     expect(box('Episodi')).toHaveTextContent('1')
@@ -77,7 +77,7 @@ describe('Report page', () => {
     const sym = screen.getByRole('heading', { name: 'Altri sintomi' }).nextElementSibling!
     expect(sym).toHaveTextContent('Gonfiore')
     expect(sym).toHaveTextContent('5')
-    expect(sym).toHaveTextContent('1 voce')
+    expect(sym).toHaveTextContent('1 giorno')
     const tags = screen.getByRole('heading', { name: 'Tag' }).nextElementSibling!
     expect(within(tags as HTMLElement).getByRole('row', { name: /Riposo/ })).toHaveTextContent(/^Riposo\s*1\s*–\s*–$/)
     const notable = screen.getByRole('heading', { name: 'Episodi e note' }).nextElementSibling!
@@ -155,7 +155,7 @@ describe('Report for another symptom (#38)', () => {
     render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, symptom: 'swelling', onclose: vi.fn() })
     expect(screen.getByText('Sintomo: Gonfiore')).toBeInTheDocument()
     const box = (k: string) => screen.getByText(k).parentElement!
-    expect(box('Media')).toHaveTextContent('5')
+    expect(box('Media giornaliera')).toHaveTextContent('5')
     expect(box('Giorni ≥ 5')).toHaveTextContent('1')
     expect(screen.getByRole('img', { name: 'Gonfiore per giorno' })).toBeInTheDocument()
     // Swelling was read without a place: the map stays empty.
@@ -169,7 +169,7 @@ describe('Report for another symptom (#38)', () => {
     const from = rangeStart(7)
     const entries = [makeEntry({ at: at(0), layers: [{ regions: ['152'], readings: {}, tags: [] }] })]
     render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
-    expect(screen.queryByText('Media')).not.toBeInTheDocument()
+    expect(screen.queryByText('Media giornaliera')).not.toBeInTheDocument()
     expect(screen.queryByText('Giorni ≥ 5')).not.toBeInTheDocument()
     expect(screen.queryByText(/^Sintomo:/)).not.toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).not.toContain('Nel tempo')

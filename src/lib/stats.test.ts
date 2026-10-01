@@ -31,7 +31,8 @@ describe('stats', () => {
     const s = summarize([...eps, e('6', 2), e('6', 4)], 7, 'pain', now)
     expect(s.entries).toBe(4)
     expect(s.daysWithEntries).toBe(3)
-    expect(s.mean).toBe(5)
+    // Days 8, 6 and (2 + 4) / 2.
+    expect(s.mean).toBeCloseTo(17 / 3)
     expect(s.max).toBe(8)
     expect(s.daysAtLeast5).toBe(2)
     expect(s.episodes).toBe(2)
@@ -39,6 +40,18 @@ describe('stats', () => {
     expect(s.maxEpisodeMs).toBe(3 * 3_600_000)
     expect(s.hoursPerWeek).toBe(5)
     expect(summarize([], 7).mean).toBeNull()
+  })
+
+  it('averages per day, then across days: a day logged twenty times weighs as much as a day logged once', () => {
+    // 29 quiet days at 3 and one migraine day: the start at 8, then twenty updates at 8.
+    const quiet = Array.from({ length: 29 }, (_, i) => makeEntry({ at: new Date(2026, 2, i + 1, 12).toISOString(), readings: { pain: 3 } }))
+    const migraine = Array.from({ length: 21 }, () => makeEntry({ at: new Date(2026, 2, 30, 12).toISOString(), readings: { pain: 8 } }))
+    const s = summarize([...quiet, ...migraine], 30)
+    expect(s.mean).toBeCloseTo((29 * 3 + 8) / 30)
+    expect(s.max).toBe(8)
+    // The other symptoms too: two readings on one day count as that day's mean.
+    const fog = (d: string, v: number) => makeEntry({ at: at(d), layers: [{ regions: ['mind'], readings: { fog: v } }] })
+    expect(symptomMeans([fog('1', 2), fog('1', 2), fog('1', 2), fog('2', 8)], DEFAULT_SYMPTOMS)).toEqual([{ symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), mean: 5, count: 2 }])
   })
 
   it('measures pain over the entries that read it: one without a pain reading is not a 0', () => {

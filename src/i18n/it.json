@@ -174,7 +174,7 @@
   "trends.entries": "Voci",
   "trends.onDays": "in {n} giorni",
   "trends.onDays.one": "in {n} giorno",
-  "trends.mean": "Media",
+  "trends.mean": "Media giornaliera",
   "trends.maxPain": "max {n}",
   "trends.badDays": "Giorni ≥ 5",
   "trends.badDaysHint": "almeno 5 nel giorno",
