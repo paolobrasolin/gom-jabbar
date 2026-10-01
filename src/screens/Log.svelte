@@ -292,6 +292,8 @@
 <Sheet bind:open={howTo} title={t('install.title')}>
   <p>{t(isIOS() ? 'install.ios' : 'install.android')}</p>
   <p class="small muted">{t('install.why')}</p>
+  <!-- Instructions to read and then act on elsewhere: a visible way out, besides the backdrop and back (§6.1). -->
+  <button class="btn block" onclick={() => (howTo = false)}>{t('common.close')}</button>
 </Sheet>
 
 <style>
