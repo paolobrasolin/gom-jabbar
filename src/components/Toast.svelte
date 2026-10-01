@@ -1,7 +1,7 @@
 <script lang="ts">
   import { toastState, closeToast, holdToast, releaseToast } from '../lib/toast.svelte'
   import { t } from '../i18n/index.svelte'
-  import { ICONS } from '../lib/icons'
+  import MessageIcon from './MessageIcon.svelte'
 
   /** The kind in a shape as well as a colour (§10): an undo is a done with an action. */
   const ICON = { done: 'done', undo: 'done', refusal: 'needs', failure: 'failed' } as const
@@ -11,7 +11,7 @@
   {@const m = toastState.current}
   <!-- A finger on it holds its time (#94): an undo that is being read does not run out. -->
   <div
-    class="toast {m.kind}"
+    class="msg toast {m.kind}"
     class:held={toastState.held}
     class:lifted={toastState.lift !== null}
     class:top={toastState.top}
@@ -21,9 +21,7 @@
     onpointerup={releaseToast}
     onpointercancel={releaseToast}
     onpointerleave={releaseToast}>
-    <svg class="icon" data-icon={ICON[m.kind]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      {#each ICONS[ICON[m.kind]] as d, i (i)}<path {d} />{/each}
-    </svg>
+    <MessageIcon name={ICON[m.kind]} />
     <span class="grow">{m.message}</span>
     {#if m.action}
       <button
@@ -49,14 +47,7 @@
     right: 12px;
     bottom: calc(16px + env(safe-area-inset-bottom));
     z-index: 50;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    /* One height for every kind, the undo's: its 48px action and the padding around it. */
-    min-height: calc(var(--tap) + 12px);
-    padding: 6px 6px 6px 14px;
     overflow: hidden;
-    border-radius: var(--radius);
     box-shadow: var(--shadow);
     animation: up 0.15s ease-out;
   }
@@ -65,16 +56,9 @@
   /* On the log with the drawer pulled up: over the row of dropdowns, clear of the form. */
   .toast.top { top: calc(12px + env(safe-area-inset-top)); bottom: auto; }
 
-  /* Done: quiet, the colours of the page. */
-  .done { background: var(--surface); color: var(--ink); border: 1px solid var(--border); box-shadow: none; padding-right: 16px; }
-  /* Undo: inverted, with the time left running out along its bottom edge. */
-  .undo { background: var(--ink); color: var(--bg); }
-  /* Refusal: warm, the app needs something before it goes on. */
-  .refusal { background: var(--warn-bg); color: var(--warn-ink); font-weight: 600; padding-right: 16px; }
-  /* Failure: red, stays until its ✕. */
-  .failure { background: var(--fail-bg); color: var(--fail-ink); font-weight: 600; }
+  /* The colours of each kind are global (app.css, .msg); a quiet confirmation casts no shadow. */
+  .done { box-shadow: none; }
 
-  .icon { flex: none; width: 20px; height: 20px; }
   .action {
     min-height: var(--tap);
     padding: 0 14px;

@@ -11,6 +11,7 @@
   import { reads } from './lib/live.svelte'
   import { googleDrive } from './lib/drive'
   import type { CloudProvider, Resumed } from './lib/cloud'
+  import MessageIcon from './components/MessageIcon.svelte'
 
   /** `resumed`: the tap that left for Google's consent screen, back at startup (main.ts); it is finished in Settings. */
   /** `reload`: what Cancella tutto ends with; tests pass a stub, jsdom cannot reload. */
@@ -75,8 +76,9 @@
 
 <div class="app">
   {#if reads.failed}
-    <div class="unread" role="alert">
-      <span>{t('app.readError')}</span>
+    <div class="msg failure unread" role="alert">
+      <MessageIcon name="failed" />
+      <span class="grow">{t('app.readError')}</span>
       <button class="btn small" onclick={reload}>{t('app.reload')}</button>
     </div>
   {/if}
@@ -108,13 +110,7 @@
 
 <style>
   /* A failed read (§4.1): first in the column, above the header, until a reload; the arrow and the menu stay reachable. */
-  .unread {
-    flex: none;
-    margin: calc(8px + env(safe-area-inset-top)) 12px 4px;
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 10px 10px 16px; border-radius: var(--radius);
-    background: #d33f3f; color: #fff;
-  }
-  .unread span { flex: 1; }
-  .unread .btn { background: #fff; color: #b3261e; font-weight: 600; }
+  /* A failure that lasts (#94): it stays until the app is reloaded. */
+  .unread { flex: none; margin: calc(8px + env(safe-area-inset-top)) 12px 4px; }
+  .unread .btn { background: var(--fail-ink); color: var(--fail-bg); font-weight: 600; }
 </style>

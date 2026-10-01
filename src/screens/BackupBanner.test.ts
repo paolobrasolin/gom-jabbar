@@ -138,12 +138,17 @@ describe('One banner at a time (#37)', () => {
     prefs.installedAt = null
     await diarySince(15)
     render(App, { props: { cloud: g.provider } })
-    expect(screen.getByText(/Aggiungi alla schermata Home per/)).toBeInTheDocument()
+    const install = screen.getByText(/Aggiungi alla schermata Home per/).closest('.msg')!
+    // A standing message (#94): the page's colours, the icon of a message that needs you.
+    expect(install).toHaveClass('standing')
+    expect(install.querySelector('svg.icon')).toHaveAttribute('data-icon', 'needs')
     // Give the live query time to find the old diary: the backup banner still does not show.
     await waitFor(() => expect(document.querySelectorAll('.nudge')).toHaveLength(1))
     await new Promise((r) => setTimeout(r, 50))
     expect(screen.queryByText("È da un po' che non fai un backup.")).not.toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Non ora' }))
-    expect(await screen.findByText("È da un po' che non fai un backup.")).toBeInTheDocument()
+    const backup = (await screen.findByText("È da un po' che non fai un backup.")).closest('.msg')!
+    expect(backup).toHaveClass('standing')
+    expect(backup.querySelector('svg.icon')).toHaveAttribute('data-icon', 'needs')
   })
 })

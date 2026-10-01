@@ -178,6 +178,19 @@ h1, h2, h3, p { margin: 0; }
 .zone { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
 .zlabel { margin-bottom: 8px; font-weight: 600; }
 .muted { color: var(--ink-2); }
+/*
+ * Messages (#94, SPEC §10): one look for the toast, the failure notices and the log's banners. All one height, an icon
+ * on the left. done and standing are quiet, in the page's colours; undo is inverted; a refusal is warm; a failure red.
+ */
+.msg { display: flex; align-items: center; gap: 10px; min-height: calc(var(--tap) + 12px); padding: 6px 6px 6px 14px; border-radius: var(--radius); }
+.msg > .icon { flex: none; width: 20px; height: 20px; }
+.msg.done, .msg.standing { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.msg.undo { background: var(--ink); color: var(--bg); }
+.msg.refusal { background: var(--warn-bg); color: var(--warn-ink); font-weight: 600; }
+.msg.failure { background: var(--fail-bg); color: var(--fail-ink); font-weight: 600; }
+.msg.done, .msg.refusal { padding-right: 16px; }
+/* The storage error at startup (lib/startupError.ts): over the page, the app may not have drawn. */
+.msg.startup { position: fixed; left: 12px; right: 12px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 99; }
 .small { font-size: 14px; }
 .row { display: flex; align-items: center; gap: 10px; }
 .grow { flex: 1; min-width: 0; }

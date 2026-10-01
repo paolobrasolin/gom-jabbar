@@ -1008,7 +1008,7 @@ describe('Install nudge', () => {
 
   it('shows above the body map while the app is not installed', () => {
     render(App)
-    const banner = screen.getByText('Aggiungi alla schermata Home per tenere i dati al sicuro').closest('.card')!
+    const banner = screen.getByText('Aggiungi alla schermata Home per tenere i dati al sicuro').closest('.msg')!
     const map = screen.getAllByRole('group')[0]
     expect(banner.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

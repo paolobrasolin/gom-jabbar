@@ -27,6 +27,7 @@
   import { cloudBackup, driveInUse, failureText } from '../lib/cloudBackup'
   import type { CloudProvider } from '../lib/cloud'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
+  import MessageIcon from '../components/MessageIcon.svelte'
 
   let { cloud, navigate }: { cloud: CloudProvider; navigate: (to: Tab) => void } = $props()
 
@@ -248,13 +249,15 @@
 
   <!-- One banner at a time (#37): installing is what keeps the data safe, so it goes first; the backup waits its turn. -->
   {#if installNudge}
-    <div class="card row nudge small">
+    <div class="msg standing nudge small">
+      <MessageIcon name="needs" />
       <span class="grow">{t('install.nudge')}</span>
       <button class="chip small" onclick={installNow}>{t('install.now')}</button>
       <button class="chip small outline" onclick={() => (install.dismissed = true)} aria-label={t('install.later')}>✕</button>
     </div>
   {:else if nudge}
-    <div class="card row nudge small">
+    <div class="msg standing nudge small">
+      <MessageIcon name="needs" />
       {#if nudge.drive}
         <span class="grow">{nudge.days === null ? t('drive.never') : tn('backup.nudgeDrive', nudge.days)}</span>
         <button class="chip small" onclick={driveNow}>{t('drive.backup')}</button>
@@ -297,7 +300,8 @@
   .log { padding-bottom: 0; }
   .log > :global(.form) { min-height: 440px; }
   /* The text keeps a readable measure: on a narrow (zoomed) page it takes its own line and the buttons wrap under it. */
-  .nudge { padding: 6px 6px 6px 12px; flex-wrap: wrap; row-gap: 6px; }
+  /* A standing message (#94): it stays in the page until acted on; on a narrow page its buttons wrap under the words. */
+  .nudge { flex: none; flex-wrap: wrap; row-gap: 6px; }
   .nudge > .grow { flex: 1 1 9em; }
   /* The row of dropdowns: the screens and what is going on at the left, the presets at the right edge. */
   /* On a narrow (zoomed) page the row wraps rather than squeezing a label to a letter. */
