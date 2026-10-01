@@ -8,6 +8,7 @@
   import { t } from './i18n/index.svelte'
   import { prefs, type Tab } from './lib/prefs.svelte'
   import { dismissToast } from './lib/toast.svelte'
+  import { reads } from './lib/live.svelte'
   import { googleDrive } from './lib/drive'
   import type { CloudProvider, Resumed } from './lib/cloud'
 
@@ -94,7 +95,24 @@
       {/if}
     </header>
   {/if}
+  {#if reads.failed}
+    <div class="unread" role="alert">
+      <span>{t('app.readError')}</span>
+      <button class="btn small" onclick={reload}>{t('app.reload')}</button>
+    </div>
+  {/if}
   {#if tab === 'log'}<Log {cloud} navigate={go} />{:else if tab === 'diary'}<Diary query={query ?? ''} />{:else if tab === 'trends'}<Trends />{:else}<Settings {cloud} {resume} onresumed={() => (resume = null)} {reload} />{/if}
 </div>
 
 <Toast />
+
+<style>
+  /* A failed read (§4.1): over everything at the top, until a reload. */
+  .unread {
+    position: fixed; top: calc(8px + env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 60;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 10px 10px 16px; border-radius: var(--radius);
+    background: #d33f3f; color: #fff; box-shadow: var(--shadow);
+  }
+  .unread span { flex: 1; }
+</style>

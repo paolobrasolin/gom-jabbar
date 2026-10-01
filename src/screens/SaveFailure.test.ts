@@ -1,4 +1,4 @@
-/** A write can fail (storage full, the database closed by the browser): it is said, and what was typed stays. */
+/** A write or a read can fail (storage full, the database closed by the browser): it is said, never silent. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
@@ -6,6 +6,7 @@ import { prefs } from '../lib/prefs.svelte'
 import { addEntry } from '../lib/entries'
 import { addPreset } from '../lib/presets'
 import { dismissToast, toastState } from '../lib/toast.svelte'
+import { reads } from '../lib/live.svelte'
 import { go, openEpisode, pickPreset, presetItem } from '../test/nav'
 import App from '../App.svelte'
 
@@ -15,6 +16,7 @@ beforeEach(() => {
   prefs.lang = 'it'
   history.replaceState(null, '', '/')
   dismissToast()
+  reads.failed = false
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 afterEach(() => {
@@ -103,5 +105,32 @@ describe('a failed write', () => {
     await fireEvent.click(await screen.findByRole('button', { name: 'Annulla' }))
     await said()
     expect(await db.entries.count()).toBe(1)
+  })
+})
+
+describe('a failed read', () => {
+  it('says the diary could not be read, never that it is empty, and offers a reload', async () => {
+    await addEntry({ at: ago(30), layers: [{ regions: ['152'], readings: { pain: 4 } }] })
+    vi.spyOn(db.entries, 'count').mockRejectedValue(new DOMException('The database connection is closing.', 'InvalidStateError'))
+    const reload = vi.fn()
+    render(App, { props: { reload } })
+    await go('Diario')
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Non riesco a leggere il diario')
+    expect(screen.queryByText('Ancora nessuna voce.')).not.toBeInTheDocument()
+    await fireEvent.click(within(alert).getByRole('button', { name: 'Ricarica' }))
+    expect(reload).toHaveBeenCalled()
+  })
+
+  it('Trends says the same instead of "nothing in this period"', async () => {
+    await addEntry({ at: ago(30), layers: [{ regions: ['152'], readings: { pain: 4 } }] })
+    // Trends reads the range by time; that read fails, every other one works.
+    const where = db.entries.where.bind(db.entries)
+    const closing = () => Promise.reject(new DOMException('The database connection is closing.', 'InvalidStateError'))
+    vi.spyOn(db.entries, 'where').mockImplementation(((key: string) => (key === 'at' ? { aboveOrEqual: () => ({ toArray: closing }) } : where(key))) as never)
+    render(App)
+    await go('Andamento')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Non riesco a leggere il diario')
+    expect(screen.queryByText('Nessuna voce in questo periodo.')).not.toBeInTheDocument()
   })
 })
