@@ -72,11 +72,11 @@ describe('matches', () => {
 
   it('finds tags on any layer by their label in the current language, disabled ones included', () => {
     const e = entry({ regions: [[id('knee', 'l')], [MIND]], tags: [['heat'], ['old']] })
-    expect(hit(e, 'calore')).toBe(true)
+    expect(hit(e, 'impacco')).toBe(true)
     expect(hit(e, 'tachi')).toBe(true)
     expect(hit(e, 'ciclo')).toBe(false)
     prefs.lang = 'en'
-    expect(hit(e, 'heat')).toBe(true)
+    expect(hit(e, 'warm')).toBe(true)
   })
 
   it('finds the symptoms recorded above 0, disabled ones included', () => {
@@ -123,8 +123,8 @@ describe('matches', () => {
   it('a side binds only to a place: next to a symptom or a tag it is any side, as typed alone', () => {
     const left = entry({ regions: [[id('knee', 'l')]], readings: [{ pain: 3 }], tags: [['heat']] })
     const right = entry({ regions: [[id('knee', 'r')]], readings: [{ pain: 3 }], tags: [['heat']] })
-    for (const q of ['dolore sx', 'sx dolore', 'calore sx', 'dolore ginocchio sx']) expect(hit(left, q), q).toBe(true)
-    for (const q of ['dolore sx', 'calore sx', 'dolore ginocchio sx']) expect(hit(right, q), q).toBe(false)
+    for (const q of ['dolore sx', 'sx dolore', 'impacco sx', 'dolore ginocchio sx']) expect(hit(left, q), q).toBe(true)
+    for (const q of ['dolore sx', 'impacco sx', 'dolore ginocchio sx']) expect(hit(right, q), q).toBe(false)
     prefs.lang = 'en'
     expect(matches(left, 'left pain', ctx())).toBe(true)
     expect(matches(right, 'left pain', ctx())).toBe(false)

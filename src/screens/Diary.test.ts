@@ -140,7 +140,7 @@ describe('Edit sheet', () => {
 
     await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '3' } })
     await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Note' }), { target: { value: 'meglio' } })
-    await fireEvent.click(within(sheet).getByRole('button', { name: 'Calore' }))
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Impacco caldo' }))
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
     await waitFor(async () => {
       const cur = await db.entries.get(e.id)
@@ -285,7 +285,7 @@ describe('Edit sheet', () => {
     await waitFor(() => expect(back).toHaveAccessibleName(/4\s*Schiena/))
     expect(back).not.toHaveTextContent('schiena')
     // A shape holds no tags: nothing is replayed onto the reading.
-    expect(back).not.toHaveTextContent('Calore')
+    expect(back).not.toHaveTextContent('Impacco caldo')
     // Several layers keep their levels beside the name.
     expect(legs).toHaveAccessibleName(/6\s*Gambe · cosce 6 · anche 6/)
     // A preset that no longer exists leaves the row as any other.
@@ -446,12 +446,12 @@ describe('Diary search', () => {
     await logUpdate(head!.id, [{ pain: 3 }], noon.toISOString(), [['heat']])
     await openDiary()
     await waitFor(() => expect(rows()).toHaveLength(1))
-    await searchFor('calore')
+    await searchFor('impacco')
     await waitFor(() => expect(rows()).toHaveLength(1))
     const [u] = rows()
     expect(u.querySelector('.pill')).toHaveTextContent('3')
     expect(u).toHaveTextContent('Emicrania')
-    expect(u).toHaveTextContent('Calore')
+    expect(u).toHaveTextContent('Impacco caldo')
     expect(u).toHaveTextContent(/aggiornamento · inizio \d\d:\d\d/)
     await fireEvent.click(u)
     expect(await screen.findByRole('dialog', { name: 'Episodio in corso' })).toBeInTheDocument()
@@ -465,7 +465,7 @@ describe('Diary search', () => {
     const head = await addEntry({ at: start.toISOString(), kind: 'episode', layers: [L(['152'], 7)] })
     await logUpdate(head.id, [{ pain: 3 }], new Date().toISOString(), [['heat']])
     await openDiary()
-    await searchFor('calore')
+    await searchFor('impacco')
     await waitFor(() => expect(rows()[0]).toHaveTextContent(/aggiornamento · inizio ieri 09:00/))
   })
 
