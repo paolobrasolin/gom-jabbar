@@ -13,7 +13,7 @@
   import { live } from '../lib/live.svelte'
   import type { Lang } from '../lib/types'
   import { buildExport, parseImport, previewImport, applyImport, shareOrDownload, exportFilename, type ExportFile, type ImportPreview } from '../lib/backup'
-  import { showToast, haptic } from '../lib/toast.svelte'
+  import { showToast, showFailure, showRefusal, haptic } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
   import { deletePreset, restorePreset } from '../lib/presets'
 
@@ -67,7 +67,7 @@
       haptic(20)
       showToast(t('backup.done'))
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') showToast(t('backup.failed'))
+      if ((err as Error).name !== 'AbortError') showFailure(t('backup.failed'))
     } finally {
       busy = false
     }
@@ -95,7 +95,7 @@
       pending = { file, preview: await previewImport(file) }
       importOpen = true
     } catch (err) {
-      showToast(t((err as Error).message === 'newer-version' ? 'import.newer' : 'import.invalid'))
+      showRefusal(t((err as Error).message === 'newer-version' ? 'import.newer' : 'import.invalid'))
     }
   }
 
@@ -112,7 +112,7 @@
     } catch (err) {
       const e = err as Error & { inner?: Error }
       console.error('import failed', e.name, e.message, e.inner?.name, e.inner?.message, e)
-      showToast(t('import.failed'))
+      showFailure(t('import.failed'))
       return
     } finally {
       busy = false
@@ -147,7 +147,7 @@
       // The diary is deleted in one step: when that fails it is all there. Say so, and let the button be pressed again.
       console.error(e)
       resetting = false
-      showToast(t('reset.failed'))
+      showFailure(t('reset.failed'))
       return
     }
     reload()

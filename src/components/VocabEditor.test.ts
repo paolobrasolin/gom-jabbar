@@ -31,6 +31,16 @@ describe('Vocabulary editor: symptoms', () => {
     await waitFor(async () => expect((await db.symptoms.get('pain'))?.enabled).toBe(false))
   })
 
+  it('refuses a name already in the list, whatever the case, as a refusal (#94)', async () => {
+    render(VocabEditor, { table: 'symptoms' })
+    await waitFor(() => expect(names()).toContain('Gonfiore'))
+    const fields = screen.getAllByPlaceholderText('Nuovo…')
+    await fireEvent.input(fields[0], { target: { value: 'gonfiore' } })
+    await fireEvent.keyDown(fields[0], { key: 'Enter' })
+    await waitFor(() => expect(toastState.current).toMatchObject({ message: '«Gonfiore» c\'è già', kind: 'refusal' }))
+    expect(names().filter((n) => n === 'Gonfiore')).toHaveLength(1)
+  })
+
   it('adds a mind symptom from the field of its group, and moves only within the group', async () => {
     render(VocabEditor, { table: 'symptoms' })
     const fields = await screen.findAllByPlaceholderText('Nuovo…')

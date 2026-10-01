@@ -295,7 +295,7 @@ describe('Settings backup', () => {
 
     create.mockImplementation(() => { throw new TypeError('no blobs here') })
     await fireEvent.click(screen.getByRole('button', { name: 'Backup su file' }))
-    expect(await screen.findByText('Esportazione non riuscita')).toBeInTheDocument()
+    expect((await screen.findByText('Esportazione non riuscita')).closest('.toast')).toHaveClass('failure')
     expect(prefs.lastBackupAt).toBeNull()
   })
 
@@ -313,14 +313,14 @@ describe('Settings import', () => {
   it('says a file from a newer version needs the app updated, and opens nothing', async () => {
     await openSettings()
     await pickFile(JSON.stringify({ app: 'gom-jabbar', version: 99, entries: [] }))
-    expect(await screen.findByText("File di una versione più nuova: aggiorna l'app")).toBeInTheDocument()
+    expect((await screen.findByText("File di una versione più nuova: aggiorna l'app")).closest('.toast')).toHaveClass('refusal')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('rejects a file that is not a backup', async () => {
     await openSettings()
     await pickFile('{"hello": 1}')
-    expect(await screen.findByText('File non valido')).toBeInTheDocument()
+    expect((await screen.findByText('File non valido')).closest('.toast')).toHaveClass('refusal')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 

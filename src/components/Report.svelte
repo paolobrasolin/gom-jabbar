@@ -13,7 +13,7 @@
   import { leadSymptom } from '../lib/vocabulary'
   import { intensityColor, intensityInk } from '../lib/color'
   import { shareOrDownload, exportFilename } from '../lib/backup'
-  import { showToast } from '../lib/toast.svelte'
+  import { showToast, showFailure } from '../lib/toast.svelte'
 
   /** `symptom`: the one its figures read (§7, #38), the one picked on Trends; else the first read in range, in the editor's order. */
   let {
@@ -81,7 +81,7 @@
       await shareOrDownload(exportFilename('html'), standaloneHtml(), 'text/html')
       showToast(t('report.shared'))
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') showToast(t('backup.failed'))
+      if ((err as Error).name !== 'AbortError') showFailure(t('backup.failed'))
     }
   }
 </script>

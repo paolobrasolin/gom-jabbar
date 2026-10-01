@@ -1,4 +1,7 @@
-/** Stroke icons for the tool rails (#22): 24×24 paths, drawn with the current colour. Each carries a caption, so they need not stand alone. */
+/**
+ * Stroke icons for the tool rails (#22) and the messages (#94): 24×24 paths, drawn with the current colour. Each
+ * carries a caption or a message, so they need not stand alone.
+ */
 export const ICONS: Record<string, string[]> = {
   mirror: ['M12 3v18', 'M8 8l-4 4 4 4', 'M16 8l4 4-4 4'],
   flip: ['M4 12a8 8 0 0 1 14-5', 'M18 3v4h-4', 'M20 12a8 8 0 0 1-14 5', 'M6 21v-4h4'],
@@ -9,6 +12,10 @@ export const ICONS: Record<string, string[]> = {
   torso: ['M7 3h10l2 9-2 9H7l-2-9z', 'M12 3v18'],
   brush: ['M15 4l5 5-9 9-5-5z', 'M6 13l-2 2c-1 1-1 3 0 4s3 1 4 0l2-2'],
   undo: ['M9 14L4 9l5-5', 'M4 9h9a6 6 0 0 1 0 12h-3'],
+  /** Messages: something happened; the app needs something first; something did not happen. */
+  done: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 'M8 12.5l2.8 2.8L16 10'],
+  needs: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 'M12 7.5v5.5', 'M12 16.5v.01'],
+  failed: ['M12 3.5L2.5 20h19z', 'M12 9.5v4.5', 'M12 17v.01'],
   clear: ['M4 7h16', 'M10 11v6', 'M14 11v6', 'M6 7l1 13h10l1-13', 'M9 7V4h6v3'],
   zoomIn: ['M12 5v14', 'M5 12h14'],
   zoomOut: ['M5 12h14'],

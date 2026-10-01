@@ -15,7 +15,7 @@
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
   import { loadDraft, storeDraft, pruneUnknown } from '../lib/logDraft'
   import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, timeProblem, type Episode } from '../lib/entries'
-  import { showToast, haptic, toastState } from '../lib/toast.svelte'
+  import { showToast, showFailure, showRefusal, haptic, toastState } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
   import { intensityColor, intensityInk } from '../lib/color'
   import { formatDuration } from '../lib/time'
@@ -46,7 +46,7 @@
       haptic(20)
       showToast(t('backup.done'))
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') showToast(t('backup.failed'))
+      if ((err as Error).name !== 'AbortError') showFailure(t('backup.failed'))
     }
   }
   /** The banner's button once Drive is in use: the same step as Backup su Drive in Settings. */
@@ -54,7 +54,7 @@
     const res = await cloudBackup(cloud)
     tick = Date.now()
     if (res === 'left') return
-    if (!res.ok) return showToast(failureText(res))
+    if (!res.ok) return showFailure(failureText(res))
     haptic(20)
     showToast(t('drive.done'))
   }
@@ -155,12 +155,12 @@
     // Nothing measured where there is something to measure: no value nobody chose is stored (§6.1 item 7). Say so and
     // put the finger on the slider. With no symptom on for the form, a place alone is a reading of its own.
     if (!times.layers?.some((l) => Object.keys(l.readings ?? {}).length) && form?.measures()) {
-      showToast(t('log.noLevel'))
+      showRefusal(t('log.noLevel'))
       form?.pointAtLevel()
       return
     }
     if (timeProblem({ at: times.at!, endedAt: times.endedAt })) {
-      showToast(t('time.endBeforeStart'))
+      showRefusal(t('time.endBeforeStart'))
       void form?.pointAt('end')
       return
     }

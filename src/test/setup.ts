@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
 import { configure } from '@testing-library/svelte'
+import { closeToast } from '../lib/toast.svelte'
 
 // findBy*/waitFor default to 1s. A save fans out to every live query on the entries table, and on
 // CI (two cores, every test file in its own worker, inside the nix sandbox) that can take longer:
@@ -37,6 +38,9 @@ for (const g of [globalThis, window] as unknown as Record<string, unknown>[]) {
 beforeEach(async () => {
   for (let i = 0; i < 100 && (history.state as { sheet?: number } | null)?.sheet; i++) await new Promise((r) => setTimeout(r, 10))
 })
+
+// A failure stays until closed (#94), across screens and so across tests: every test starts with none.
+beforeEach(() => closeToast())
 
 // The log's draft is mirrored to local storage (§6.1): one test's draft must not come back in the next.
 beforeEach(() => {

@@ -1504,7 +1504,7 @@ describe('Times that cannot be', () => {
     const end = screen.getByRole('group', { name: 'Fine' })
     await fireEvent.click(within(end).getByRole('button', { name: '3h fa' }))
     await salva()
-    expect(await screen.findByText("La fine è prima dell'inizio")).toBeInTheDocument()
+    expect((await screen.findByText("La fine è prima dell'inizio")).closest('.toast')).toHaveClass('refusal')
     expect(await db.entries.count()).toBe(0)
     // Nothing was reset: the draft is there to be fixed.
     expect(within(end).getByRole('button', { name: '3h fa' })).toHaveAttribute('aria-pressed', 'true')

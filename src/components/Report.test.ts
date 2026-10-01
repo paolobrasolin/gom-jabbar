@@ -149,6 +149,7 @@ describe('Report page', () => {
     open()
     await fireEvent.click(screen.getByRole('button', { name: 'Condividi file' }))
     await waitFor(() => expect(toastState.current?.message).toBe('Esportazione non riuscita'))
+    expect(toastState.current?.kind).toBe('failure')
   })
 })
 
