@@ -36,10 +36,28 @@ describe('stats', () => {
     expect(s.max).toBe(8)
     expect(s.daysAtLeast5).toBe(2)
     expect(s.episodes).toBe(2)
-    expect(s.meanEpisodeMs).toBe(2.5 * 3_600_000)
-    expect(s.maxEpisodeMs).toBe(3 * 3_600_000)
-    expect(s.hoursPerWeek).toBe(5)
+    // Both ended: 3h and 2h.
+    expect(s.medianEpisodeMs).toBe(2.5 * 3_600_000)
+    expect(s.ongoing).toBe(0)
     expect(summarize([], 7).mean).toBeNull()
+  })
+
+  it('episode durations: the median of the ended ones; one still going on is counted apart, never as its time so far', () => {
+    const now = Date.parse(at('20'))
+    const ep = (day: string, hours: number | null) => {
+      const h = makeEntry({ at: at(day, 8), readings: { pain: 6 }, kind: 'episode' })
+      h.endedAt = hours === null ? null : new Date(Date.parse(h.at) + hours * 3_600_000).toISOString()
+      return h
+    }
+    // Ended 1h, 2h, 10h; one forgotten for days, and one begun minutes ago.
+    const s = summarize([ep('1', 1), ep('2', 2), ep('3', 10), ep('4', null), makeEntry({ at: new Date(now - 300_000).toISOString(), readings: { pain: 3 }, kind: 'episode' })], 30, 'pain', now)
+    expect(s.episodes).toBe(5)
+    expect(s.medianEpisodeMs).toBe(2 * 3_600_000)
+    expect(s.ongoing).toBe(2)
+    // Nothing ended yet: no median.
+    expect(summarize([ep('4', null)], 30, 'pain', now)).toMatchObject({ episodes: 1, medianEpisodeMs: null, ongoing: 1 })
+    // An even count: the middle two averaged.
+    expect(summarize([ep('1', 1), ep('2', 3)], 30, 'pain', now).medianEpisodeMs).toBe(2 * 3_600_000)
   })
 
   it('averages per day, then across days: a day logged twenty times weighs as much as a day logged once', () => {

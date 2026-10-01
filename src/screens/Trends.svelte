@@ -8,7 +8,7 @@
   import { db } from '../lib/db'
   import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE } from '../lib/stats'
+  import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE, type Summary } from '../lib/stats'
   import { formatDuration } from '../lib/time'
   import { allStrokes } from '../lib/strokes'
   import { PAIN } from '../lib/types'
@@ -49,6 +49,9 @@
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
+  /** Under the episode count: the median length of the ended ones, and how many are still going on (§6.3). */
+  const episodeLine = (s: Summary) =>
+    [s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '', s.ongoing ? tn('episode.count', s.ongoing) : ''].filter(Boolean).join(' · ')
 </script>
 
 <div class="screen">
@@ -76,7 +79,7 @@
         <div class="card tile"><span class="small muted">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="small muted">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
         <div class="card tile"><span class="small muted">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="small muted">{t('trends.badDaysHint')}</span></div>
       {/if}
-      <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="small muted">{summary.meanEpisodeMs !== null ? t('trends.episodeMean', { d: formatDuration(summary.meanEpisodeMs, units) }) : ''}</span></div>
+      <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="small muted">{episodeLine(summary)}</span></div>
     </div>
 
     <div class="card">

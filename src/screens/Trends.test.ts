@@ -56,7 +56,11 @@ describe('Trends summary', () => {
     expect(tile('Media giornaliera')).toHaveTextContent('max 8')
     expect(tile('Giorni ≥ 5')).toHaveTextContent('2')
     expect(tile('Episodi')).toHaveTextContent('1')
-    expect(tile('Episodi')).toHaveTextContent('durata media 2h')
+    expect(tile('Episodi')).toHaveTextContent('durata mediana 2h')
+    // One begun and not ended: counted apart, not as a length.
+    await addEntry({ at: at(0, 8), kind: 'episode', ...legs(5) })
+    await waitFor(() => expect(tile('Episodi')).toHaveTextContent('durata mediana 2h · 1 in corso'))
+    expect(tile('Episodi')).toHaveTextContent('2')
   })
 
   it('range chips change the data', async () => {

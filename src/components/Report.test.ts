@@ -64,7 +64,7 @@ describe('Report page', () => {
     expect(screen.getByText('Sintomo: Dolore')).toBeInTheDocument()
     expect(box('Giorni ≥ 5')).toHaveTextContent('2')
     expect(box('Episodi')).toHaveTextContent('1')
-    expect(box('Episodi')).toHaveTextContent('durata media 2h')
+    expect(box('Episodi')).toHaveTextContent('durata mediana 2h')
   })
 
   it('has the sections a doctor reads: map, chart, symptoms, tags, episodes and notes', () => {

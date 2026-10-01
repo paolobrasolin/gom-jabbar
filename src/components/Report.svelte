@@ -4,7 +4,7 @@
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale, num, tn } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, rangeEnd } from '../lib/stats'
+  import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, rangeEnd, type Summary } from '../lib/stats'
   import { durationMs, episodesOf, isHead, isUpdate, isActive, shownReading, chainLayers } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
@@ -41,6 +41,9 @@
   const strokes = $derived(allStrokes(entries, sid))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
+  /** Under the episode count: the median length of the ended ones, and how many are still going on (§6.3). */
+  const episodeLine = (s: Summary) =>
+    [s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '', s.ongoing ? tn('episode.count', s.ongoing) : ''].filter(Boolean).join(' · ')
   /** Compact chronological list: episodes and entries with notes; an update is read through its episode. */
   const episodes = $derived(episodesOf(entries))
   const notable = $derived(entries.filter((e) => !isUpdate(e) && (isHead(e) || e.note)).sort((a, b) => a.at.localeCompare(b.at)))
@@ -102,7 +105,7 @@
         <div><span class="k">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="k">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
         <div><span class="k">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="k">{t('trends.badDaysHint')}</span></div>
       {/if}
-      <div><span class="k">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="k">{summary.meanEpisodeMs !== null ? t('trends.episodeMean', { d: formatDuration(summary.meanEpisodeMs, units) }) : ''}</span></div>
+      <div><span class="k">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="k">{episodeLine(summary)}</span></div>
     </section>
 
     <section class="two">

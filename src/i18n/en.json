@@ -181,7 +181,7 @@
   "trends.badDays": "Days ≥ 5",
   "trends.badDaysHint": "5 or more that day",
   "trends.episodes": "Episodes",
-  "trends.episodeMean": "mean length {d}",
+  "trends.episodeMedian": "median length {d}",
   "trends.heatSymptom": "Symptom",
   "trends.heatmap": "Where",
   "trends.heatmapHint": "Colour: mean intensity. Outline: frequency.",
