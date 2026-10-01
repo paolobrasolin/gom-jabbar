@@ -311,7 +311,7 @@ describe('The drawer', () => {
     render(App)
     await more()
     let strip = await screen.findByLabelText('Tag frequenti')
-    await waitFor(() => expect(within(strip).getAllByRole('button')).toHaveLength(16))
+    await waitFor(() => expect(within(strip).getAllByRole('button')).toHaveLength(17))
     await fireEvent.click(screen.getByRole('button', { name: 'Tutti i tag' }))
     // Expanded: the strip is gone, the grouped list stands in its place, the same toggle folds it back.
     expect(screen.queryByLabelText('Tag frequenti')).not.toBeInTheDocument()
@@ -399,7 +399,7 @@ describe('Tag discoverability', () => {
     const names = () => within(strip).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)
     // Every enabled tag, vocabulary order until something has been used.
     await waitFor(() => expect(names().slice(0, 7)).toEqual(['Tutti i tag', 'Compressione', 'Linfodrenaggio', 'Movimento', 'Riposo', 'Impacco caldo', 'Impacco freddo']))
-    expect(names()).toHaveLength(16)
+    expect(names()).toHaveLength(17)
     expect(names().at(-1)).toBe('Viaggio')
     await fireEvent.click(within(strip).getByRole('button', { name: 'Impacco caldo' }))
     expect(within(strip).getByRole('button', { name: 'Impacco caldo' })).toHaveAttribute('aria-pressed', 'true')

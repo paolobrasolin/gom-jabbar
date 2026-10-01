@@ -147,9 +147,10 @@ Default tags:
 | standing | context | A lungo in piedi | Standing for long |
 | sitting | context | A lungo a sedere | Sitting for long |
 | hot_weather | context | Clima caldo | Hot weather |
+| cold_weather | context | Clima freddo | Cold weather |
 | travel | context | Viaggio | Travel |
 
-Medications are tags in the `medication` group. None ship by default; the tester adds their own in settings (name only, dose goes in the note if needed).
+Clima freddo joined the seed after 0.9.6: the seed only fills a new database (or one cleared by Cancella tutto), so a phone set up before has it only if added in Settings → Tag; no upgrade adds seed items to existing data. Medications are tags in the `medication` group. None ship by default; the tester adds their own in settings (name only, dose goes in the note if needed).
 
 Every item can be **renamed** at any time: the typed word replaces the label, trimmed, a leading `i18n:` stripped (a typed name is never a key); a blank one, or the name left as it was, leaves the item as it was (a seed item keeps following the language). Names are unique within the symptoms and within the tags, in the language shown and whatever the case: adding or renaming to a name another item has is refused with a toast («Dolore» c'è già) and changes nothing. A renamed seed item stays the person's word; typing the translation back gives plain text. Every item can be **switched on and off**; disabled items stay in history. An item can be **deleted while unused**: no entry reads the symptom or carries the tag, on any layer, and no preset asks for the symptom (`usage` in `lib/vocab.ts`). Anything may go, a whole group included: an empty vocabulary is a legitimate state.
 

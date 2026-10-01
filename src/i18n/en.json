@@ -144,6 +144,7 @@
   "vocab.standing": "Standing for long",
   "vocab.sitting": "Sitting for long",
   "vocab.hot_weather": "Hot weather",
+  "vocab.cold_weather": "Cold weather",
   "vocab.travel": "Travel",
   "backup.done": "Backed up to file",
   "backup.failed": "Export failed",
