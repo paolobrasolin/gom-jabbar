@@ -61,7 +61,13 @@ export function createDrive(deps: DriveDeps): CloudProvider {
 
   function load(): Stored {
     try {
-      return (JSON.parse(deps.storage().getItem(KEY) ?? '{}') as Stored) ?? {}
+      const s = (JSON.parse(deps.storage().getItem(KEY) ?? '{}') as Stored) ?? {}
+      // Until 0.9.7 the account's name was kept too, never shown: forgotten here, keeping only the email.
+      if (s.account && 'name' in s.account) {
+        s.account = { email: s.account.email }
+        deps.storage().setItem(KEY, JSON.stringify(s))
+      }
+      return s
     } catch {
       return {}
     }
@@ -195,8 +201,9 @@ export function createDrive(deps: DriveDeps): CloudProvider {
 
     whoami: () =>
       run(async () => {
-        const { user } = await call<{ user: { displayName: string; emailAddress: string } }>(`${API}/about?fields=user(displayName,emailAddress)`)
-        const account = { name: user.displayName, email: user.emailAddress }
+        // The email only: which account holds the backup, and the hint for the next sign-in. No name.
+        const { user } = await call<{ user: { emailAddress: string } }>(`${API}/about?fields=user(emailAddress)`)
+        const account = { email: user.emailAddress }
         save({ account })
         return account
       }),

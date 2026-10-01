@@ -53,7 +53,7 @@ export class FakeDrive {
     const path = url.pathname
     const media = url.searchParams.get('alt') === 'media'
     let m: RegExpMatchArray | null
-    if (path === '/drive/v3/about') return json({ user: { displayName: 'Paolo', emailAddress: 'paolo@example.test' } })
+    if (path === '/drive/v3/about') return json({ user: { emailAddress: 'paolo@example.test' } })
     if (path === '/drive/v3/files' && method === 'GET') {
       const q = url.searchParams.get('q')!
       const name = q.match(/name = '([^']+)'/)![1]

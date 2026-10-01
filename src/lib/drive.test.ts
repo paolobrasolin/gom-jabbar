@@ -148,11 +148,18 @@ describe('the token', () => {
 })
 
 describe('whoami', () => {
-  it('reads the account under the file scope and remembers it', async () => {
+  it('reads only the account email under the file scope, and remembers it; no name', async () => {
     const p = make()
     signIn(p)
-    expect(await p.whoami()).toEqual({ ok: true, value: { name: 'Paolo', email: 'paolo@example.test' } })
-    expect(make().status().account).toEqual({ name: 'Paolo', email: 'paolo@example.test' })
+    expect(await p.whoami()).toEqual({ ok: true, value: { email: 'paolo@example.test' } })
+    expect(make().status().account).toEqual({ email: 'paolo@example.test' })
+    expect(storage.getItem('gj.drive')).not.toContain('Paolo')
+  })
+
+  it('forgets a name an older version stored', () => {
+    storage.setItem('gj.drive', JSON.stringify({ account: { name: 'Paolo', email: 'paolo@example.test' } }))
+    expect(make().status().account).toEqual({ email: 'paolo@example.test' })
+    expect(storage.getItem('gj.drive')).not.toContain('Paolo')
   })
 })
 
