@@ -4,7 +4,7 @@
 [![Version](https://img.shields.io/github/v/tag/paolobrasolin/gom-jabbar?label=version&sort=semver)](https://github.com/paolobrasolin/gom-jabbar/tags)
 [![Licence](https://img.shields.io/github/license/paolobrasolin/gom-jabbar)](LICENSE)
 
-Chronic pain diary. Installable web app, no backend, data stays on the phone. See [SPEC.md](SPEC.md). Deployed at https://paolobrasolin.github.io/gom-jabbar/ (install to the home screen from there).
+Chronic pain diary. Installable web app, no backend, data stays on the phone. See [SPEC.md](SPEC.md). Deployed at https://gom-jabbar.618.ovh/ (install to the home screen from there).
 
 With [Nix](https://nixos.org) and [direnv](https://direnv.net), `direnv allow` once and the shell gets the pinned Node; `nix build` runs the whole CI (check, tests, build, size gate) and leaves the Pages bundle in `result/`. Without Nix, any Node ≥ 22 works.
 
