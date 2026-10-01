@@ -143,7 +143,14 @@ describe('stats', () => {
     expect(cmp[0].withMean).toBe(8)
     expect(cmp[0].withoutMean).toBeCloseTo((3 * 6 + 9) / 7)
     expect(tagComparison(entries, DEFAULT_TAGS, 'pain', 1).map((c) => c.tag.id)).toEqual(['badsleep', 'stress'])
-    expect(tagCounts(entries, DEFAULT_TAGS).map((x) => [x.tag.id, x.count])).toEqual([['badsleep', 6], ['stress', 1]])
+    expect(tagCounts(entries, DEFAULT_TAGS).map((x) => [x.tag.id, x.days])).toEqual([['badsleep', 6], ['stress', 1]])
+  })
+
+  it('counts tags in days, not entries, medications first: three doses on one day are one day of medication', () => {
+    const tagged = (d: string, h: number, tags: string[]) => makeEntry({ at: at(d, h), layers: [{ regions: ['152'], readings: { pain: 4 }, tags }] })
+    const entries = [tagged('1', 8, ['ibuprofen']), tagged('1', 14, ['ibuprofen']), tagged('1', 20, ['ibuprofen']), tagged('2', 9, ['ibuprofen']), tagged('1', 9, ['stress']), tagged('2', 9, ['stress']), tagged('3', 9, ['stress'])]
+    const tags = [...DEFAULT_TAGS, { id: 'ibuprofen', label: 'Ibuprofene', group: 'medication' as const, enabled: true, order: 99 }]
+    expect(tagCounts(entries, tags).map((x) => [x.tag.id, x.days])).toEqual([['ibuprofen', 2], ['stress', 3]])
   })
 
   it('averages other symptoms where recorded', () => {

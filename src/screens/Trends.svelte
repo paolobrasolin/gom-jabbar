@@ -112,7 +112,7 @@
         <p class="small muted">{t('trends.tagsNeedData', { n: MIN_DAYS_PER_SIDE })}</p>
         {#if counts.length}
           <div class="chips top">
-            {#each counts as c (c.tag.id)}<span class="chip small outline">{tl(c.tag.label)} · {c.count}</span>{/each}
+            {#each counts as c (c.tag.id)}<span class="chip small outline">{tl(c.tag.label)} · {tn('diary.days', c.days)}</span>{/each}
           </div>
         {/if}
       {/if}
