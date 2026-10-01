@@ -52,5 +52,7 @@ export const DEFAULT_TAGS: Tag[] = [
   { id: 'standing', group: 'context', label: seed('standing'), enabled: true, order: 13 },
   { id: 'sitting', group: 'context', label: seed('sitting'), enabled: true, order: 14 },
   { id: 'hot_weather', group: 'context', label: seed('hot_weather'), enabled: true, order: 15 },
-  { id: 'travel', group: 'context', label: seed('travel'), enabled: true, order: 16 },
+  // Added after 0.9.6: a fresh database (or Cancella tutto) starts with it; an existing one gets it from the editor.
+  { id: 'cold_weather', group: 'context', label: seed('cold_weather'), enabled: true, order: 16 },
+  { id: 'travel', group: 'context', label: seed('travel'), enabled: true, order: 17 },
 ]

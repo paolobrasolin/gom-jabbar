@@ -144,6 +144,7 @@
   "vocab.standing": "A lungo in piedi",
   "vocab.sitting": "A lungo a sedere",
   "vocab.hot_weather": "Clima caldo",
+  "vocab.cold_weather": "Clima freddo",
   "vocab.travel": "Viaggio",
   "backup.done": "Backup su file fatto",
   "backup.failed": "Esportazione non riuscita",

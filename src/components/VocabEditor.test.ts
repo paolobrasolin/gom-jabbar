@@ -187,9 +187,11 @@ describe('Vocabulary editor: names are unique', () => {
 describe('Vocabulary editor: tags', () => {
   it('lists the tags by group, each with its own add field', async () => {
     render(VocabEditor, { table: 'tags' })
-    await waitFor(() => expect(names()).toHaveLength(15))
+    await waitFor(() => expect(names()).toHaveLength(16))
     const titles = Array.from(document.querySelectorAll('.group-title')).map((p) => p.textContent)
     expect(titles).toEqual(['Rimedi', 'Contesto', 'Farmaci'])
+    // The weather both ways, next to each other.
+    expect(names().slice(names().indexOf('Clima caldo'), names().indexOf('Clima caldo') + 3)).toEqual(['Clima caldo', 'Clima freddo', 'Viaggio'])
     expect(screen.getAllByPlaceholderText('Nuovo…')).toHaveLength(3)
     expect(names().slice(0, 2)).toEqual(['Compressione', 'Linfodrenaggio'])
     expect(names()[8]).toBe('Ciclo')
@@ -203,7 +205,7 @@ describe('Vocabulary editor: tags', () => {
     await fireEvent.click(screen.getAllByRole('button', { name: '+ Aggiungi' })[2])
     await waitFor(() => expect(names()).toContain('Ibuprofene'))
     const added = (await db.tags.orderBy('order').last())!
-    expect(added).toMatchObject({ group: 'medication', label: 'Ibuprofene', enabled: true, order: 17 })
+    expect(added).toMatchObject({ group: 'medication', label: 'Ibuprofene', enabled: true, order: 18 })
     expect(names()[names().length - 1]).toBe('Ibuprofene')
   })
 
@@ -271,7 +273,7 @@ describe('Vocabulary editor: deleting (§6.4)', () => {
 
   it('can empty a whole group', async () => {
     render(VocabEditor, { table: 'tags' })
-    for (const name of ['Ciclo', 'Stress', 'Dormito male', 'A lungo in piedi', 'A lungo a sedere', 'Clima caldo', 'Viaggio']) {
+    for (const name of ['Ciclo', 'Stress', 'Dormito male', 'A lungo in piedi', 'A lungo a sedere', 'Clima caldo', 'Clima freddo', 'Viaggio']) {
       await fireEvent.click(await screen.findByRole('button', { name: `Elimina ${name}` }))
       await waitFor(() => expect(names()).not.toContain(name))
     }
