@@ -7,6 +7,8 @@
   "log.save": "Salva",
   "log.saved": "Salvato",
   "log.undo": "Annulla",
+  "log.noLevel": "Quanto? Sposta la barra",
+  "slider.unset": "non indicato",
   "error.write": "Non riuscito: riprova",
   "log.ongoing": "In corso",
   "log.note": "Note",

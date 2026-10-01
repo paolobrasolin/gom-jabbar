@@ -223,8 +223,8 @@ describe('entries', () => {
     expect(input.note).toBe('n')
     // The draft's layers remember what they held; finalize leaves it out of the row.
     expect(input.layers).toEqual([{ ...L(['154'], { pain: 5 }, ['rest']), had: { regions: ['154'], readings: { pain: 5 } } }])
-    const fresh = draftToInput(emptyDraft({ head: 'pain', level: 4 }))
-    expect(fresh.layers).toEqual([L([], { pain: 4 })])
+    const fresh = draftToInput(emptyDraft())
+    expect(fresh.layers).toEqual([L([], {})])
     expect(Date.parse(fresh.at!)).toBeGreaterThan(Date.now() - 5000)
   })
 })

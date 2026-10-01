@@ -33,15 +33,15 @@ export type EntryDraft = {
 }
 
 /**
- * A fresh draft. `head` is the body's headline symptom (§6.1), the first enabled one: it starts at `level`, 5 unless
- * carried over from the last save. Without one (no body symptom on, or the vocabulary not read yet) nothing is set.
+ * A fresh draft. Nothing is read yet (§6.1 item 7): no slider starts at a value nobody chose, the headline included; a
+ * level is recorded when a slider is touched.
  */
-export function emptyDraft(opts: { kind?: EntryKind; head?: string; level?: number } = {}): EntryDraft {
+export function emptyDraft(opts: { kind?: EntryKind } = {}): EntryDraft {
   return {
     at: null,
     kind: opts.kind ?? 'chronic',
     endedAt: null,
-    layers: [newLayer(opts.head ? { [opts.head]: opts.level ?? 5 } : {})],
+    layers: [newLayer({})],
     cur: 0,
     note: '',
   }

@@ -1,15 +1,18 @@
 <script lang="ts">
   import { intensityColor, intensityInk } from '../lib/color'
   import { haptic } from '../lib/toast.svelte'
+  import { t } from '../i18n/index.svelte'
 
+  /** `value` null: nothing recorded yet (§6.1 item 7); the slider shows "–" and its track empty until it is touched. */
   let {
-    value = $bindable(5),
+    value = $bindable(null),
     label = '',
     onchange,
-  }: { value?: number; label?: string; onchange?: (v: number) => void } = $props()
+  }: { value?: number | null; label?: string; onchange?: (v: number) => void } = $props()
 
-  const color = $derived(intensityColor(value))
-  const ink = $derived(intensityInk(value))
+  const blank = $derived(value === null || value === undefined)
+  const color = $derived(blank ? 'var(--c-zero)' : intensityColor(value!))
+  const ink = $derived(blank ? 'var(--ink-2)' : intensityInk(value!))
   /** One size for every symptom, pain included (#37). */
   const thumb = 36
 
@@ -37,7 +40,7 @@
 
   /** Value under a pointer: the thumb centre travels from thumb/2 to width - thumb/2, like the native control. */
   function valueAt(clientX: number): number {
-    if (!input) return value
+    if (!input) return value ?? 0
     const r = input.getBoundingClientRect()
     const pct = (clientX - r.left - thumb / 2) / Math.max(1, r.width - thumb)
     return Math.round(Math.min(1, Math.max(0, pct)) * 10)
@@ -79,7 +82,7 @@
   }
 </script>
 
-<div class="slider" style="--fill: {color}; --ink-on: {ink}; --pct: {value / 10}">
+<div class="slider" class:blank style="--fill: {color}; --ink-on: {ink}; --pct: {(value ?? 0) / 10}">
   {#if label}<span class="label">{label}</span>{/if}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="track-wrap" onpointerdown={down}>
@@ -89,11 +92,11 @@
       min="0"
       max="10"
       step="1"
-      {value}
+      value={value ?? 0}
       aria-label={label || 'intensity'}
-      aria-valuetext={String(value)}
+      aria-valuetext={blank ? t('slider.unset') : String(value)}
       oninput={onInput} />
-    <span class="bubble" aria-hidden="true">{value}</span>
+    <span class="bubble" aria-hidden="true">{blank ? '–' : value}</span>
   </div>
 </div>
 
