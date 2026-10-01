@@ -119,6 +119,12 @@
     }
     importOpen = false
     haptic(20)
+    // The file is a backup made when it was exported (§4.2): restoring it says so, unless a later backup is known, so the
+    // banner does not ask for one straight after a restore (a new phone, or after Cancella tutto).
+    if (!prefs.lastBackupAt || file.exportedAt > prefs.lastBackupAt) {
+      prefs.lastBackupAt = file.exportedAt
+      savePrefs()
+    }
     const msg = tn('import.done', mode === 'replace' ? res.entries : res.added + res.updated)
     if (snapshot) showToast(msg, { label: t('log.undo'), run: () => void applyImport(snapshot, 'replace').catch(failed) })
     else showToast(msg)
