@@ -9,7 +9,7 @@
   import { maxReadings, showsCategory } from '../lib/layers'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
-  import { formatDuration, formatTime, formatDay } from '../lib/time'
+  import { formatDuration, formatTime, formatDay, dayKey } from '../lib/time'
   import { intensityColor, intensityInk } from '../lib/color'
   import { PAIN, type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
   import { firstEnabled } from '../lib/vocabulary'
@@ -87,6 +87,12 @@
   const manyDays = $derived(!!ep && new Set([ep.head, ...ep.updates].map((e) => new Date(e.at).toDateString())).size > 1)
   const when = (iso: string) =>
     manyDays ? `${formatDay(iso, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') })} ${formatTime(iso, locale())}` : formatTime(iso, locale())
+  /** When an ended episode ended: "finito alle 12:00" today, "finito ieri alle 21:06" on another day. */
+  function endedText(iso: string): string {
+    const time = formatTime(iso, locale())
+    if (dayKey(iso) === dayKey(new Date().toISOString())) return t('episode.endedAt', { t: time })
+    return t('episode.endedOn', { d: formatDay(iso, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') }).toLowerCase(), t: time })
+  }
   /**
    * Every reading, each an entry edited from its own line (§5.5): its highest symptom, named; its places, so an edit
    * shows where it was made; what was done then; its note.
@@ -159,15 +165,17 @@
   }
 </script>
 
-<Sheet bind:open title={t(active ? 'episode.active' : 'episode.ended')}>
+<!-- An ended episode is just "Episodio": "Episodio terminato" is what the toast says when one ends. -->
+<Sheet bind:open title={t(active ? 'episode.active' : 'episode.title')}>
   {#if ep && now}
     <div class="card small">
       <div class="head">
+        <span class="pill" style="--c: {intensityColor(hl.value)}; --ink-on: {intensityInk(hl.value)}">{hl.value}</span>
         <div class="grow"><EntrySummary lead={symptomName(hl.id, symptoms, tl)} layers={now.layers} tagDefs={[]} /></div>
         <!-- Only while the start is what the card shows: with several readings each line opens its own. -->
         {#if points.length <= 1}<button class="edit" onclick={() => edit(ep!.head)}>{t('episode.editShort')}</button>{/if}
       </div>
-      <div class="muted">{active ? t('episode.since', { d: formatDuration(durationMs(ep.head) ?? 0, units) }) : formatDuration(durationMs(ep.head) ?? 0, units)}{#if context.length}{' · '}{context.map(tagName).join(', ')}{/if}</div>
+      <div class="muted">{active ? t('episode.since', { d: formatDuration(durationMs(ep.head) ?? 0, units) }) : `${formatDuration(durationMs(ep.head) ?? 0, units)} · ${endedText(ep.head.endedAt!)}`}{#if context.length}{' · '}{context.map(tagName).join(', ')}{/if}</div>
       {#if points.length > 1}
       <ol class="history" aria-label={t('episode.readings')}>
         {#each points as p (p.entry.id)}

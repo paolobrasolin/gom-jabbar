@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
-import { addEntry, logUpdate, isHead, isUpdate } from '../lib/entries'
+import { addEntry, logUpdate, endEpisode, isHead, isUpdate } from '../lib/entries'
 import { go, openEpisode, episodesButton } from '../test/nav'
 import App from '../App.svelte'
 import { mergedTags } from '../lib/layers'
@@ -96,7 +96,7 @@ describe('Episode sheet', () => {
     // The ended episode's sheet, from the diary, has the readings and the edit link but no sliders.
     await go('Diario')
     await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
-    const ended = await screen.findByRole('dialog', { name: 'Episodio terminato' })
+    const ended = await screen.findByRole('dialog', { name: 'Episodio' })
     expect(within(ended).getByLabelText('Letture')).toBeInTheDocument()
     expect(within(ended).queryByRole('slider')).not.toBeInTheDocument()
     expect(within(ended).queryByRole('button', { name: 'Aggiorna' })).not.toBeInTheDocument()
@@ -119,6 +119,27 @@ describe('Episode sheet', () => {
     sheet = await openEpisode()
     expect(lines(sheet)[0]).toMatch(/^\d\d:\d\d 7 dolore · coscia dx$/)
     expect(lines(sheet)[1]).toMatch(/^\d\d:\d\d 4 dolore · coscia sx$/)
+  })
+
+  it('an ended episode with one reading: its level, when it ended, and Modifica; the title is not the toast', async () => {
+    const e = await addEntry({ at: ago(300), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 6 } }] })
+    await endEpisode(e.id, ago(180))
+    render(App)
+    await go('Diario')
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+    const sheet = await screen.findByRole('dialog', { name: 'Episodio' })
+    expect(within(sheet).getByText('6')).toHaveClass('pill')
+    expect(sheet).toHaveTextContent(/2h · finito alle 12:00/)
+    expect(within(sheet).getByRole('button', { name: 'Modifica' })).toBeInTheDocument()
+  })
+
+  it('an episode that ended on another day says which', async () => {
+    const e = await addEntry({ at: ago(36 * 60), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 6 } }] })
+    await endEpisode(e.id, ago(30 * 60))
+    render(App)
+    await go('Diario')
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+    expect(await screen.findByRole('dialog', { name: 'Episodio' })).toHaveTextContent(/6h · finito ieri alle 09:00/)
   })
 
   it('Modifica hands the head to the edit sheet while it is the only reading', async () => {
