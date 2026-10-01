@@ -371,6 +371,7 @@
   "reset.drive": "The Drive file stays where it is; Drive gets disconnected.",
   "reset.type": "Type “{w}” to confirm",
   "reset.word": "delete",
+  "reset.failed": "Didn't work: nothing was deleted",
   "report.disclaimer": "Personal diary: entered by the person, not clinically validated. Gom Jabbar is not a medical device.",
   "about.privacy": "Privacy policy",
   "about.terms": "Terms of service",

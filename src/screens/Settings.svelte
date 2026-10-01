@@ -141,7 +141,15 @@
   async function resetNow() {
     if (!resetArmed || resetting) return
     resetting = true
-    await resetAll(cloud)
+    try {
+      await resetAll(cloud)
+    } catch (e) {
+      // The diary is deleted in one step: when that fails it is all there. Say so, and let the button be pressed again.
+      console.error(e)
+      resetting = false
+      showToast(t('reset.failed'))
+      return
+    }
     reload()
   }
 
