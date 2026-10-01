@@ -172,6 +172,16 @@ describe('Episodes with an end', () => {
     }
   })
 
+  it("a save's toast still showing when the drawer opens moves to the top, off the kind switch", async () => {
+    render(App)
+    await fireEvent.click(await screen.findByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    const toast = (await screen.findByText('Salvato')).closest('.toast')!
+    expect(toast).not.toHaveClass('top')
+    await more()
+    await waitFor(() => expect(screen.getByText('Salvato').closest('.toast')).toHaveClass('top'))
+  })
+
   it('the refusal of an end before the start shows at the top, clear of the time rows the open drawer shows', async () => {
     render(App)
     // With the drawer down, a toast sits above it.
