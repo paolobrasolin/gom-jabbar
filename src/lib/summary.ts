@@ -1,6 +1,7 @@
 import { whereItems } from './anatomy'
 import { mergedReadings, maxReadings } from './layers'
-import { PAIN, type Label, type Symptom } from './types'
+import { leadSymptom } from './vocabulary'
+import type { Label, Symptom } from './types'
 
 type T = (k: string, p?: Record<string, string | number>) => string
 
@@ -16,22 +17,22 @@ export function regionText(regions: string[], t: T): string {
 
 export type Headline = { id: string; value: number }
 
-/** A headline reading: the highest one. Pain wins ties and stands in when nothing is set. */
-export function headline(readings: Record<string, number>): Headline {
-  let best: Headline = { id: PAIN, value: readings[PAIN] ?? 0 }
-  for (const [id, v] of Object.entries(readings)) if (id !== PAIN && v > best.value) best = { id, value: v }
+/** A headline reading: the highest one. The lead symptom (`leadSymptom`) wins ties and stands in when nothing is set. */
+export function headline(readings: Record<string, number>, lead = ''): Headline {
+  let best: Headline = { id: lead, value: readings[lead] ?? 0 }
+  for (const [id, v] of Object.entries(readings)) if (id !== lead && v > best.value) best = { id, value: v }
   return best
 }
 
 /** An entry's headline: over the readings of all its layers (§5.1). */
-export const entryHeadline = (e: { layers: { readings: Record<string, number> }[] }): Headline => headline(mergedReadings(e.layers))
+export const entryHeadline = (e: { layers: { readings: Record<string, number> }[] }, lead?: string): Headline => headline(mergedReadings(e.layers), lead)
 
 /** The level a layer is shown at: its headline value. */
 export const layerLevel = (l: { readings: Record<string, number> }): number => headline(l.readings).value
 
-/** Lowercase name of a symptom for a headline, e.g. "gonfiore"; empty for pain, which needs no naming. */
+/** Lowercase name of a symptom for a headline, e.g. "gonfiore"; empty for the lead symptom, which needs no naming. */
 export function symptomName(id: string, symptoms: Symptom[], tl: (s: Label) => string): string {
-  if (id === PAIN) return ''
+  if (id === leadSymptom(symptoms)) return ''
   const def = symptoms.find((s) => s.id === id)
   return def ? tl(def.label).toLowerCase() : id
 }

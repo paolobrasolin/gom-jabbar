@@ -74,6 +74,20 @@ describe('Diary list', () => {
     expect(episode).toHaveTextContent('dopo la corsa')
   })
 
+  it('names every symptom but the lead one, which follows the vocabulary, not pain (#36)', async () => {
+    await db.symptoms.update('pain', { enabled: false })
+    await addEntry({ at: ago(30), layers: [{ regions: ['152'], readings: { pain: 5 }, tags: [] }] })
+    await addEntry({ at: ago(20), layers: [{ regions: ['152'], readings: { swelling: 6 }, tags: [] }] })
+    await addEntry({ at: ago(10), layers: [{ regions: ['152'], readings: { pain: 4, swelling: 4 }, tags: [] }] })
+    await openDiary()
+    // The vocabulary arrives on its own query: wait for it, not just for the rows.
+    await waitFor(() => expect(rows()[2]).toHaveTextContent('5 dolore'))
+    const [tie, swelling] = rows()
+    expect(tie.querySelector('.pill')).toHaveTextContent('4')
+    expect(tie).not.toHaveTextContent(/gonfiore|dolore/)
+    expect(swelling).not.toHaveTextContent('gonfiore')
+  })
+
   it('shows 30 days and loads 60 more at a time while older entries exist', async () => {
     await addEntry({ at: ago(10), layers: [L(['152'], 2)] })
     await addEntry({ at: ago(40 * DAY), layers: [L(['152'], 9)] })

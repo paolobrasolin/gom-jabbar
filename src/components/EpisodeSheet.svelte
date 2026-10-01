@@ -11,8 +11,8 @@
   import { failed } from '../lib/failure'
   import { formatDuration, formatTime, formatDay, dayKey } from '../lib/time'
   import { intensityColor, intensityInk } from '../lib/color'
-  import { PAIN, type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
-  import { firstEnabled } from '../lib/vocabulary'
+  import { type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
+  import { firstEnabled, leadSymptom } from '../lib/vocabulary'
 
   /** `entry` is the head (§5.5); the sheet loads its updates and works from the latest reading. */
   let {
@@ -66,7 +66,8 @@
   const active = $derived(!!ep && isActive(ep.head))
   /** What the card leads with (§5.5): how it is now while it goes on, the worst it got once ended. */
   const shown = $derived(ep ? shownReading(ep) : null)
-  const hl = $derived(shown ? entryHeadline(shown) : { id: PAIN, value: 0 })
+  const leadId = $derived(leadSymptom(symptoms))
+  const hl = $derived(shown ? entryHeadline(shown, leadId) : headline({}, leadId))
   /** Remedies happen in response to pain, so they are offered here; context tags stay in the edit sheet. */
   const remedyGroups: TagGroup[] = ['intervention', 'medication']
   const remedies = $derived(remedyGroups.map((g) => ({ g, items: tagDefs.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
@@ -101,7 +102,7 @@
    */
   const points = $derived(
     (ep ? [ep.head, ...ep.updates] : []).map((e) => {
-      const h = headline(maxReadings(e.layers.map((l) => l.readings)))
+      const h = headline(maxReadings(e.layers.map((l) => l.readings)), leadId)
       const where = e.layers.filter((l) => l.regions.length).map((l) => regionText(l.regions, t))
       const done = [...new Set(e.layers.flatMap((l) => l.tags))].filter((id) => groupOf(id) !== 'context').map(tagName)
       return { entry: e, value: h.value, name: named(h.id), where, done, note: e.note }
@@ -199,7 +200,7 @@
             {@const level = layerLevel(l)}
             <button class="chip small area" aria-pressed={i === cur} style="--c: {intensityColor(level)}; --ink-on: {intensityInk(level)}" onclick={() => (cur = i)}>
               <span class="dot">{level}</span>
-              <EntrySummary lead={symptomName(headline(l.readings).id, symptoms, tl)} layers={[l]} {tagDefs} />
+              <EntrySummary lead={symptomName(headline(l.readings, leadId).id, symptoms, tl)} layers={[l]} {tagDefs} />
             </button>
           {/each}
         </div>

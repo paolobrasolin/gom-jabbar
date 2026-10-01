@@ -19,6 +19,9 @@ export function firstEnabled(symptoms: Symptom[], category: SymptomCategory): Sy
   return [...symptoms].sort((a, b) => a.order - b.order).find((s) => s.enabled && (s.category ?? defaultCategory(s.id)) === category)
 }
 
+/** The lead symptom (#36): the body's first enabled one, which wins headline ties and goes unnamed (§5.1). Pain in the seed. */
+export const leadSymptom = (symptoms: Symptom[]): string | undefined => firstEnabled(symptoms, 'body')?.id
+
 /** The highest mental reading, 0 when none is set: the level of an area holding only the mind (§5.4) and the mind's heat (§6.3). */
 export function mindMax(readings: Record<string, number>, symptoms: Symptom[]): number {
   return Math.max(0, ...symptoms.filter(isMindSymptom).map((s) => readings[s.id] ?? 0))

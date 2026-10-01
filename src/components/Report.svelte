@@ -10,6 +10,7 @@
   import { formatDuration, formatTime } from '../lib/time'
   import { PAIN, type Entry, type Symptom, type Tag } from '../lib/types'
   import { entryHeadline, symptomName, trail } from '../lib/summary'
+  import { leadSymptom } from '../lib/vocabulary'
   import { intensityColor, intensityInk } from '../lib/color'
   import { shareOrDownload, exportFilename } from '../lib/backup'
   import { showToast } from '../lib/toast.svelte'
@@ -50,7 +51,7 @@
   function rowOf(e: Entry) {
     const ep = isHead(e) ? episodes.get(e.id) : undefined
     const cur = ep ? shownReading(ep) : e
-    const hl = entryHeadline(cur)
+    const hl = entryHeadline(cur, leadSymptom(symptoms))
     return { cur, hl, shown: ep ? chainLayers(ep) : cur.layers, levels: ep && ep.updates.length ? trail([ep.head, ...ep.updates], hl.id) : [], dur: durationMs(e) }
   }
 
