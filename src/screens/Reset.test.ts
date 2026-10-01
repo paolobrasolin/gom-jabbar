@@ -58,7 +58,7 @@ describe('Cancella tutto', () => {
     await g.provider.whoami()
     const sheet = await openReset()
     expect(sheet).toHaveTextContent('Ultimo backup: 20 set 2026.')
-    expect(sheet).toHaveTextContent("Il file su Drive resta dov'è; Drive viene scollegato.")
+    expect(sheet).toHaveTextContent("Il file su Drive resta dov'è; Drive viene scollegato da questo telefono (il permesso, da myaccount.google.com/permissions).")
   })
 
   it('does nothing when the sheet is closed, and forgets the word', async () => {

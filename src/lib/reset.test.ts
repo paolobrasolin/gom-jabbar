@@ -70,7 +70,7 @@ describe('resetAll', () => {
 
   it('works in a build without Drive', async () => {
     const g = fakeGoogle()
-    await expect(resetAll({ ...g.provider, available: false, disconnect: async () => {} })).resolves.toBeUndefined()
+    await expect(resetAll({ ...g.provider, available: false, disconnect: async () => false })).resolves.toBeUndefined()
     await db.open()
     expect(await db.symptoms.count()).toBe(DEFAULT_SYMPTOMS.length)
   })

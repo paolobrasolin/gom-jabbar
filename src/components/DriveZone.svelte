@@ -1,4 +1,6 @@
 <script lang="ts">
+  /** Where a Google account lists and removes the apps it has granted access to. */
+  const PERMISSIONS = 'https://myaccount.google.com/permissions'
   import { onMount, untrack } from 'svelte'
   import Sheet from './Sheet.svelte'
   import { t } from '../i18n/index.svelte'
@@ -70,11 +72,16 @@
       onrestore(res.value)
     })
 
+  /**
+   * Scollega (§4.2): forgotten here always; revoked with Google only while the hour-long token lives. Otherwise say so
+   * honestly and offer Google's own page, where the permission can be removed.
+   */
   async function disconnect() {
-    await cloud.disconnect()
+    const revoked = await cloud.disconnect()
     problem = null
     refresh()
-    showToast(t('drive.disconnected'))
+    if (revoked) showToast(t('drive.disconnected'))
+    else showToast(t('drive.forgotten'), { label: t('drive.removePermission'), run: () => void window.open(PERMISSIONS, '_blank', 'noopener') })
   }
 
   onMount(() => {
