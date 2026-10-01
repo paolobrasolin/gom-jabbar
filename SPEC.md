@@ -34,7 +34,7 @@
 | i18n | JSON message files, tiny store, `it` default, `en` | No heavy lib needed |
 | Charts and body map | Hand-written SVG | No chart lib, full control, small |
 | Tests | Vitest, `fake-indexeddb`, `@testing-library/svelte` | Paolo's pick |
-| Hosting | GitHub Pages via Actions | Static, free, no infra |
+| Hosting | GitHub Pages via Actions, at `https://gom-jabbar.618.ovh/` (DNS in Paolo's `iac` repo) | Static, free, no infra. Its own origin: browser storage is per origin, and until #105 the diary shared `paolobrasolin.github.io` with every other Pages site of the account, any of which could read it |
 | Google sign-in (cloud backup) | Two Google Cloud projects: `gom-jabbar` for Pages, `gom-jabbar-dev` (Testing, one test user) for `npm run dev`; client ids in `.env.production` and `.env.development` | Configuration, not infrastructure; set up by hand, no API exists (#32). Published to production on 2026-09-28; its branding links `privacy-policy.html` and `terms-of-service.html` (#35) but stays unverified, so the consent screen names the domain, not the app |
 | Licence | EUPL-1.2 (`LICENSE`), © 2026 Paolo Brasolin | Copyleft that reaches hosted copies, written for EU law, official Italian text; no warranty and, as far as the law allows, no liability (#35) |
 | Third-party notices | `open-source-licences.html` in the build: every package in the bundle (from the module graph), the service worker's Workbox runtime (listed in `vite.config.ts`, checked by `npm run notices`), CHOIRBM; licence texts and NOTICE files | MIT and Apache ask for their notices to travel with copies (#35) |
