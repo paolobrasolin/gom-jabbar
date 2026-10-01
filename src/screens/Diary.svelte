@@ -12,6 +12,7 @@
   import type { Entry } from '../lib/types'
   import type { Episode } from '../lib/entries'
   import { entryHeadline, symptomName, trail } from '../lib/summary'
+  import { leadSymptom } from '../lib/vocabulary'
   import { search, snippet, words, type SearchContext } from '../lib/search'
 
   /** What is typed in the header's field (§6.2); nothing typed, the Diary as it is. */
@@ -76,7 +77,7 @@
     const ep: Episode | undefined = isHead(e) ? episodes.get(e.id) : undefined
     const head = isUpdate(e) ? episodes.get(e.episodeId!)?.head : undefined
     const cur = ep && !searching ? shownReading(ep) : e
-    const hl = entryHeadline(cur)
+    const hl = entryHeadline(cur, leadSymptom(symptoms.value))
     const presetId = (head ?? e).presetId
     const name = presetId ? presets.value.find((p) => p.id === presetId)?.name : undefined
     const lead = [name, symptomName(hl.id, symptoms.value, tl)].filter(Boolean).join(' · ')

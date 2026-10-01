@@ -327,7 +327,7 @@
                 style="--c: {intensityColor(level)}; --ink-on: {intensityInk(level)}"
                 onclick={() => apply(selectLayer(st(), i))}>
                 {#if mode !== 'preset'}<span class="dot">{Object.keys(l.readings).length ? level : '–'}</span>{/if}
-                {#if l.regions.length}<EntrySummary lead={symptomName(headline(l.readings).id, symptoms, tl)} layers={[l]} tagDefs={tags} />{:else}<span class="muted">…</span>{/if}
+                {#if l.regions.length}<EntrySummary lead={symptomName(headline(l.readings, bodyHead?.id).id, symptoms, tl)} layers={[l]} tagDefs={tags} />{:else}<span class="muted">…</span>{/if}
               </button>
             {/each}
           {/if}

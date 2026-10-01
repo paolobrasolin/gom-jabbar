@@ -4,6 +4,7 @@ import { durationMs, isHead } from './entries'
 import { presetOf } from './presets'
 import { mergedReadings, mergedTags } from './layers'
 import { dayKey } from './time'
+import { leadSymptom } from './vocabulary'
 
 const ALL_IDS = [...new Set(REGIONS.map((r) => r.id))]
 const readings = (e: Entry) => mergedReadings(e.layers)
@@ -224,16 +225,18 @@ export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; days: numb
 export type PresetPoint = { at: number; value: number }
 
 /**
- * One line per preset that has samples: the preset's first symptom over time, samples only, no carry-forward. An update
+ * One line per preset that has samples: one symptom over time (the lead one when the preset asks for it), samples only, no carry-forward. An update
  * of an episode opened from a preset is a sample of it, even when the episode began before the range: `earlier` holds
  * the heads outside `entries`. A sample without the reading is skipped: no reading is not a 0.
  */
-export function presetSeries(entries: Entry[], presets: Preset[], earlier: Entry[] = []): { preset: Preset; points: PresetPoint[] }[] {
+export function presetSeries(entries: Entry[], presets: Preset[], earlier: Entry[] = [], symptoms: Symptom[] = []): { preset: Preset; points: PresetPoint[] }[] {
+  const lead = leadSymptom(symptoms)
   const heads = new Map([...earlier, ...entries].filter((e) => e.presetId && e.episodeId === e.id).map((e) => [e.id, e]))
   return presets
     .map((preset) => {
-      // Pain when any layer asks for it, else the first thing its first layer asks (§6.3).
-      const id = preset.layers.some((l) => l.asks?.includes(PAIN)) ? PAIN : (preset.layers[0]?.asks?.[0] ?? PAIN)
+      // The lead symptom when any layer asks for it, else the first thing its first layer asks (§6.3).
+      const id = lead && preset.layers.some((l) => l.asks?.includes(lead)) ? lead : (preset.layers[0]?.asks?.[0] ?? lead)
+      if (id === undefined) return { preset, points: [] }
       const points = entries
         .filter((e) => presetOf(e, heads) === preset.id)
         .flatMap((e) => {

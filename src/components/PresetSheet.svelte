@@ -10,6 +10,7 @@
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
   import { headline, layerLevel, symptomName } from '../lib/summary'
+  import { leadSymptom } from '../lib/vocabulary'
   import { intensityColor, intensityInk } from '../lib/color'
   import type { Preset, Symptom } from '../lib/types'
 
@@ -87,7 +88,7 @@
           {@const level = layerLevel(l)}
           <button class="chip small area" aria-pressed={i === cur} style="--c: {intensityColor(level)}; --ink-on: {intensityInk(level)}" onclick={() => (cur = i)}>
             <span class="dot">{Object.keys(l.readings).length ? level : '–'}</span>
-            <EntrySummary lead={symptomName(headline(l.readings).id, symptoms, tl)} layers={[l]} />
+            <EntrySummary lead={symptomName(headline(l.readings, leadSymptom(symptoms)).id, symptoms, tl)} layers={[l]} />
           </button>
         {/each}
       </div>

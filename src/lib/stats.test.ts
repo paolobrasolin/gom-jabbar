@@ -187,7 +187,7 @@ describe('stats', () => {
 })
 
 describe('presetSeries', () => {
-  it('gives one line per preset with samples only: pain when any layer asks for it, else the first thing its first layer asks', () => {
+  it('gives one line per preset with samples only: the lead symptom when any layer asks for it, else the first thing its first layer asks', () => {
     const presets: Preset[] = [
       { id: 'a', name: 'Schiena', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic', order: 0 },
       { id: 'b', name: 'Gambe', layers: [{ regions: ['mind'], asks: ['fog'] }, { regions: ['224'], asks: ['swelling'] }], kind: 'chronic', order: 1 },
@@ -202,7 +202,7 @@ describe('presetSeries', () => {
       mk('4', '2026-09-02T12:00:00.000Z', { pain: 7 }),
       mk('5', '2026-09-02T13:00:00.000Z', { pain: 1, swelling: 5, fog: 2 }, 'd'),
     ]
-    const rows = presetSeries(entries, presets)
+    const rows = presetSeries(entries, presets, [], DEFAULT_SYMPTOMS)
     expect(rows.map((r) => r.preset.id)).toEqual(['a', 'b', 'd'])
     expect(rows[0].points.map((p) => [p.at, p.value])).toEqual([[Date.parse('2026-09-01T10:00:00.000Z'), 6], [Date.parse('2026-09-03T10:00:00.000Z'), 4]])
     expect(rows[1].points.map((p) => p.value)).toEqual([2])
@@ -211,10 +211,26 @@ describe('presetSeries', () => {
 })
 
 describe('presetSeries edge cases', () => {
-  it('falls back to pain for a preset without symptoms', () => {
+  it('falls back to the lead symptom for a preset without symptoms', () => {
     const presets: Preset[] = [{ id: 'x', name: 'X', layers: [], kind: 'chronic', order: 0 }]
     const entries = [makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3 }, presetId: 'x' })]
-    expect(presetSeries(entries, presets).map((r) => r.points[0].value)).toEqual([3])
+    expect(presetSeries(entries, presets, [], DEFAULT_SYMPTOMS).map((r) => r.points[0].value)).toEqual([3])
+  })
+
+  it('follows the lead symptom, not pain, when it leads elsewhere (#36)', () => {
+    const presets: Preset[] = [
+      { id: 'x', name: 'X', layers: [{ regions: ['224'], asks: ['pain', 'swelling'] }], kind: 'chronic', order: 0 },
+      { id: 'y', name: 'Y', layers: [{ regions: ['224'], asks: ['heaviness'] }, { regions: ['130'], asks: ['pain'] }], kind: 'chronic', order: 1 },
+    ]
+    const entries = [
+      makeEntry({ at: '2026-09-01T10:00:00.000Z', readings: { pain: 3, swelling: 6 }, presetId: 'x' }),
+      makeEntry({ at: '2026-09-01T11:00:00.000Z', readings: { pain: 2, heaviness: 7 }, presetId: 'y' }),
+    ]
+    const off = DEFAULT_SYMPTOMS.map((s) => (s.id === 'pain' ? { ...s, enabled: false } : s))
+    // Swelling leads: x asks for it; y does not, so its first layer's first symptom.
+    expect(presetSeries(entries, presets, [], off).map((r) => r.points[0].value)).toEqual([6, 7])
+    // The seed: pain leads, as before.
+    expect(presetSeries(entries, presets, [], DEFAULT_SYMPTOMS).map((r) => r.points[0].value)).toEqual([3, 2])
   })
 
   it('skips a sample without the reading: no reading is not a 0, and a preset with none has no line', () => {

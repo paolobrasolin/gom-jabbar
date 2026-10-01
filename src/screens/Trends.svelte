@@ -28,7 +28,7 @@
     return [...new Set(entries.value.flatMap((e) => (e.episodeId && !ids.has(e.episodeId) ? [e.episodeId] : [])))]
   })
   const earlier = live(() => outside, async () => (await db.entries.bulkGet(outside)).filter((e) => e !== undefined), [])
-  const byPreset = $derived(presetSeries(entries.value, presets.value, earlier.value))
+  const byPreset = $derived(presetSeries(entries.value, presets.value, earlier.value, symptoms.value))
 
   /**
    * The screen reads one symptom at a time (§6.3, #38): the tiles, the map, the chart and the tag comparison. The picker

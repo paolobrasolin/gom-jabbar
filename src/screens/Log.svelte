@@ -206,7 +206,7 @@
         {#snippet items(close)}
           {#each active.value as ep (ep.head.id)}
             {@const cur = latest(ep)}
-            {@const hl = entryHeadline(cur)}
+            {@const hl = entryHeadline(cur, head)}
             <button role="menuitem" onclick={() => {
                 close()
                 episode = ep.head

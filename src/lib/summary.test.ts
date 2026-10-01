@@ -6,22 +6,33 @@ import { t, tl } from '../i18n/index.svelte'
 import { prefs } from './prefs.svelte'
 
 describe('headline', () => {
-  it('is the highest reading, pain on ties and when nothing else is set', () => {
-    expect(headline({ pain: 0, swelling: 3 })).toEqual({ id: 'swelling', value: 3 })
-    expect(headline({ pain: 5, swelling: 5 })).toEqual({ id: 'pain', value: 5 })
-    expect(headline({ pain: 2 })).toEqual({ id: 'pain', value: 2 })
-    expect(headline({})).toEqual({ id: 'pain', value: 0 })
+  it('is the highest reading, the lead symptom on ties and when nothing else is set', () => {
+    expect(headline({ pain: 0, swelling: 3 }, 'pain')).toEqual({ id: 'swelling', value: 3 })
+    expect(headline({ pain: 5, swelling: 5 }, 'pain')).toEqual({ id: 'pain', value: 5 })
+    expect(headline({ pain: 2 }, 'pain')).toEqual({ id: 'pain', value: 2 })
+    expect(headline({}, 'pain')).toEqual({ id: 'pain', value: 0 })
+    // Pain is only the seed's lead (#36): whatever leads wins the tie.
+    expect(headline({ pain: 5, swelling: 5 }, 'swelling')).toEqual({ id: 'swelling', value: 5 })
+    expect(headline({}, 'swelling')).toEqual({ id: 'swelling', value: 0 })
     // An entry's headline is over all its layers; a layer's level is its own headline.
     const e = makeEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }, { regions: ['mind'], readings: { fog: 6 } }] })
     expect(entryHeadline(e)).toEqual({ id: 'fog', value: 6 })
     expect(e.layers.map(layerLevel)).toEqual([4, 6])
   })
 
-  it('names the symptom in the current language, lowercase, and stays quiet for pain', () => {
+  it('names the symptom in the current language, lowercase, and stays quiet for the lead symptom', () => {
     prefs.lang = 'it'
     expect(symptomName('swelling', DEFAULT_SYMPTOMS, tl)).toBe('gonfiore')
     expect(symptomName('pain', DEFAULT_SYMPTOMS, tl)).toBe('')
     expect(symptomName('sym-unknown', DEFAULT_SYMPTOMS, tl)).toBe('sym-unknown')
+    // Pain switched off: swelling leads and goes unnamed, pain's old readings say what they are (#36).
+    const off = DEFAULT_SYMPTOMS.map((s) => (s.id === 'pain' ? { ...s, enabled: false } : s))
+    expect(symptomName('swelling', off, tl)).toBe('')
+    expect(symptomName('pain', off, tl)).toBe('dolore')
+    // Moved below swelling, likewise.
+    const moved = DEFAULT_SYMPTOMS.map((s) => (s.id === 'pain' ? { ...s, order: 1 } : s.id === 'swelling' ? { ...s, order: 0 } : s))
+    expect(symptomName('swelling', moved, tl)).toBe('')
+    expect(symptomName('pain', moved, tl)).toBe('dolore')
   })
 })
 
