@@ -174,7 +174,7 @@
   "trends.entries": "Entries",
   "trends.onDays": "on {n} days",
   "trends.onDays.one": "on {n} day",
-  "trends.mean": "Mean",
+  "trends.mean": "Daily mean",
   "trends.maxPain": "max {n}",
   "trends.badDays": "Days ≥ 5",
   "trends.badDaysHint": "5 or more that day",

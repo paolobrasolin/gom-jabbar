@@ -120,7 +120,7 @@
         <p class="small muted label">{t('trends.symptoms')}</p>
         <div class="sym">
           {#each symMeans as s (s.symptom.id)}
-            <div class="row"><span class="name grow">{tl(s.symptom.label)}</span><span class="small muted">{tn('trends.nEntries', s.count)}</span><b class="val">{fmt1(s.mean)}</b></div>
+            <div class="row"><span class="name grow">{tl(s.symptom.label)}</span><span class="small muted">{tn('diary.days', s.count)}</span><b class="val">{fmt1(s.mean)}</b></div>
           {/each}
         </div>
       </div>

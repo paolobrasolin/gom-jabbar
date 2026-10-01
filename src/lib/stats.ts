@@ -68,10 +68,22 @@ export function dailySeries(entries: Entry[], from: Date, days: number, symptom 
   return out
 }
 
+/**
+ * The mean of `vals` per day, then across days (§6.3): a day logged twenty times (a migraine and its updates) weighs as
+ * much as a day logged once, so the figure is the typical day, not the typical entry.
+ */
+function dailyMean(vals: { at: string; v: number }[]): { mean: number; days: number } | null {
+  const byDay = new Map<string, number[]>()
+  for (const { at, v } of vals) byDay.set(dayKey(at), [...(byDay.get(dayKey(at)) ?? []), v])
+  if (!byDay.size) return null
+  const means = [...byDay.values()].map((vs) => vs.reduce((a, b) => a + b, 0) / vs.length)
+  return { mean: means.reduce((a, b) => a + b, 0) / means.length, days: means.length }
+}
+
 export type Summary = {
   entries: number
   daysWithEntries: number
-  /** The symptom's mean and max over the entries reading it; null when none does. */
+  /** The symptom's mean per day, then across days, and its max, over the entries reading it; null when none does. */
   mean: number | null
   max: number | null
   daysAtLeast5: number
@@ -92,7 +104,7 @@ export function summarize(entries: Entry[], days: number, symptom = PAIN, now = 
   return {
     entries: entries.length,
     daysWithEntries: series.size,
-    mean: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null,
+    mean: dailyMean(read.map(({ e, v }) => ({ at: e.at, v })))?.mean ?? null,
     max: vs.length ? Math.max(...vs) : null,
     daysAtLeast5: [...dayMax.values()].filter((v) => v >= 5).length,
     episodes: eps.length,
@@ -164,17 +176,21 @@ export function tagComparison(entries: Entry[], tags: Tag[], symptom = PAIN, min
   return out.sort((a, b) => Math.abs(b.withMean - b.withoutMean) - Math.abs(a.withMean - a.withoutMean))
 }
 
+/** `count`: the days the symptom was recorded on. */
 export type SymptomMean = { symptom: Symptom; mean: number; count: number }
 
-/** Mean of every symptom but `except` (the one picked, §6.3) over the entries where it was recorded above zero. */
+/** Mean of every symptom but `except` (the one picked, §6.3), per day then across days, where it was recorded above zero. */
 export function symptomMeans(entries: Entry[], symptoms: Symptom[], except = PAIN): SymptomMean[] {
   return symptoms
     .filter((s) => s.id !== except)
-    .map((symptom) => {
-      const vals = entries.map((e) => readings(e)[symptom.id]).filter((v): v is number => typeof v === 'number' && v > 0)
-      return { symptom, mean: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0, count: vals.length }
+    .flatMap((symptom) => {
+      const vals = entries.flatMap((e) => {
+        const v = readings(e)[symptom.id]
+        return typeof v === 'number' && v > 0 ? [{ at: e.at, v }] : []
+      })
+      const m = dailyMean(vals)
+      return m ? [{ symptom, mean: m.mean, count: m.days }] : []
     })
-    .filter((x) => x.count > 0)
     .sort((a, b) => b.mean - a.mean)
 }
 

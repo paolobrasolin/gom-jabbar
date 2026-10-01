@@ -119,7 +119,7 @@
           <h2>{t('trends.symptoms')}</h2>
           <table>
             <tbody>
-              {#each symMeans as s (s.symptom.id)}<tr><td>{tl(s.symptom.label)}</td><td class="num">{fmt1(s.mean)}</td><td class="num muted">{tn('trends.nEntries', s.count)}</td></tr>{/each}
+              {#each symMeans as s (s.symptom.id)}<tr><td>{tl(s.symptom.label)}</td><td class="num">{fmt1(s.mean)}</td><td class="num muted">{tn('diary.days', s.count)}</td></tr>{/each}
             </tbody>
           </table>
         {/if}
