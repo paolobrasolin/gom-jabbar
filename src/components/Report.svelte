@@ -5,7 +5,7 @@
   import { t, tl, locale, num, tn } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, rangeEnd } from '../lib/stats'
-  import { durationMs, episodesOf, isHead, isUpdate, isActive, latest, chainLayers } from '../lib/entries'
+  import { durationMs, episodesOf, isHead, isUpdate, isActive, shownReading, chainLayers } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
   import { PAIN, type Entry, type Symptom, type Tag } from '../lib/types'
@@ -46,7 +46,7 @@
   const notable = $derived(entries.filter((e) => !isUpdate(e) && (isHead(e) || e.note)).sort((a, b) => a.at.localeCompare(b.at)))
   function rowOf(e: Entry) {
     const ep = isHead(e) ? episodes.get(e.id) : undefined
-    const cur = ep ? latest(ep) : e
+    const cur = ep ? shownReading(ep) : e
     const hl = entryHeadline(cur)
     return { cur, hl, shown: ep ? chainLayers(ep) : cur.layers, levels: ep && ep.updates.length ? trail([ep.head, ...ep.updates], hl.id) : [], dur: durationMs(e) }
   }

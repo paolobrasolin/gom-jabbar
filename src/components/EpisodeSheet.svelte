@@ -4,7 +4,7 @@
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { endEpisode, reopenEpisode, logUpdate, loadEpisode, deleteEntry, latest, durationMs, isActive, type Episode } from '../lib/entries'
+  import { endEpisode, reopenEpisode, logUpdate, loadEpisode, deleteEntry, latest, shownReading, durationMs, isActive, type Episode } from '../lib/entries'
   import { entryHeadline, headline, symptomName, layerLevel, regionText } from '../lib/summary'
   import { maxReadings, showsCategory } from '../lib/layers'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
@@ -64,7 +64,9 @@
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const now = $derived(ep ? latest(ep) : null)
   const active = $derived(!!ep && isActive(ep.head))
-  const hl = $derived(now ? entryHeadline(now) : { id: PAIN, value: 0 })
+  /** What the card leads with (§5.5): how it is now while it goes on, the worst it got once ended. */
+  const shown = $derived(ep ? shownReading(ep) : null)
+  const hl = $derived(shown ? entryHeadline(shown) : { id: PAIN, value: 0 })
   /** Remedies happen in response to pain, so they are offered here; context tags stay in the edit sheet. */
   const remedyGroups: TagGroup[] = ['intervention', 'medication']
   const remedies = $derived(remedyGroups.map((g) => ({ g, items: tagDefs.filter((x) => x.enabled && x.group === g) })).filter((x) => x.items.length))
@@ -171,7 +173,7 @@
     <div class="card small">
       <div class="head">
         <span class="pill" style="--c: {intensityColor(hl.value)}; --ink-on: {intensityInk(hl.value)}">{hl.value}</span>
-        <div class="grow"><EntrySummary lead={symptomName(hl.id, symptoms, tl)} layers={now.layers} tagDefs={[]} /></div>
+        <div class="grow"><EntrySummary lead={symptomName(hl.id, symptoms, tl)} layers={(shown ?? now).layers} tagDefs={[]} /></div>
         <!-- Only while the start is what the card shows: with several readings each line opens its own. -->
         {#if points.length <= 1}<button class="edit" onclick={() => edit(ep!.head)}>{t('episode.editShort')}</button>{/if}
       </div>

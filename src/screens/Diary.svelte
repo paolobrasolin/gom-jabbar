@@ -6,7 +6,7 @@
   import { db } from '../lib/db'
   import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { durationMs, episodesOf, isHead, isUpdate, isActive, latest, chainLayers } from '../lib/entries'
+  import { durationMs, episodesOf, isHead, isUpdate, isActive, shownReading, chainLayers } from '../lib/entries'
   import { intensityColor, intensityInk } from '../lib/color'
   import { dayKey, formatDay, formatTime, formatDuration } from '../lib/time'
   import type { Entry } from '../lib/types'
@@ -69,13 +69,13 @@
     return `${tn('diary.entries', n)} · ${tn('diary.days', d)}`
   })
   /**
-   * What a row shows: for an episode, its latest reading and its trail (§5.5); a row logged from a preset is named after
+   * What a row shows: for an episode, the reading it is shown by (the latest while it goes on, the worst once ended) and its trail (§5.5); a row logged from a preset is named after
    * it (§5.6). A hit shows its own reading, the one that matched; an update, when its episode started.
    */
   function rowOf(e: Entry) {
     const ep: Episode | undefined = isHead(e) ? episodes.get(e.id) : undefined
     const head = isUpdate(e) ? episodes.get(e.episodeId!)?.head : undefined
-    const cur = ep && !searching ? latest(ep) : e
+    const cur = ep && !searching ? shownReading(ep) : e
     const hl = entryHeadline(cur)
     const presetId = (head ?? e).presetId
     const name = presetId ? presets.value.find((p) => p.id === presetId)?.name : undefined
