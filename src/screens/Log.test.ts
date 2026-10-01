@@ -1081,6 +1081,9 @@ describe('Install nudge', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }))
     const sheet = await screen.findByRole('dialog', { name: 'Aggiungi alla schermata Home' })
     expect(sheet).toHaveTextContent(/menu del browser/)
+    // A visible way out, besides the backdrop and back.
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Chiudi' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('explains the Share button on iOS', async () => {
