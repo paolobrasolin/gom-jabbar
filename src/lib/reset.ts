@@ -8,9 +8,10 @@ import type { CloudProvider } from './cloud'
  * the default vocabulary, and starts from default preferences. The service worker and the Drive file are untouched.
  */
 export async function resetAll(cloud: CloudProvider): Promise<void> {
-  // First, while the token is still in storage: the grant is revoked, not just forgotten.
-  await cloud.disconnect()
+  // The diary first, in one step: if that fails nothing has changed, Drive included, and the caller says so.
   await db.delete()
+  // Then, while the token is still in storage: the grant is revoked, not just forgotten. It never throws.
+  await cloud.disconnect()
   forgetOurs(() => localStorage)
   forgetOurs(() => sessionStorage)
 }
