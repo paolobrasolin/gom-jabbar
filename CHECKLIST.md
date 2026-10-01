@@ -17,6 +17,7 @@ Manual, on a real phone, before telling anyone to update:
 ## Android (Chrome)
 - [ ] Open the Pages URL, install to the home screen, launch from the icon: opens straight on the log screen, no browser chrome.
 - [ ] Airplane mode, relaunch: still opens and shows the diary.
+- [ ] The update: with the app installed and the previous release on it, deploy, then bring the app back from Recents without touching it: within seconds it reloads by itself and the Settings footer shows the new version. Touch something first and it waits: it reloads the next time it comes back from Recents.
 - [ ] Navigation (#37): no tab bar. ☰, first in the top row, drops down Diario, Andamento, Impostazioni; a tap elsewhere closes it. Each screen has ← and its name; ← and Android's back gesture both return to the log, and back from the log leaves the app. Relaunch from Diario: the app opens on the log.
 - [ ] The top row at the largest font: ☰, "in corso" and Preset keep their words, wrapping to a second line rather than shrinking.
 - [ ] The drawer: tap a region on an empty form; the drawer's top row does not change height and the figure does not move. The stage ends a little above the drawer, not touching it.
