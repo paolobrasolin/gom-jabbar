@@ -75,6 +75,7 @@
   "settings.figure.male": "Male",
   "settings.install": "Add to your Home screen to use it offline and keep your data safe.",
   "settings.dataNote": "The diary lives on this phone",
+  "settings.notPersisted": "The browser may delete the data: back up often.",
   "settings.entriesCount": "{n} entries",
   "settings.entriesCount.one": "{n} entry",
   "tag.group.intervention": "Remedies",

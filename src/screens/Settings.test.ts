@@ -92,6 +92,38 @@ describe('Settings about', () => {
   })
 })
 
+describe('Settings storage (#115)', () => {
+  const NOTE = 'Il browser può cancellare i dati: fai spesso un backup.'
+  const stub = (persisted: (() => Promise<boolean>) | undefined) =>
+    vi.stubGlobal('navigator', { ...navigator, storage: { persist: async () => false, ...(persisted ? { persisted } : {}) } })
+
+  it('says so in the Backup card when the browser did not agree to keep the data', async () => {
+    stub(async () => false)
+    await openSettings()
+    const card = screen.getByRole('region', { name: 'Backup' })
+    expect(await within(card).findByText(NOTE)).toBeInTheDocument()
+  })
+
+  it('says nothing when it agreed, or cannot tell', async () => {
+    stub(async () => true)
+    await openSettings()
+    await screen.findByRole('region', { name: 'Backup' })
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+    await back()
+    stub(undefined)
+    await go('Impostazioni')
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+    // A browser that fails to answer says nothing either.
+    await back()
+    stub(async () => Promise.reject(new Error('no')))
+    await go('Impostazioni')
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+  })
+})
+
 describe('Settings presets', () => {
   it('lists presets and deletes with undo', async () => {
     await addPreset({ name: 'Schiena', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic' })

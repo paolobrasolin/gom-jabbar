@@ -56,6 +56,15 @@
     if (!vocabOpen) vocab = null
   })
 
+  /**
+   * Whether the browser agreed to keep the data (§4.1): the app asks at startup and again once installed, and until #115
+   * never said what came of it. False only when the browser said no: unsupported or unknown says nothing.
+   */
+  let persisted = $state<boolean | null>(null)
+  $effect(() => {
+    navigator.storage?.persisted?.().then((p) => (persisted = p), () => {})
+  })
+
   const lastBackup = $derived(
     prefs.lastBackupAt ? new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(prefs.lastBackupAt)) : null,
   )
@@ -189,6 +198,7 @@
     <p class="small muted label" id="backup-title">{t('settings.backup')}</p>
     <p class="small muted">{t('settings.dataNote')} · {tn('settings.entriesCount', count.value)}</p>
     <p class="small muted">{lastBackup ? t('settings.lastBackup', { d: lastBackup }) : t('settings.neverBackedUp')}</p>
+    {#if persisted === false}<p class="small evictable">{t('settings.notPersisted')}</p>{/if}
     {#if cloud.available}
       <DriveZone {cloud} resumed={resume} {onresumed} onrestore={openImport} />
     {/if}
@@ -317,6 +327,8 @@
 </Sheet>
 
 <style>
+  /* The browser may evict the diary (#115): a refusal's colours, the one line in the card that asks for something. */
+  .evictable { background: var(--warn-bg); color: var(--warn-ink); font-weight: 600; border-radius: 8px; padding: 6px 10px; margin: 6px 0; }
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   .chip:disabled { opacity: 0.55; }
   .center { text-align: center; }

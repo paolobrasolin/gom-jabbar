@@ -75,6 +75,7 @@
   "settings.figure.male": "Maschile",
   "settings.install": "Aggiungi alla schermata Home per usarla offline e tenere i dati al sicuro.",
   "settings.dataNote": "Il diario sta su questo telefono",
+  "settings.notPersisted": "Il browser può cancellare i dati: fai spesso un backup.",
   "settings.entriesCount": "{n} voci",
   "settings.entriesCount.one": "{n} voce",
   "tag.group.intervention": "Rimedi",
