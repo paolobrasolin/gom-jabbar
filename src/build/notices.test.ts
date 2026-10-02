@@ -56,7 +56,7 @@ describe('renderNotices', () => {
     expect(out).toContain('<title>Gom Jabbar · Open source licences</title>')
     // English first, then Italian, each with its own header line.
     const en = out.indexOf('<a href="./">Gom Jabbar</a> · <a href="privacy-policy.html">Privacy policy</a> · <a href="terms-of-service.html">Terms of service</a> · <strong>Open source licences</strong> · <a href="#it">Italiano</a>')
-    const it = out.indexOf('<a href="./">Gom Jabbar</a> · <a href="privacy-policy.html#it">Privacy policy</a> · <a href="terms-of-service.html#it">Termini d\'uso</a> · <strong>Licenze open source</strong> · <a href="#en">English</a>')
+    const it = out.indexOf('<a href="./">Gom Jabbar</a> · <a href="privacy-policy.html#it">Informativa sulla privacy</a> · <a href="terms-of-service.html#it">Termini d\'uso</a> · <strong>Licenze open source</strong> · <a href="#en">English</a>')
     expect(en).toBeGreaterThan(0)
     expect(it).toBeGreaterThan(en)
     expect(out.indexOf('<div lang="it" id="it">')).toBeLessThan(it)

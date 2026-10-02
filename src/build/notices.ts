@@ -52,7 +52,7 @@ export function renderNotices(notices: Notice[]): string {
 <h1>Open source licences</h1>
 <p>Gom Jabbar: © 2026 Paolo Brasolin, under the <a href="https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12">EUPL-1.2</a> (<a href="https://github.com/paolobrasolin/gom-jabbar">source code</a>). Below, the third-party code and data shipped in the app, each under its own licence.</p>
 <div lang="it" id="it">
-<p><a href="./">Gom Jabbar</a> · <a href="privacy-policy.html#it">Privacy policy</a> · <a href="terms-of-service.html#it">Termini d'uso</a> · <strong>Licenze open source</strong> · <a href="#en">English</a></p>
+<p><a href="./">Gom Jabbar</a> · <a href="privacy-policy.html#it">Informativa sulla privacy</a> · <a href="terms-of-service.html#it">Termini d'uso</a> · <strong>Licenze open source</strong> · <a href="#en">English</a></p>
 <h1>Licenze open source</h1>
 <p>Gom Jabbar: © 2026 Paolo Brasolin, sotto la <a href="https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12">EUPL-1.2</a> (<a href="https://github.com/paolobrasolin/gom-jabbar">codice sorgente</a>). Qui sotto il codice e i dati di terzi inclusi nell'app, ciascuno con la sua licenza; i testi delle licenze sono in inglese.</p>
 </div>
