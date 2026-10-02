@@ -162,7 +162,7 @@
                 <td class="when">{fmtDay(e.at)} {formatTime(e.at, locale())}</td>
                 <td class="num"><span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.read ? r.hl.value : '–'}</span></td>
                 <td>
-                  <EntrySummary lead={r.read ? symptomName(r.hl.id, symptoms, tl) : ''} layers={r.shown} tagDefs={tags} />
+                  <EntrySummary lead={r.read ? symptomName(r.hl.id, symptoms, tl) : ''} layers={r.shown} tagDefs={tags} {symptoms} />
                   {#if r.dur !== null}<span class="muted"> · {isActive(e) ? t('diary.ongoing') : formatDuration(r.dur, units)}</span>{/if}
                   {#if r.levels.length}<span class="muted"> · {r.levels.join(' → ')}</span>{/if}
                   {#if e.note}<div class="note">{e.note}</div>{/if}

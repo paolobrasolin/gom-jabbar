@@ -104,6 +104,19 @@ describe('Diary list', () => {
     expect(both.querySelector('.line')).toHaveTextContent(/^coscia sx 8 · spalla sx$/)
   })
 
+  it('a row of several layers names the symptom of each number that is not the lead one (#114)', async () => {
+    await addEntry({ at: ago(20), layers: [L(['152'], 8), { regions: ['mind'], readings: { anxiety: 6 }, tags: [] }] })
+    await addEntry({ at: ago(10), layers: [{ regions: ['152'], readings: { swelling: 5 }, tags: [] }, L(['153'], 3)] })
+    await openDiary()
+    const [swollen, anxious] = await waitFor(() => {
+      const r = rows()
+      expect(r).toHaveLength(2)
+      return r
+    })
+    await waitFor(() => expect(anxious.querySelector('.line')).toHaveTextContent(/^coscia sx 8 · mente 6 ansia$/))
+    expect(swollen.querySelector('.line')).toHaveTextContent(/^gonfiore · coscia sx 5 gonfiore · coscia dx 3$/)
+  })
+
   it('shows 30 days and loads 60 more at a time while older entries exist', async () => {
     await addEntry({ at: ago(10), layers: [L(['152'], 2)] })
     await addEntry({ at: ago(40 * DAY), layers: [L(['152'], 9)] })
