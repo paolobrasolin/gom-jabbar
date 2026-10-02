@@ -168,7 +168,11 @@ describe('stats', () => {
     expect(cmp[0].withoutN).toBe(7)
     expect(cmp[0].withMean).toBe(8)
     expect(cmp[0].withoutMean).toBeCloseTo((3 * 6 + 9) / 7)
-    expect(tagComparison(entries, DEFAULT_TAGS, 'pain', 1).map((c) => c.tag.id)).toEqual(['badsleep', 'stress'])
+    // Listed as the vocabulary is, never by the size of the gap, which put a few days of noise first (#114).
+    expect(tagComparison(entries, DEFAULT_TAGS, 'pain', 1).map((c) => c.tag.id)).toEqual(['stress', 'badsleep'])
+    const med = { id: 'med-x', group: 'medication' as const, label: 'Ibuprofene', enabled: true, order: 0 }
+    const mixed = [...entries.slice(0, 3).map((x) => ({ ...x, layers: x.layers.map((l) => ({ ...l, tags: [...l.tags, 'med-x', 'rest'] })) })), ...entries.slice(3)]
+    expect(tagComparison(mixed, [...DEFAULT_TAGS, med], 'pain', 1).map((c) => c.tag.id)).toEqual(['med-x', 'rest', 'stress', 'badsleep'])
     expect(tagCounts(entries, DEFAULT_TAGS).map((x) => [x.tag.id, x.days])).toEqual([['badsleep', 6], ['stress', 1]])
   })
 

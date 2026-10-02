@@ -164,6 +164,9 @@ export const ringWidth = (weight: number) => 0.75 + 1.75 * weight
 /** The ring as drawn: twice the width, clipped to the region, so only the inner half shows. */
 export const ringStyle = (weight: number) => `stroke-width:${(2 * ringWidth(weight)).toFixed(2)}px`
 
+/** Tags are listed medications first, then remedies, then context (§6.3). */
+const GROUP_RANK: Record<Tag['group'], number> = { medication: 0, intervention: 1, context: 2 }
+
 export type TagComparison = { tag: Tag; withN: number; withoutN: number; withMean: number; withoutMean: number }
 
 export const MIN_DAYS_PER_SIDE = 5
@@ -188,7 +191,8 @@ export function tagComparison(entries: Entry[], tags: Tag[], symptom = PAIN, min
     const mean = (xs: { max: number }[]) => xs.reduce((a, b) => a + b.max, 0) / xs.length
     out.push({ tag, withN: w.length, withoutN: wo.length, withMean: mean(w), withoutMean: mean(wo) })
   }
-  return out.sort((a, b) => Math.abs(b.withMean - b.withoutMean) - Math.abs(a.withMean - a.withoutMean))
+  // In vocabulary order, grouped as the tag counts are: sorted by the gap, a few days of noise came first (#114).
+  return out.sort((a, b) => GROUP_RANK[a.tag.group] - GROUP_RANK[b.tag.group] || a.tag.order - b.tag.order)
 }
 
 /** `count`: the days the symptom was recorded on. */
@@ -216,8 +220,6 @@ export function symptomsRead(entries: Entry[], symptoms: Symptom[]): Symptom[] {
   const ids = new Set(entries.flatMap((e) => e.layers.flatMap((l) => Object.keys(l.readings))))
   return symptoms.filter((s) => ids.has(s.id)).sort((a, b) => a.order - b.order)
 }
-
-const GROUP_RANK: Record<Tag['group'], number> = { medication: 0, intervention: 1, context: 2 }
 
 /**
  * Tag use in the range, in **days** (§6.3): three doses on one day are one day of medication, as clinicians count it
