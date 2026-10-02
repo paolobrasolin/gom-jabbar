@@ -16,12 +16,16 @@
   import { showToast, showFailure, showRefusal, haptic } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
   import { deletePreset, restorePreset } from '../lib/presets'
+  import { listSnapshots, type Snapshot } from '../lib/snapshots'
 
   let { cloud, resume = null, onresumed = () => {}, reload }: { cloud: CloudProvider; resume?: Resumed; onresumed?: () => void; reload: () => void } = $props()
 
   const count = live(() => null, () => db.entries.count(), 0)
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
+  /** The copies the app keeps of the diary (§4.1): before an upgrade, a replace, a merge. Newest first. */
+  const snapshots = live(() => null, listSnapshots, [])
+  const when = (iso: string) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
   /** Modifica opens the preset form on the preset (§5.6): edited in place, its stream of entries stays with it. */
   let presetSeed = $state.raw<PresetSeed | null>(null)
   async function removePreset(id: string) {
@@ -74,7 +78,8 @@
   }
 
   let fileInput: HTMLInputElement | undefined = $state()
-  let pending = $state.raw<{ file: ExportFile; preview: ImportPreview } | null>(null)
+  /** What the Ripristina sheet shows: a backup file, or one of the app's own copies (`copy`), which is no backup. */
+  let pending = $state.raw<{ file: ExportFile; preview: ImportPreview; copy?: Snapshot } | null>(null)
   let importOpen = $state(false)
   $effect(() => {
     if (!importOpen) pending = null
@@ -96,6 +101,28 @@
       importOpen = true
     } catch (err) {
       showRefusal(t((err as Error).message === 'newer-version' ? 'import.newer' : 'import.invalid'))
+    }
+  }
+
+  /** One of the app's copies into the same preview (§4.1): its file is a backup like any other. */
+  async function openCopy(copy: Snapshot) {
+    pending = { file: copy.file, preview: await previewImport(copy.file), copy }
+    importOpen = true
+  }
+
+  /** A copy out of the phone, as a backup file. It is the diary as it was then: it does not count as a backup now. */
+  async function downloadCopy() {
+    if (!pending?.copy || busy) return
+    busy = true
+    try {
+      const name = exportFilename('json', new Date(pending.copy.takenAt)).replace('gom-jabbar-', 'gom-jabbar-copia-')
+      await shareOrDownload(name, JSON.stringify(pending.copy.file, null, 1), 'application/json')
+      haptic(20)
+      showToast(t('copy.done'))
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') showFailure(t('backup.failed'))
+    } finally {
+      busy = false
     }
   }
 
@@ -121,7 +148,8 @@
     haptic(20)
     // The file is a backup made when it was exported (§4.2): restoring it says so, unless a later backup is known, so the
     // banner does not ask for one straight after a restore (a new phone, or after Cancella tutto).
-    if (!prefs.lastBackupAt || file.exportedAt > prefs.lastBackupAt) {
+    // One of the app's own copies never left the phone: no backup.
+    if (!pending?.copy && (!prefs.lastBackupAt || file.exportedAt > prefs.lastBackupAt)) {
       prefs.lastBackupAt = file.exportedAt
       savePrefs()
     }
@@ -164,7 +192,7 @@
     <div class="card small">{t('settings.install')}</div>
   {/if}
 
-  <!-- One card, two zones (§6.4): Drive first, the one-tap path the banner uses; then the file on the share sheet. -->
+  <!-- One card (§6.4): Drive first, the one-tap path the banner uses; then the file on the share sheet; then the app's own copies. -->
   <section class="card" aria-labelledby="backup-title">
     <p class="small muted label" id="backup-title">{t('settings.backup')}</p>
     <p class="small muted">{t('settings.dataNote')} · {tn('settings.entriesCount', count.value)}</p>
@@ -180,6 +208,20 @@
         <input class="sr-only" type="file" accept="application/json,.json,text/plain,.txt" bind:this={fileInput} onchange={onFile} tabindex="-1" aria-hidden="true" />
       </div>
     </div>
+    {#if snapshots.value.length}
+      <!-- The app's own copies (§4.1): there only once one was taken. -->
+      <div class="zone" role="group" aria-labelledby="backup-copies">
+        <p class="small zlabel" id="backup-copies">{t('settings.backup.copies')}</p>
+        <div class="plist">
+          {#each snapshots.value as s (s.id)}
+            <div class="row copy">
+              <span class="grow small">{t(`copy.${s.reason}`)} · {when(s.takenAt)}</span>
+              <button class="chip small outline" onclick={() => openCopy(s)} disabled={busy}>{t('copy.open')}</button>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
   </section>
 
   <div class="card">
@@ -258,11 +300,12 @@
 <Sheet bind:open={importOpen} title={t('import.title')}>
   {#if pending}
     <div class="card small">
-      <p>{tn('import.summary', pending.preview.entries, { d: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(new Date(pending.file.exportedAt)) })}</p>
+      <p>{tn(pending.copy ? 'import.copySummary' : 'import.summary', pending.preview.entries, { d: new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(new Date(pending.file.exportedAt)) })}</p>
       <p class="muted">{t('import.mergeInfo', { a: tn('import.added', pending.preview.added), u: tn('import.updated', pending.preview.updated) })}</p>
     </div>
     <button class="btn primary block" onclick={() => doImport('merge')} disabled={busy}>{t('import.merge')}</button>
     <button class="btn block" onclick={() => doImport('replace')} disabled={busy}>{tn('import.replace', count.value)}</button>
+    {#if pending.copy}<button class="btn block" onclick={downloadCopy} disabled={busy}>{t('copy.download')}</button>{/if}
   {/if}
 </Sheet>
 
@@ -295,6 +338,6 @@
   .word input { font: inherit; font-size: 17px; padding: 10px 12px; border-radius: var(--radius-s); border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
   .wipe { background: var(--danger); color: #fff; }
   .plist { display: flex; flex-direction: column; gap: 4px; }
-  .preset { min-height: 40px; }
+  .preset, .copy { min-height: 40px; }
   .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
