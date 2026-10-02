@@ -5,7 +5,7 @@ import { emptyDraft } from './draft'
 import { LEG_IDS } from './regions'
 import { finalize } from './layers'
 import { DEFAULT_SYMPTOMS, isMindSymptom } from './vocabulary'
-import { presetFromDraft, defaultAsks, addPreset, updatePreset, deletePreset, restorePreset, logPreset, lastForPreset, lastByPreset, presetEntries } from './presets'
+import { presetFromDraft, defaultAsks, liveAsks, addPreset, updatePreset, deletePreset, restorePreset, logPreset, lastForPreset, lastByPreset, presetEntries } from './presets'
 
 let db: ReturnType<typeof resetDb>
 beforeEach(() => {
@@ -111,6 +111,16 @@ describe('presets', () => {
     expect(u).not.toHaveProperty('presetId')
     expect((await presetEntries()).map((e) => e.id).sort()).toEqual([head.id, u!.id].sort())
     expect((await lastForPreset(p.id))?.id).toBe(u!.id)
+  })
+})
+
+describe('liveAsks (#115)', () => {
+  it('leaves out what is switched off, and nothing else: the preset keeps asking it for when it is back', () => {
+    const off = DEFAULT_SYMPTOMS.map((s) => (s.id === 'swelling' ? { ...s, enabled: false } : s))
+    expect(liveAsks(P(LEG_IDS, ['pain', 'swelling']), off)).toEqual(['pain'])
+    expect(liveAsks(P(LEG_IDS, ['pain', 'swelling']), DEFAULT_SYMPTOMS)).toEqual(['pain', 'swelling'])
+    // A symptom the vocabulary does not know (yet, while it loads) is not hidden.
+    expect(liveAsks(P(LEG_IDS, ['pain', 'swelling']), [])).toEqual(['pain', 'swelling'])
   })
 })
 

@@ -98,6 +98,23 @@ describe('Log layer without a place', () => {
   })
 })
 
+describe('Preset sheet and switched-off symptoms', () => {
+  it('asks only what is on, and saves a layer whose every ask is off as a place (#115)', async () => {
+    await addPreset({ name: 'Gambe', layers: [{ regions: LEG_IDS, asks: ['pain', 'swelling'] }, { regions: ['224'], asks: ['swelling'] }], kind: 'chronic' })
+    await db.symptoms.update('swelling', { enabled: false })
+    render(App)
+    await screen.findByRole('slider', { name: 'Dolore' })
+    await pickPreset(/^Gambe/)
+    const sheet = await screen.findByRole('dialog', { name: 'Gambe' })
+    expect(within(sheet).getAllByRole('slider').map((s) => s.getAttribute('aria-label'))).toEqual(['Dolore'])
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '4' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    expect(e.layers.map((l) => l.readings)).toEqual([{ pain: 4 }, {}])
+  }, 10_000)
+})
+
 describe('Log fast path', () => {
   it('tap region, set intensity, save', async () => {
     render(App)

@@ -20,6 +20,16 @@ export function defaultAsks(l: Layer, symptoms: Symptom[]): SymptomId[] {
 }
 
 /**
+ * What a preset layer asks that is switched on: its sheet's sliders (§5.6). Switching a symptom off hides it here and
+ * nowhere is it removed: the preset keeps asking it, so switching it back on brings it back (#115). A symptom the
+ * vocabulary does not know, as while it loads, is not hidden.
+ */
+export function liveAsks(l: PresetLayer, symptoms: Symptom[]): SymptomId[] {
+  const off = new Set(symptoms.filter((s) => !s.enabled).map((s) => s.id))
+  return l.asks.filter((id) => !off.has(id))
+}
+
+/**
  * What a filled form would save as a reusable shape (§5.6): each kept layer's regions and paint, and what it asks for,
  * its own list when the form set one, else the default. Readings and tags stay behind: a reading is set at each save,
  * a tag is a fact about one reading. With the vocabulary, a layer asks only what its regions show (§6.1).

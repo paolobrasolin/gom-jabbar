@@ -55,7 +55,8 @@
   const askableFor = (l: Layer): Symptom[] => symptoms.filter((s) => s.enabled && showsCategory(l, s.category))
   /** What a layer asks for: its own list once the chips set one, else the default; explicit, so a symptom at 0 today still belongs. */
   const asksOf = (l: Layer): string[] => l.asks ?? defaultAsks(l, symptoms)
-  const asksFor = (l: Layer): string[] => askableFor(l).map((s) => s.id).filter((id) => asksOf(l).includes(id))
+  /** What a layer will ask, in vocabulary order: what it asked and its regions show, switched off or not (#115). */
+  const asksFor = (l: Layer): string[] => symptoms.filter((s) => showsCategory(l, s.category) && asksOf(l).includes(s.id)).map((s) => s.id)
   /** The chips follow the current layer, like the tag strip of the log form (§5.4). */
   const cur = $derived(draft.layers[draft.cur] ?? draft.layers[0])
   const askable = $derived(askableFor(cur))
