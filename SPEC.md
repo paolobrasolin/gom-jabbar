@@ -314,7 +314,7 @@ Range picker: 7, 30, 90, 365 days. A range is calendar days ending with today: a
 
 A full-screen overlay in a fixed light palette, opened for the current range and the symptom picked from Trends (§6.3; by itself it reads the first symptom read in range, in the editor's order), with print CSS for A4; `@media print` hides the app behind it. No library. Contents:
 
-1. Header: date range (from the range's first day to its last, counted in calendar days, so a clock change never moves the end to tomorrow), generated on, and the symptom its figures read, "Sintomo: Gonfiore" (left out when nothing in range reads one).
+1. Header: the title "Diario dei sintomi" ("Symptom diary"), whatever symptom it reads (#114; it was "Diario del dolore"), the date range (from the range's first day to its last, counted in calendar days, so a clock change never moves the end to tomorrow), generated on, and the symptom its figures read, "Sintomo: Gonfiore" (left out when nothing in range reads one).
 2. Body heatmap for that symptom (front and back side by side), colour for the mean and a ring for frequency as on Trends (§6.3), strokes as shading (§5.3), and the full-body line under it.
 3. Intensity over time chart.
 4. Summary numbers: entries, daily mean/max (per day, then across days, §6.3) and days ≥ 5 of the symptom (left out when nothing in range reads it, §6.3), episode count and durations; the chart likewise; Altri sintomi without it.

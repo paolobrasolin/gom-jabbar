@@ -52,7 +52,7 @@ const readFile = (f: Blob) =>
 describe('Report page', () => {
   it('has the title, the range and the headline numbers', () => {
     const { from } = open()
-    expect(screen.getByRole('heading', { level: 1, name: 'Diario del dolore' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Diario dei sintomi' })).toBeInTheDocument()
     const to = new Date(from.getTime() + 7 * 86_400_000 - 1)
     expect(screen.getByText(`Dal ${fmt(from)} al ${fmt(to)} · generato il ${fmt(new Date())}`)).toBeInTheDocument()
     const box = (k: string) => screen.getByText(k).parentElement!
@@ -126,7 +126,7 @@ describe('Report page', () => {
     expect(shared[0].type).toBe('text/html')
     const html = await readFile(shared[0])
     expect(html.startsWith('<!doctype html><html lang="it">')).toBe(true)
-    expect(html).toContain('<title>Diario del dolore</title>')
+    expect(html).toContain('<title>Diario dei sintomi</title>')
     expect(html).toContain('<style>')
     expect(html).toContain('<body class="printing">')
     expect(html).toContain('<article')

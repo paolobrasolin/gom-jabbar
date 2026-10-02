@@ -307,9 +307,9 @@ describe('Trends report', () => {
     await addEntry({ at: at(0), ...legs(5) })
     await openTrends()
     await fireEvent.click(await screen.findByRole('button', { name: 'Report per il medico' }))
-    expect(screen.getByRole('heading', { level: 1, name: 'Diario del dolore' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Diario dei sintomi' })).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }))
-    expect(screen.queryByRole('heading', { level: 1, name: 'Diario del dolore' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Diario dei sintomi' })).not.toBeInTheDocument()
   })
 })
 
