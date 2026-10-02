@@ -1,10 +1,9 @@
 import { db } from './db'
-import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
+import type { Entry, Preset, Symptom, Tag } from './types'
 import type { Layer } from './layers'
 import { isHead } from './entries'
-import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, oneLabel, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7, type PresetV8 } from './legacy'
+import { entryToLayers, presetToLayers, categoryLookup, categoryV5, seedSymptomsV10, seedTagsV10, PAIN_V1, splitEpisode, presetKind, presetAsks, oneLabel, type AreaV6, type CategoryOf, type EntryV7, type HistoryPoint, type PresetV7, type PresetV8 } from './legacy'
 import { upgradeRegions } from './regions'
-import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
 
 export const EXPORT_VERSION = 10
 
@@ -70,9 +69,10 @@ export function parseImport(text: string): ExportFile {
   // A file from a newer app (a rollback): its shape is unknown here, so nothing of it is read.
   if (version > EXPORT_VERSION) throw new Error('newer-version')
   const vocab = (o.vocabulary ?? {}) as Partial<ExportFile['vocabulary']>
-  // A file without a vocabulary (no version ever wrote one) reads as carrying the seed; an empty one stays empty (§8).
-  const symptoms = Array.isArray(vocab.symptoms) ? vocab.symptoms.map((s) => normalizeSymptom(s, version)) : DEFAULT_SYMPTOMS
-  const tags = Array.isArray(vocab.tags) ? vocab.tags.map((x) => normalizeTag(x, version)) : DEFAULT_TAGS
+  // A file without a vocabulary (no version ever wrote one) reads as carrying the seed as of version 10, frozen (#113);
+  // an empty one stays empty (§8).
+  const symptoms = Array.isArray(vocab.symptoms) ? vocab.symptoms.map((s) => normalizeSymptom(s, version)) : seedSymptomsV10()
+  const tags = Array.isArray(vocab.tags) ? vocab.tags.map((x) => normalizeTag(x, version)) : seedTagsV10()
   const categoryOf = categoryLookup(symptoms)
   const entries = (o.entries as Row[]).flatMap((e) => normalizeEntry(e, version, categoryOf))
   return {
@@ -118,7 +118,7 @@ const isPresetLayer = (l: unknown): boolean => isObject(l) && isStrings(l.region
  * 10 its label held both languages; it becomes one string (§5.2). Nothing else is touched.
  */
 function normalizeSymptom(s: Symptom, version: number): Symptom {
-  const out = s.category ? s : { ...s, category: defaultCategory(s.id) }
+  const out = s.category ? s : { ...s, category: categoryV5(s.id) }
   return version < 10 ? { ...out, label: oneLabel('symptoms', s.id, s.label) } : out
 }
 
@@ -133,7 +133,7 @@ type PointV6 = { at: string; readings: Record<string, number> }
 function normalizePoint(h: Row, version: number): PointV6 {
   if (version < 3 && !h.readings && typeof h.pain === 'number') {
     const { pain, ...rest } = h
-    return { ...rest, readings: { [PAIN]: pain } } as unknown as PointV6
+    return { ...rest, readings: { [PAIN_V1]: pain } } as unknown as PointV6
   }
   return h as PointV6
 }
@@ -151,10 +151,10 @@ function layersOf(e: Row, version: number, categoryOf: CategoryOf): { layers: La
     if (!Array.isArray(e.layers) || !e.layers.length || !e.layers.every(isLayer)) throw new Error('invalid-entry')
     return { layers: e.layers as Layer[], history: Array.isArray(e.history) ? (e.history as HistoryPoint[]) : undefined }
   }
-  const readings = (e.readings && typeof e.readings === 'object' ? e.readings : { [PAIN]: 0 }) as Record<string, number>
+  const readings = (e.readings && typeof e.readings === 'object' ? e.readings : { [PAIN_V1]: 0 }) as Record<string, number>
   let areas: AreaV6[] = Array.isArray(e.areas) ? (e.areas as AreaV6[]) : []
   if (version < 2 && Array.isArray(e.regions) && (e.regions as string[]).length) {
-    areas = [{ regions: e.regions as string[], intensity: readings[PAIN] ?? 0 }]
+    areas = [{ regions: e.regions as string[], intensity: readings[PAIN_V1] ?? 0 }]
   }
   if (version < 5) areas = upgradeAreas(areas)
   const history = Array.isArray(e.history) ? (e.history as Row[]).map((h) => normalizePoint(h, version)) : undefined

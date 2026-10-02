@@ -1,15 +1,19 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Entry, Preset, Symptom, Tag } from './types'
-import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
+import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 import { upgradeRegions } from './regions'
 import { outdated } from './outdated.svelte'
-import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, oneLabel, MIND_DEFAULTS_V6, type AreaV6, type EntryV6, type EntryV7, type PresetV6, type PresetV7, type PresetV8 } from './legacy'
+import { entryToLayers, presetToLayers, categoryLookup, categoryV5, splitEpisode, presetKind, presetAsks, oneLabel, MIND_DEFAULTS_V6, type AreaV6, type EntryV6, type EntryV7, type PresetV6, type PresetV7, type PresetV8 } from './legacy'
 
 /** The database on the phone is newer than this code (§4.1): an older copy of the app, open across a release. */
 export class NewerDatabaseError extends Error {
   name = 'NewerDatabaseError'
 }
 
+/**
+ * The diary's database. Its upgrades read only `lib/legacy.ts` and `upgradeRegions` (frozen rules, #113), never today's
+ * helpers; only `populate`, which fills a new database, reads today's seed.
+ */
 export class GomJabbarDB extends Dexie {
   entries!: EntityTable<Entry, 'id'>
   symptoms!: EntityTable<Symptom, 'id'>
@@ -65,7 +69,7 @@ export class GomJabbarDB extends Dexie {
       .upgrade(async (tx) => {
         const symptoms = tx.table('symptoms')
         await symptoms.toCollection().modify((s: Symptom) => {
-          if (!s.category) s.category = defaultCategory(s.id)
+          if (!s.category) s.category = categoryV5(s.id)
         })
         const have = new Set((await symptoms.toArray()).map((s: Symptom) => s.id))
         await symptoms.bulkAdd(MIND_DEFAULTS_V6.filter((s) => !have.has(s.id)))
