@@ -159,6 +159,25 @@ describe('entries', () => {
     expect(eps.get(head.id)?.updates.map((u) => u.id)).toEqual([early.id, late.id])
   })
 
+  it('orders readings at the same time by their migrated number, then by when they were written (#115)', async () => {
+    // Histories split in version 8 (§8) can hold two points at one time, ids `<head>:<n>`, createdAt the same as at.
+    const at = '2026-01-01T12:00:00.000Z'
+    const head = { ...makeEntry({ kind: 'episode', at: '2026-01-01T10:00:00.000Z', readings: { pain: 7 } }), id: 'h' }
+    head.episodeId = 'h'
+    const point = (n: number, pain: number) => ({ ...makeEntry({ kind: 'episode', at, readings: { pain } }), id: `h:${n}`, episodeId: 'h', createdAt: at })
+    // As text "h:10" sorts before "h:2", the order Dexie hands them over in.
+    expect(episodesOf([head, point(10, 2), point(2, 5)]).get('h')?.updates.map((u) => u.id)).toEqual(['h:2', 'h:10'])
+    await db.entries.bulkAdd([head, point(10, 2), point(2, 5)])
+    expect(latest((await loadEpisode('h'))!).id).toBe('h:10')
+    // Readings logged since have random ids: the one written later is the later reading.
+    const first = { ...makeEntry({ kind: 'episode', at, readings: { pain: 3 } }), id: 'zz', episodeId: 'h', createdAt: '2026-01-01T12:00:01.000Z' }
+    const second = { ...makeEntry({ kind: 'episode', at, readings: { pain: 1 } }), id: 'aa', episodeId: 'h', createdAt: '2026-01-01T12:00:02.000Z' }
+    expect(episodesOf([head, second, first]).get('h')?.updates.map((u) => u.id)).toEqual(['zz', 'aa'])
+    // Nothing else tells them apart: the id does, so the order never depends on how they were loaded.
+    const twin = { ...second, id: 'bb' }
+    expect(episodesOf([head, twin, second]).get('h')?.updates.map((u) => u.id)).toEqual(['aa', 'bb'])
+  })
+
   it('updates, deletes and restores', async () => {
     const e = await addEntry({ readings: { pain: 3 } })
     const u = await updateEntry(e.id, { note: 'hi', layers: [{ regions: ['*', '110'], readings: { pain: 9, fog: 1 }, tags: [] }] })
