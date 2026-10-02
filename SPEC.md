@@ -7,7 +7,7 @@
 1. **Logging is a breeze.** A complete entry takes two taps and a swipe, under five seconds, one hand. Nothing is ever required beyond intensity.
 2. **Owns its data.** Everything is stored locally and exportable to a file at any time. No accounts, no server, no analytics.
 3. **Works on a phone, offline, always.** Android first, iOS supported. Installed to the home screen, opens instantly.
-4. **Useful at the doctor's.** A one-page printable report for any date range.
+4. **Useful at the doctor's.** A printable report for the last 7, 30, 90 or 365 days, or since a day picked: since the last visit.
 5. **Flexible enough for more than one chronic condition, and whatever else comes up**, without becoming a form builder.
 
 ## 2. Non-goals (v1)
@@ -286,7 +286,7 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 ### 6.3 Trends
 
-Range picker: 7, 30, 90, 365 days. A range is calendar days ending with today: an entry dated later (a clock set wrong, a backup from a phone ahead in time) is in none, for the tiles, the map, the tags and the report as for the chart (#114; until then only the chart was bounded).
+Range picker: 7, 30, 90, 365 days, and **Dal…** (#114): it opens a date field under the row (its picker at once where the browser can, no day after today), and the range runs from the day picked to today; the chip then reads "Dal 12 set", and a fixed range lets it go. The row wraps rather than hiding a chip out of sight. Under the row, first, **Report per il medico** (§7), for the range shown: before a visit the report is the point, and until #114 it sat at the bottom. A range is calendar days ending with today: an entry dated later (a clock set wrong, a backup from a phone ahead in time) is in none, for the tiles, the map, the tags and the report as for the chart (#114; until then only the chart was bounded).
 
 **One symptom at a time** (#38). Under the ranges, a chip row, **Sintomo**, offers every symptom read in range (a reading of 0 counts, disabled symptoms too: they stay in history), in the vocabulary editor's order, and the screen opens on the first: Dolore in the seed, whatever leads once reordered or once pain is off (§5.2). The tiles, the map and the chart read the symptom picked; Per preset keeps its own rule. Their labels are neutral, **Media giornaliera · max 8**, **Giorni ≥ 5** ("almeno 5 nel giorno"), because the row already says which symptom and a name would need gender agreement ("gonfiore medio", "stanchezza media") that a user-made symptom does not carry; the chart's accessible name is "Gonfiore per giorno". The figures are over the entries that read the symptom: one without the reading (the mind alone, a symptom not asked) is not a 0, and a mean is taken per day first, then across days, so a day logged twenty times (a migraine and its updates) weighs as much as a day logged once: the figure is the typical day, not the typical entry (#36). With nothing read in range there is no row, and the two symptom tiles and the chart are left out; Voci and Episodi stay. Until #38 every figure but the map read pain.
 
@@ -296,7 +296,6 @@ Range picker: 7, 30, 90, 365 days. A range is calendar days ending with today: a
 - **Episodes**: count (heads only), the **median** length of the ones that have ended ("durata mediana 2h"), and how many are still going on ("· 1 in corso"). An episode still going on is not a length yet: counted apart, never at its time so far, so a forgotten Termina cannot inflate the figure; the median, not the mean, so one very long episode does not either. Every other number counts every entry, an episode's updates included: the daily max sees the 8 a migraine started at, not only the 3 it ended at, and a three-day episode contributes to every day it was updated on. Region frequency on the heatmap counts an episode once per reading, as a chronic preset logged daily already does.
 - **Tags**: tag use in **days**, not entries (three doses on one day are one day of medication, as clinicians count medication days per month), medications first, then remedies, then context, the most used first within each: "Riposo · 6 giorni"; the card is there only when a tag was used in range. The report's tag table does the same, its columns "Tag" and "Giorni". There is no comparison of days with and without a tag (#114, #120): it was there until then, the mean of the daily maximum on either side from 5 days each, and it could not be read honestly: five days a side is mostly noise, and medications and remedies are taken because the pain is high, so their "with" days always looked worse.
 - **Other symptoms** (Altri sintomi): mean of every symptom but the one picked, per day then across days, over the entries reading it, a 0 included, with the days it was recorded on ("6 giorni"): the same number its tile shows when it is picked (#114; until then a 0 was left out here, and pain read 4.7 here and 3.8 picked).
-- **Report** button → §7.
 
 ### 6.4 Settings
 
