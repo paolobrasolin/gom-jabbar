@@ -57,11 +57,17 @@ export async function updateEntry(id: string, patch: Partial<Omit<Entry, 'id' | 
   return db.entries.get(id)
 }
 
-/** An edit from the form (§6.2): the row as it was comes back with the saved one, for the undo toast. */
+/**
+ * An edit from the form (§6.2): the row as it was comes back with the saved one, for the undo toast. A head with updates
+ * keeps its kind and its chain whatever the patch says (§5.5): the form locks them, and this refuses, writing nothing,
+ * rather than leave the updates without their head (#115).
+ */
 export function editEntry(id: string, patch: Partial<Omit<Entry, 'id' | 'createdAt'>>): Promise<{ before?: Entry; after?: Entry }> {
   return db.transaction('rw', db.entries, db.symptoms, async () => {
     const before = await db.entries.get(id)
     if (!before) return { before: undefined, after: undefined }
+    const regroups = ('kind' in patch && patch.kind !== before.kind) || ('episodeId' in patch && patch.episodeId !== before.episodeId)
+    if (regroups && isHead(before) && (await db.entries.where('episodeId').equals(id).count()) > 1) throw new Error('An episode start with updates keeps its kind')
     return { before, after: await updateEntry(id, patch) }
   })
 }

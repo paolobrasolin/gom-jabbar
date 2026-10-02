@@ -192,6 +192,19 @@ describe('entries', () => {
     expect(await deleteEntry('nope')).toEqual([])
   })
 
+  it('refuses to turn an episode start with updates into anything else, whatever the form sends (#115)', async () => {
+    const e = await addEntry({ at: '2026-09-01T10:00:00.000Z', kind: 'episode', readings: { pain: 6 } })
+    const u = await logUpdate(e.id, [{ pain: 3 }], '2026-09-01T11:00:00.000Z')
+    const stored = await db.entries.get(e.id)
+    await expect(editEntry(e.id, { kind: 'chronic', episodeId: undefined, endedAt: undefined })).rejects.toThrow()
+    await expect(editEntry(e.id, { episodeId: 'elsewhere' })).rejects.toThrow()
+    // Nothing was written: the start and its update are as they were.
+    expect(await db.entries.get(e.id)).toEqual(stored)
+    expect((await loadEpisode(e.id))?.updates.map((x) => x.id)).toEqual([u!.id])
+    // Its end and everything else still move.
+    expect((await editEntry(e.id, { endedAt: '2026-09-01T12:00:00.000Z', note: 'ok' })).after).toMatchObject({ kind: 'episode', note: 'ok' })
+  })
+
   it('an edit hands back the row as it was, and restoring it undoes the edit exactly', async () => {
     const e = await addEntry({ at: '2026-09-01T10:00:00.000Z', kind: 'episode', readings: { pain: 6 }, note: 'a' })
     await endEpisode(e.id, '2026-09-01T12:00:00.000Z')
