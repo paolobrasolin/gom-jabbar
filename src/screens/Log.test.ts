@@ -37,6 +37,27 @@ const menuOfPresets = async () => (await presetItem('Nuovo preset')).closest<HTM
 /** The pieces drawn on the stage itself, not on the thumbnail of the other side. */
 const strokes = () => document.querySelectorAll('.stage > svg .stroke')
 
+describe('Log layer chips', () => {
+  it("a new layer's chip scrolls into sight, off to the right of a full row (#115)", async () => {
+    // jsdom has no layout: the row is 200px wide and the pressed chip sits at 500–600 in it, off to the right, moving as it scrolls.
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const row = this.closest<HTMLElement>('.areas')
+      const [left, right] = this.classList.contains('areas') ? [0, 200] : row && this.getAttribute('aria-pressed') === 'true' ? [500 - row.scrollLeft, 600 - row.scrollLeft] : [0, 0]
+      return { left, right, top: 0, bottom: 0, x: left, y: 0, width: right - left, height: 0, toJSON: () => ({}) } as DOMRect
+    })
+    try {
+      render(App)
+      await screen.findByRole('slider', { name: 'Dolore' })
+      await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+      await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
+      const row = document.querySelector<HTMLElement>('.areas')!
+      await waitFor(() => expect(row.scrollLeft).toBe(412))
+    } finally {
+      rect.mockRestore()
+    }
+  }, 10_000)
+})
+
 describe('Log fast path', () => {
   it('tap region, set intensity, save', async () => {
     render(App)
