@@ -72,6 +72,18 @@ describe('stats', () => {
     expect(symptomMeans([fog('1', 2), fog('1', 2), fog('1', 2), fog('2', 8)], DEFAULT_SYMPTOMS)).toEqual([{ symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), mean: 5, count: 2 }])
   })
 
+  it('one symptom, one average: a reading of 0 counts under Altri sintomi as it does when the symptom is picked (#114)', () => {
+    const swell = (day: string, pain: number, swelling: number) => makeEntry({ at: at(day), layers: [L(['152'], { pain, swelling })] })
+    const entries = [swell('1', 4, 0), swell('2', 6, 6), swell('2', 2, 3), e('3', 5)]
+    const others = symptomMeans(entries, DEFAULT_SYMPTOMS, 'pain')
+    expect(others).toEqual([{ symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'swelling'), mean: (0 + 4.5) / 2, count: 2 }])
+    for (const s of DEFAULT_SYMPTOMS) {
+      const picked = summarize(entries, 7, s.id).mean
+      const listed = symptomMeans(entries, DEFAULT_SYMPTOMS, 'other').find((m) => m.symptom.id === s.id)?.mean ?? null
+      expect(listed, s.id).toBe(picked)
+    }
+  })
+
   it('measures pain over the entries that read it: one without a pain reading is not a 0', () => {
     const mind = (day: string, fog: number) => makeEntry({ at: at(day), layers: [L(['mind'], { fog })] })
     const from = new Date(2026, 2, 1)
@@ -153,14 +165,20 @@ describe('stats', () => {
     expect(tagCounts(entries, tags).map((x) => [x.tag.id, x.days])).toEqual([['ibuprofen', 2], ['stress', 3]])
   })
 
-  it('averages other symptoms where recorded', () => {
+  it('averages other symptoms where recorded, a 0 included', () => {
     const entries = [e('1', 5, { readings: { swelling: 6 } }), e('2', 5, { layers: [L(['152'], { swelling: 2 }), L(['110'], { swelling: 1, fog: 0 })] }), e('3', 5)]
-    expect(symptomMeans(entries, DEFAULT_SYMPTOMS)).toEqual([{ symptom: DEFAULT_SYMPTOMS[1], mean: 4, count: 2 }])
+    expect(symptomMeans(entries, DEFAULT_SYMPTOMS)).toEqual([
+      { symptom: DEFAULT_SYMPTOMS[1], mean: 4, count: 2 },
+      { symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), mean: 0, count: 1 },
+    ])
     // "Other" than the symptom picked (#38): pain is one of them when swelling is picked.
-    expect(symptomMeans(entries, DEFAULT_SYMPTOMS, 'swelling')).toEqual([{ symptom: DEFAULT_SYMPTOMS[0], mean: 5, count: 1 }])
+    expect(symptomMeans(entries, DEFAULT_SYMPTOMS, 'swelling')).toEqual([
+      { symptom: DEFAULT_SYMPTOMS[0], mean: 5, count: 1 },
+      { symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), mean: 0, count: 1 },
+    ])
     // The highest mean first.
     const more = [...entries, makeEntry({ at: at('4'), layers: [{ regions: ['mind'], readings: { fog: 9 } }] })]
-    expect(symptomMeans(more, DEFAULT_SYMPTOMS, 'swelling').map((m) => [m.symptom.id, m.mean])).toEqual([['fog', 9], ['pain', 5]])
+    expect(symptomMeans(more, DEFAULT_SYMPTOMS, 'swelling').map((m) => [m.symptom.id, m.mean])).toEqual([['pain', 5], ['fog', 4.5]])
   })
 
   it('measures any symptom the way it measures pain (#38)', () => {
