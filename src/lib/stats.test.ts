@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
-import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, rangeStart, rangeEnd, inRange, tagCounts, ringWidth, ringStyle } from './stats'
+import { dailySeries, summarize, regionHeat, fullBody, tagComparison, symptomMeans, symptomsRead, rangeStart, rangeEnd, inRange, tagCounts, ringWidth, ringStyle } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
 import { presetSeries } from './stats'
 import type { Preset } from './types'
@@ -103,10 +103,11 @@ describe('stats', () => {
       e('2', 4, { layers: [L(['152', '110'], { pain: 4 })] }),
       e('3', 2, { layers: [L(['*'], { pain: 2 })] }),
     ])
-    expect(h.get('152')).toEqual({ mean: 14 / 3, count: 3, weight: 1 })
-    expect(h.get('110')?.count).toBe(2)
-    expect(h.get('261')).toEqual({ mean: 2, count: 1, weight: Math.log(2) / Math.log(4) })
-    // The mind is one more region; full body does not cover it.
+    expect(h.get('152')).toEqual({ mean: 6, count: 2, weight: 1 })
+    expect(h.get('110')).toEqual({ mean: 4, count: 1, weight: Math.log(2) / Math.log(3) })
+    // Full body is not every region at once (#114): one such entry would light all 74 and dilute each.
+    expect(h.get('261')).toBeUndefined()
+    expect(h.get('*')).toBeUndefined()
     expect(h.get('mind')).toBeUndefined()
     // Overlapping layers: the max wins, the entry counts once. A layer without the symptom contributes nothing.
     const b = regionHeat(
@@ -116,13 +117,26 @@ describe('stats', () => {
         e('6', 0, { layers: [L(['*', 'mind'], { pain: 2, fog: 4 })] }),
       ],
     )
-    expect(b.get('152')).toEqual({ mean: 4.5, count: 2, weight: 1 })
-    expect(b.get('110')).toEqual({ mean: 4.5, count: 2, weight: 1 })
-    expect(b.get('mind')).toEqual({ mean: 2, count: 1, weight: Math.log(2) / Math.log(3) })
+    expect(b.get('152')).toEqual({ mean: 7, count: 1, weight: 1 })
+    expect(b.get('110')).toEqual({ mean: 7, count: 1, weight: 1 })
+    // The mind is one more region, beside full body as beside any other.
+    expect(b.get('mind')).toEqual({ mean: 2, count: 1, weight: 1 })
     const f = regionHeat([e('4', 0, { layers: [L(['mind'], { fog: 6 })] }), e('6', 0, { layers: [L(['*', 'mind'], { pain: 2, fog: 4 })] })], 'fog')
     expect(f.get('mind')).toEqual({ mean: 5, count: 2, weight: 1 })
-    expect(f.get('152')).toEqual({ mean: 4, count: 1, weight: Math.log(2) / Math.log(3) })
+    expect(f.get('152')).toBeUndefined()
     expect(regionHeat([e('4', 0, { layers: [L(['mind'], { fog: 6 })] })], 'swelling').size).toBe(0)
+  })
+
+  it('counts full body apart: the entries reading the symptom on the whole body, and their mean (#114)', () => {
+    const entries = [
+      e('1', 0, { layers: [L(['*'], { pain: 2 })] }),
+      e('2', 0, { layers: [L(['*', 'mind'], { pain: 6, fog: 3 }), L(['*'], { pain: 4 })] }),
+      e('3', 0, { layers: [L(['*'], { swelling: 5 })] }),
+      e('4', 8, { layers: [L(['152'], { pain: 8 })] }),
+    ]
+    expect(fullBody(entries)).toEqual({ mean: 4, count: 2 })
+    expect(fullBody(entries, 'swelling')).toEqual({ mean: 5, count: 1 })
+    expect(fullBody(entries, 'fatigue')).toBeNull()
   })
 
   it('weighs frequency on a log scale, so the rare end keeps its steps (#23)', () => {

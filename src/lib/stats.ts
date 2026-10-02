@@ -1,12 +1,11 @@
 import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
-import { REGIONS, FULL_BODY } from './regions'
+import { FULL_BODY } from './regions'
 import { durationMs, isHead } from './entries'
 import { presetOf } from './presets'
 import { mergedReadings, mergedTags } from './layers'
 import { dayKey } from './time'
 import { leadSymptom } from './vocabulary'
 
-const ALL_IDS = [...new Set(REGIONS.map((r) => r.id))]
 const readings = (e: Entry) => mergedReadings(e.layers)
 /**
  * The figures of Trends and the report read one symptom (§6.3, #38): pain unless another is picked. An entry counts only
@@ -124,7 +123,8 @@ export type Heat = { mean: number; count: number; weight: number }
  * Per-region mean level of one symptom and how often it appeared, weight = ln(1 + count) / ln(1 + max count) (§6.3):
  * frequency is read in ratios, once against twice more than 18 against 20, and a diary's counts have a long tail. An entry
  * counts once per region, at the max over its layers that carry the symptom; layers without it contribute
- * nothing. Full body counts for every body region; the mind is one more region.
+ * nothing. The mind is one more region. Full body is no region: counted for every one, a single such entry lit all 74
+ * and diluted each (#114). It is counted apart (`fullBody`).
  */
 export function regionHeat(entries: Entry[], symptom = PAIN): Map<string, Heat> {
   const acc = new Map<string, { sum: number; count: number }>()
@@ -133,8 +133,7 @@ export function regionHeat(entries: Entry[], symptom = PAIN): Map<string, Heat> 
     for (const l of e.layers) {
       const v = l.readings[symptom]
       if (typeof v !== 'number') continue
-      const ids = l.regions.includes(FULL_BODY) ? [...ALL_IDS, ...l.regions.filter((r) => r !== FULL_BODY)] : l.regions
-      for (const id of ids) best.set(id, Math.max(best.get(id) ?? 0, v))
+      for (const id of l.regions) if (id !== FULL_BODY) best.set(id, Math.max(best.get(id) ?? 0, v))
     }
     for (const [id, v] of best) {
       const c = acc.get(id) ?? { sum: 0, count: 0 }
@@ -146,6 +145,18 @@ export function regionHeat(entries: Entry[], symptom = PAIN): Map<string, Heat> 
   const maxCount = Math.max(1, ...[...acc.values()].map((c) => c.count))
   const scale = Math.log(1 + maxCount)
   return new Map([...acc].map(([id, c]) => [id, { mean: c.sum / c.count, count: c.count, weight: Math.log(1 + c.count) / scale }]))
+}
+
+/**
+ * The entries that read the symptom on the whole body (§6.3), shown beside the map rather than on every region: how many,
+ * and their mean, each entry at the max over its full-body layers that carry it. Null when there are none.
+ */
+export function fullBody(entries: Entry[], symptom = PAIN): { mean: number; count: number } | null {
+  const vs = entries.flatMap((e) => {
+    const own = e.layers.filter((l) => l.regions.includes(FULL_BODY) && typeof l.readings[symptom] === 'number').map((l) => l.readings[symptom])
+    return own.length ? [Math.max(...own)] : []
+  })
+  return vs.length ? { mean: vs.reduce((a, b) => a + b, 0) / vs.length, count: vs.length } : null
 }
 
 /** The heatmap's frequency ring (§6.3), in screen px inside the region: a hairline for once, 2.5px for the most frequent. */

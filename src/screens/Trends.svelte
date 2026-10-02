@@ -8,7 +8,7 @@
   import { db } from '../lib/db'
   import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE, type Summary } from '../lib/stats'
+  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, fullBody, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE, type Summary } from '../lib/stats'
   import { formatDuration } from '../lib/time'
   import { allStrokes } from '../lib/strokes'
   import { PAIN } from '../lib/types'
@@ -46,6 +46,8 @@
   /** The symptom's figures only when something in range reads it: an entry without the reading is not a 0 (#36). */
   const read = $derived(summary.mean !== null)
   const heat = $derived(regionHeat(entries.value, sid))
+  /** Full body is no region of the map: it is said beside it (#114). */
+  const whole = $derived(fullBody(entries.value, sid))
   const strokes = $derived(allStrokes(entries.value, sid))
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
@@ -86,6 +88,7 @@
     <div class="card">
       <p class="small muted label">{t('trends.heatmap')}</p>
       <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
+      {#if whole}<p class="small">{tn('trends.fullBody', whole.count, { m: num(whole.mean) })}</p>{/if}
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
 

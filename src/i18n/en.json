@@ -185,6 +185,8 @@
   "trends.episodeMedian": "median length {d}",
   "trends.heatSymptom": "Symptom",
   "trends.heatmap": "Where",
+  "trends.fullBody": "Whole body: {n} times, mean {m}",
+  "trends.fullBody.one": "Whole body: once, mean {m}",
   "trends.heatmapHint": "Colour: mean intensity. Outline: frequency.",
   "trends.overTime": "Over time",
   "trends.legendMax": "daily max",

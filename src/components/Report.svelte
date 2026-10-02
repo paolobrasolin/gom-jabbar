@@ -4,7 +4,7 @@
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale, num, tn } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, rangeEnd, type Summary } from '../lib/stats'
+  import { dailySeries, summarize, regionHeat, fullBody, tagComparison, symptomMeans, symptomsRead, tagCounts, rangeEnd, type Summary } from '../lib/stats'
   import { durationMs, episodesOf, isHead, isUpdate, isActive, shownReading, chainLayers } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
@@ -39,6 +39,7 @@
   /** The symptom's figures only when something in range reads it (#36). */
   const read = $derived(summary.mean !== null)
   const heat = $derived(regionHeat(entries, sid))
+  const whole = $derived(fullBody(entries, sid))
   const strokes = $derived(allStrokes(entries, sid))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
@@ -113,6 +114,7 @@
       <div>
         <h2>{t('trends.heatmap')}</h2>
         <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
+        {#if whole}<p>{tn('trends.fullBody', whole.count, { m: num(whole.mean) })}</p>{/if}
       </div>
       <div>
         {#if read && symptom}
