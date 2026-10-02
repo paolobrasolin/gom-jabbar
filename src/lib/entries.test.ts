@@ -125,6 +125,14 @@ describe('entries', () => {
     expect(chainLayers({ head: e, updates: [] })).toEqual(e.layers)
   })
 
+  it("an ended episode's row reads the layers of the reading it is shown by, its worst, as its pill does (#114)", async () => {
+    const e = await addEntry({ kind: 'episode', at: '2026-01-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 6 }, tags: ['rest'] }, { regions: ['mind'], readings: { fog: 4 } }] })
+    await logUpdate(e.id, [{ pain: 2 }, { fog: 2 }], '2026-01-01T12:00:00.000Z')
+    await endEpisode(e.id, '2026-01-01T13:00:00.000Z')
+    const ep = (await loadEpisode(e.id))!
+    expect(chainLayers(ep)).toEqual([L(['152'], { pain: 6 }, ['rest']), L(['mind'], { fog: 4 })])
+  })
+
   it("names what is wrong with an episode's times: an end before its start, a reading outside its episode", () => {
     const T = (h: number) => `2026-01-01T${String(h).padStart(2, '0')}:00:00.000Z`
     expect(timeProblem({ at: T(10), endedAt: T(9) })).toBe('end-before-start')
