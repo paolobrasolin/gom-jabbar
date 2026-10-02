@@ -134,6 +134,14 @@ describe('before a restore', () => {
     expect((await listSnapshots()).map((s) => s.id)).toEqual([res.copy!.id])
   })
 
+  it('Unisci keeps the diary it merges into, in the same transaction', async () => {
+    await addEntry({ note: 'mine' })
+    const before = await buildExport()
+    const res = await applyImport(parseImport(JSON.stringify({ ...before, entries: [] })), 'merge')
+    expect(res.copy?.reason).toBe('merge')
+    expect(res.copy?.file.entries).toEqual(before.entries)
+  })
+
   it('a replace that fails keeps no copy and changes nothing', async () => {
     await addEntry({ note: 'mine' })
     const file = parseImport(JSON.stringify(await buildExport()))

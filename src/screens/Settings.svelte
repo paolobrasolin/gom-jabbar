@@ -152,10 +152,9 @@
       savePrefs()
     }
     const msg = tn('import.done', mode === 'replace' ? res.entries : res.added + res.updated)
-    // The undo restores the copy replace kept (§4.1), which stays in Copie automatiche after the undo's ten seconds.
+    // The undo restores the copy the restore kept (§4.1), which stays in Copie automatiche after the undo's ten seconds.
     const copy = res.copy
-    if (copy) showToast(msg, { label: t('log.undo'), run: () => void applyImport(copy.file, 'replace').catch(failed) })
-    else showToast(msg)
+    showToast(msg, { label: t('log.undo'), run: () => void applyImport(copy.file, 'replace').catch(failed) })
   }
 
   /** Cancella tutto (§6.4): the app's one confirmation, a typed word, because there is no undo. */

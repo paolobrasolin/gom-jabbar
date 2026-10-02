@@ -230,15 +230,15 @@ export async function previewImport(file: ExportFile): Promise<ImportPreview> {
 export type ImportMode = 'merge' | 'replace'
 
 /**
- * Merge: upsert by id, newer `updatedAt` wins; vocabulary items are added if missing. Replace: wipe and load, after
- * keeping the diary it wipes as a copy (`copy`, §4.1), in the same transaction: no copy, no replace.
+ * Merge: upsert by id, newer `updatedAt` wins; vocabulary items are added if missing. Replace: wipe and load. Either
+ * first keeps the diary as it stands as a copy (`copy`, §4.1), in the same transaction: no copy, nothing applied.
  */
-export async function applyImport(file: ExportFile, mode: ImportMode): Promise<ImportPreview & { copy?: Snapshot }> {
+export async function applyImport(file: ExportFile, mode: ImportMode): Promise<ImportPreview & { copy: Snapshot }> {
   const preview = await previewImport(file)
-  let copy: Snapshot | undefined
+  let copy!: Snapshot
   await db.transaction('rw', [db.entries, db.symptoms, db.tags, db.presets, db.snapshots], async () => {
+    copy = await takeSnapshot(mode)
     if (mode === 'replace') {
-      copy = await takeSnapshot('replace')
       await Promise.all([db.entries.clear(), db.symptoms.clear(), db.tags.clear(), db.presets.clear()])
       await db.entries.bulkPut(file.entries)
       await db.presets.bulkPut(file.presets)
