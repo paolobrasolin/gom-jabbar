@@ -69,14 +69,14 @@ describe('Settings about', () => {
     expect(about).toHaveTextContent(`Gom Jabbar ${version} · ${day('it-IT')} · ${build}`)
     const link = (name: string) => within(about).getByRole('link', { name })
     // In Italian each page opens at its Italian part.
-    expect(link('Privacy policy')).toHaveAttribute('href', '/privacy-policy.html#it')
+    expect(link('Informativa sulla privacy')).toHaveAttribute('href', '/privacy-policy.html#it')
     expect(link("Termini d'uso")).toHaveAttribute('href', '/terms-of-service.html#it')
     expect(link('Licenze open source')).toHaveAttribute('href', '/open-source-licences.html#it')
     expect(link('paolo.brasolin@gmail.com')).toHaveAttribute('href', 'mailto:paolo.brasolin@gmail.com')
     expect(link('Codice sorgente')).toHaveAttribute('href', 'https://github.com/paolobrasolin/gom-jabbar')
     for (const a of within(about).getAllByRole('link')) expect(a).not.toHaveAttribute('target')
     // Who and where first, then the three pages.
-    expect([...about.querySelectorAll('p')].map((p) => p.textContent!.split(' · ')[0].trim())).toEqual([`Gom Jabbar ${version}`, 'paolo.brasolin@gmail.com', 'Privacy policy'])
+    expect([...about.querySelectorAll('p')].map((p) => p.textContent!.split(' · ')[0].trim())).toEqual([`Gom Jabbar ${version}`, 'paolo.brasolin@gmail.com', 'Informativa sulla privacy'])
   })
 
   it('opens the pages at the top, in English, when the app is in English', async () => {
