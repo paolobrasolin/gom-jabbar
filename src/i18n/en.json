@@ -102,6 +102,7 @@
   "preset.none": "No presets yet. On the home screen open “Presets” and tap “New preset”.",
   "preset.new": "New preset",
   "preset.edit": "Edit preset",
+  "preset.startEpisode": "Start episode",
   "preset.asks": "Asks",
   "preset.saved": "Preset saved",
   "settings.presets": "Presets",

@@ -80,7 +80,8 @@
     {#if current.layers.some((l) => l.regions.length)}
       <div class="card small"><EntrySummary layers={shown} /></div>
     {/if}
-    <TimeChips bind:value={at} label={t('time.when')} none={t('time.now')} />
+    <!-- An episode preset starts an episode (#115): its time is the start, and the button says what it does. -->
+    <TimeChips bind:value={at} label={t(current.kind === 'episode' ? 'time.start' : 'time.when')} caption={t(current.kind === 'episode' ? 'time.start' : 'time.when')} none={t('time.now')} />
     <!-- Several layers: the sliders follow the selected chip, as in the episode sheet (§5.5). -->
     {#if shown.length > 1}
       <div class="chips layers">
@@ -99,7 +100,7 @@
         <IntensitySlider label={label(id)} value={levels[cur]?.[id] ?? null} onchange={(v) => (levels[cur][id] = v)} />
       {/each}
     </div>
-    <button class="btn primary block" onclick={save}>{t('common.save')}</button>
+    <button class="btn primary block" onclick={save}>{t(current.kind === 'episode' ? 'preset.startEpisode' : 'common.save')}</button>
   {/if}
 </Sheet>
 
