@@ -2,7 +2,7 @@ import { mount } from 'svelte'
 import './app.css'
 import App from './App.svelte'
 
-import { db } from './lib/db'
+import { db, NewerDatabaseError } from './lib/db'
 import { t } from './i18n/index.svelte'
 import { initInstall } from './lib/install.svelte'
 import { googleDrive } from './lib/drive'
@@ -17,8 +17,10 @@ const target = document.getElementById('app')!
 const app = mount(App, { target, props: { resumed } })
 
 // Surface a storage failure (private windows on old Safari, disabled IndexedDB) instead of a blank, silent app.
+// A database a newer release left is no failure: the app says so itself and asks for a reload (§4.1).
 db.open().catch((err) => {
   console.error(err)
+  if (err instanceof NewerDatabaseError) return
   showStartupError(t('app.dbError'))
 })
 

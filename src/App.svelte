@@ -9,6 +9,7 @@
   import { prefs, type Tab } from './lib/prefs.svelte'
   import { dismissToast } from './lib/toast.svelte'
   import { reads } from './lib/live.svelte'
+  import { outdated } from './lib/outdated.svelte'
   import { googleDrive } from './lib/drive'
   import type { CloudProvider, Resumed } from './lib/cloud'
   import MessageIcon from './components/MessageIcon.svelte'
@@ -77,7 +78,14 @@
 <div class="app">
   <!-- An alert region always in the page, so the notice is announced when it appears in it (BX9). -->
   <div class="live unread-slot" role="alert">
-    {#if reads.failed}
+    {#if outdated.value}
+      <!-- A newer copy owns the database (§4.1): nothing failed, a reload runs the release that upgraded it. -->
+      <div class="msg standing unread">
+        <MessageIcon name="needs" />
+        <span class="grow">{t('app.outdated')}</span>
+        <button class="chip small" onclick={reload}>{t('app.reload')}</button>
+      </div>
+    {:else if reads.failed}
       <div class="msg failure unread">
         <MessageIcon name="failed" />
         <span class="grow">{t('app.readError')}</span>
@@ -116,5 +124,5 @@
   /* A failure that lasts (#94): it stays until the app is reloaded. */
   .unread-slot { flex: none; }
   .unread { margin: calc(8px + env(safe-area-inset-top)) 12px 4px; }
-  .unread .btn { background: var(--fail-ink); color: var(--fail-bg); font-weight: 600; }
+  .failure.unread .btn { background: var(--fail-ink); color: var(--fail-bg); font-weight: 600; }
 </style>

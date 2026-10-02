@@ -327,6 +327,7 @@
   "diary.started": "started {when}",
   "app.dbError": "Cannot open the data store in this browser. Try opening the app in Chrome or Safari, not in a private window.",
   "app.readError": "Can't read the diary. Your data stays on the phone: reload the app.",
+  "app.outdated": "A new version of the app is out.",
   "app.reload": "Reload",
   "report.share": "Share file",
   "report.shared": "Report shared",
