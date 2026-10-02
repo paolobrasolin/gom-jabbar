@@ -25,6 +25,7 @@
   import { fitScale, lookAt, toFigure, zoomAt, rails, MAX_ZOOM } from '../lib/camera'
   import { StageGesture } from '../lib/gesture.svelte'
   import { ICONS } from '../lib/icons'
+  import { overflowFade } from '../lib/overflow'
   import { t } from '../i18n/index.svelte'
 
   let {
@@ -154,11 +155,12 @@
   </svg>
   <!-- The side on show, captioned like the mind. -->
   <span class="caption" aria-hidden="true">{labels[view]}</span>
-  <div class="rail left">
+  <!-- Both rails scroll when the stage is short (the preset form, large text) and fade where they hide a button (#115). -->
+  <div class="rail left fade-y" use:overflowFade={'y'}>
     {@render tools?.()}
   </div>
   <!-- The right rail is how you look at the figure: the mind aside, the brush, then the view group, zoom piled on the other side. -->
-  <div class="rail right">
+  <div class="rail right fade-y" use:overflowFade={'y'}>
     <!-- The other side, a card like the mind's: tap it to turn the figure over. -->
     <button class="thumb" aria-label={labels[other]} onclick={turn}>
       <svg viewBox="{ob.x - 4} {ob.y - 4} {ob.w + 8} {ob.h + 8}" aria-hidden="true"><BodyFigure view={other} {layers} {cur} readonly /></svg>
