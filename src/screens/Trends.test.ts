@@ -73,6 +73,44 @@ describe('Trends summary', () => {
     expect(screen.queryByText('Riposo')).toBeNull()
   })
 
+  it('Dal… picks the first day: the range runs from it to today, and the report covers the same days (#114)', async () => {
+    await addEntry({ at: at(12), ...legs(9) })
+    await addEntry({ at: at(3), ...legs(2) })
+    await addEntry({ at: at(0), ...legs(4) })
+    await openTrends()
+    await waitFor(() => expect(tile('Voci')).toHaveTextContent('3'))
+    await fireEvent.click(screen.getByRole('button', { name: 'Dal…' }))
+    const field = screen.getByLabelText('Dal giorno') as HTMLInputElement
+    const day = daysAgo(5)
+    const ymd = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+    // No day after today: the range ends today.
+    const today = daysAgo(0)
+    expect(field.max).toBe(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)
+    await fireEvent.change(field, { target: { value: ymd } })
+    await waitFor(() => expect(tile('Voci')).toHaveTextContent('2'))
+    expect(tile('Media giornaliera')).toHaveTextContent('max 4')
+    const chip = screen.getByRole('button', { name: `Dal ${new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' }).format(day)}` })
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: '30 giorni' })).toHaveAttribute('aria-pressed', 'false')
+    await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
+    const fmt = (d: Date) => new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }).format(d)
+    expect(screen.getByText(new RegExp(`^Dal ${fmt(day)} al ${fmt(daysAgo(0))}`))).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }))
+    // A fixed range again: the picked day is let go.
+    await fireEvent.click(screen.getByRole('button', { name: '30 giorni' }))
+    await waitFor(() => expect(tile('Voci')).toHaveTextContent('3'))
+    expect(screen.getByRole('button', { name: 'Dal…' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('the report button sits under the ranges, before the figures (#114)', async () => {
+    await addEntry({ at: at(0), ...legs(4) })
+    await openTrends()
+    const button = await screen.findByRole('button', { name: 'Report per il medico' })
+    await waitFor(() => expect(tile('Voci')).toBeInTheDocument())
+    expect(button.compareDocumentPosition(tile('Voci')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('button', { name: '7 giorni' }).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('range chips change the data', async () => {
     await addEntry({ at: at(10), ...legs(9) })
     await addEntry({ at: at(0), ...legs(2) })

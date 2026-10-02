@@ -4,7 +4,8 @@
   import DailyChart from '../components/DailyChart.svelte'
   import Report from '../components/Report.svelte'
   import PresetLines from '../components/PresetLines.svelte'
-  import { t, tl, num, tn } from '../i18n/index.svelte'
+  import { tick } from 'svelte'
+  import { t, tl, num, tn, locale } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
@@ -14,12 +15,45 @@
   import { PAIN } from '../lib/types'
 
   const RANGES = [7, 30, 90, 365]
-  let days = $state(30)
+  let fixed = $state(30)
+  /**
+   * "Dal…" (§6.3, #114): a first day picked, the range running from it to today, for "since the last visit". A date
+   * field's own value, YYYY-MM-DD, null while a fixed range is on.
+   */
+  let since = $state<string | null>(null)
+  let picking = $state(false)
+  let field = $state<HTMLInputElement>()
   let showReport = $state(false)
 
-  const from = $derived(rangeStart(days))
+  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const today = rangeStart(1)
+  const from = $derived.by(() => {
+    if (!since) return rangeStart(fixed)
+    const [y, m, d] = since.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  })
+  /** The range in calendar days, today included: rounded, since a clock change makes one day 23 or 25 hours long. */
+  const days = $derived(since ? Math.round((today.getTime() - from.getTime()) / 86_400_000) + 1 : fixed)
   // The range ends with today, as the chart does: an entry dated later (a clock set wrong, a phone ahead in time) is in none (#114).
-  const entries = live(() => days, () => db.entries.where('at').between(from.toISOString(), rangeEnd(from, days).toISOString(), true, true).toArray(), [])
+  const entries = live(() => [fixed, since], () => db.entries.where('at').between(from.toISOString(), rangeEnd(from, days).toISOString(), true, true).toArray(), [])
+
+  /** "Dal…": the date field under the ranges, its picker opened at once where the browser can (Chrome). */
+  async function pickSince() {
+    picking = !picking
+    if (!picking) return
+    await tick()
+    try {
+      field?.showPicker?.()
+    } catch {
+      /* not allowed here: the field is in view, a tap opens it */
+    }
+  }
+  function onSince(e: Event) {
+    const v = (e.target as HTMLInputElement).value
+    if (!v || v > ymd(today)) return
+    since = v
+    picking = false
+  }
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
@@ -59,14 +93,23 @@
 <div class="screen">
   <div class="chips ranges">
     {#each RANGES as r (r)}
-      <button class="chip small" aria-pressed={days === r} onclick={() => (days = r)}>{t('trends.range', { n: r })}</button>
+      <button class="chip small" aria-pressed={!since && fixed === r} onclick={() => ((fixed = r), (since = null), (picking = false))}>{t('trends.range', { n: r })}</button>
     {/each}
+    <button class="chip small" aria-pressed={!!since} onclick={pickSince}>
+      {since ? t('trends.since', { d: new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short' }).format(from) }) : t('trends.sinceChip')}
+    </button>
   </div>
+  {#if picking}
+    <input class="since" bind:this={field} type="date" aria-label={t('trends.sinceLabel')} max={ymd(today)} value={since ?? ''} onchange={onSince} />
+  {/if}
 
   {#if summary.entries === 0}
     <!-- Nothing read is not nothing logged: after a failed read the app's notice says so (§4.1). -->
     {#if !reads.failed}<div class="card muted small">{t('trends.empty')}</div>{/if}
   {:else}
+    <!-- Before a visit the report is the point (#114): it comes first, under the ranges. -->
+    <button class="btn primary block" onclick={() => (showReport = true)}>{t('trends.report')}</button>
+
     {#if choices.length}
       <div class="chips pick" role="group" aria-label={t('trends.heatSymptom')}>
         {#each choices as s (s.id)}
@@ -128,7 +171,6 @@
       </div>
     {/if}
 
-    <button class="btn primary block" onclick={() => (showReport = true)}>{t('trends.report')}</button>
   {/if}
 </div>
 
@@ -137,7 +179,9 @@
 {/if}
 
 <style>
-  .ranges { flex-wrap: nowrap; }
+  /* Five chips: the row wraps, so none is ever out of sight, the picked day least of all. */
+  .ranges { flex: none; flex-wrap: wrap; }
+  .since { font: inherit; padding: 10px 12px; border-radius: var(--radius-s); border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .tile { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
   .tile b { font-size: 28px; line-height: 1.1; }
