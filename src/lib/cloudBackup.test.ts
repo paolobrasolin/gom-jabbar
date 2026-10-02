@@ -32,7 +32,7 @@ describe('cloudBackup', () => {
     prefs.backupSnoozedUntil = '2030-01-01T00:00:00.000Z'
     g.signIn()
     const res = await cloudBackup(g.provider)
-    expect(res).toEqual({ ok: true, value: { at: new Date(clock).toISOString() } })
+    expect(res).toEqual({ ok: true, value: { at: new Date(clock).toISOString(), kept: null } })
     const file = JSON.parse([...g.drive.files.values()][0].revs.at(-1)!.content)
     expect(file.entries.map((e: { note: string }) => e.note)).toEqual(['ciao'])
     expect(g.provider.status().account?.email).toBe('paolo@example.test')

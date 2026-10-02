@@ -1,4 +1,4 @@
-import type { CloudProvider, Failure, Result } from './cloud'
+import type { CloudProvider, Failure, Result, Uploaded } from './cloud'
 import { buildExport } from './backup'
 import { prefs, savePrefs } from './prefs.svelte'
 import { t, locale } from '../i18n/index.svelte'
@@ -26,7 +26,7 @@ export function driveInUse(cloud: CloudProvider): boolean {
  * screen (`'left'`); the app comes back to Settings, which runs it again. A success counts as a backup like the
  * share sheet's: it sets the shared date and clears the snooze.
  */
-export async function cloudBackup(cloud: CloudProvider, opts: { force?: boolean } = {}): Promise<Result<{ at: string }> | 'left'> {
+export async function cloudBackup(cloud: CloudProvider, opts: { force?: boolean } = {}): Promise<Result<Uploaded> | 'left'> {
   if (!cloud.status().expiresAt) {
     cloud.connect('backup')
     return 'left'
@@ -40,3 +40,6 @@ export async function cloudBackup(cloud: CloudProvider, opts: { force?: boolean 
   }
   return res
 }
+
+/** What a backup that landed says: done, and, when it kept a much larger file it replaced, when that file was written (#113). */
+export const doneText = (up: Uploaded): string => (up.kept ? t('drive.doneKept', { d: driveTime(up.kept) }) : t('drive.done'))

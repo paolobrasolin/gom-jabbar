@@ -168,7 +168,7 @@ describe('put', () => {
     const p = make()
     signIn(p)
     const res = await p.put('{"a":1}')
-    expect(res).toEqual({ ok: true, value: { at: new Date(T0).toISOString() } })
+    expect(res).toEqual({ ok: true, value: { at: new Date(T0).toISOString(), kept: null } })
     const f = drive.only()
     expect(f.name).toBe('gom-jabbar.json')
     expect(f.mimeType).toBe('application/json')
@@ -269,6 +269,26 @@ describe('put', () => {
     expect(drive.only().revs.at(-1)!.content).toBe('mine again')
     expect(drive.pinned().map((r) => r.content)).toEqual(['mine', 'theirs'])
   })
+  it('pins the file it replaces when the backup is much smaller, and says when that file was written (#113)', async () => {
+    const p = make()
+    signIn(p)
+    await p.put('x'.repeat(1000))
+    now += MIN
+    expect(await p.put('x'.repeat(900))).toEqual({ ok: true, value: { at: new Date(now).toISOString(), kept: null } })
+    now += MIN
+    // A diary emptied by mistake, a restore gone wrong: what it replaces must stay downloadable past Drive's 30 days.
+    expect(await p.put('x'.repeat(400))).toEqual({ ok: true, value: { at: new Date(now).toISOString(), kept: new Date(now - MIN).toISOString() } })
+    expect(drive.pinned().map((r) => r.content.length)).toEqual([1000, 900])
+    // Half or more is not much smaller.
+    now += MIN
+    expect((await p.put('x'.repeat(200))) as { value?: { kept: unknown } }).toMatchObject({ value: { kept: null } })
+    // No pin, no overwrite.
+    now += MIN
+    drive.failures.push({ match: /PATCH .*revisions/, status: 500 })
+    expect(await p.put('x')).toEqual({ ok: false, reason: 'http', status: 500 })
+    expect(drive.only().revs.at(-1)!.content).toHaveLength(200)
+  })
+
   it('finds the file again when the remembered id is gone, and creates one when there is none', async () => {
     const p = make()
     signIn(p)
@@ -295,7 +315,7 @@ describe('put', () => {
     drive.failures.push({ match: /GET .*files\/f/, status: 500 })
     expect(await p.put('x')).toEqual({ ok: false, reason: 'http', status: 500 })
     // The file this device created before the failed upload is still ours: no conflict, no second file.
-    expect(await p.put('x')).toEqual({ ok: true, value: { at: expect.any(String) } })
+    expect(await p.put('x')).toEqual({ ok: true, value: { at: expect.any(String), kept: null } })
     expect(drive.only().revs.at(-1)!.content).toBe('x')
   })
 })
@@ -306,7 +326,7 @@ describe('list and get', () => {
     signIn(p)
     await p.put('week 0')
     now += MIN
-    await p.put('week 0, later')
+    await p.put('week 0b')
     now = T0 + WEEK
     signIn(p)
     await p.put('week 1')
