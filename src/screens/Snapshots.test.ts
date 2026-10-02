@@ -111,4 +111,21 @@ describe('the copies the app keeps', () => {
     await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: /^Sostituisci tutto/ }))
     await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.note)).toEqual(['mia']))
   })
+
+  it('Unisci keeps the diary it merged into as a copy too', async () => {
+    await addEntry({ note: 'dal file' })
+    const text = JSON.stringify(await buildExport())
+    await db.entries.clear()
+    await addEntry({ note: 'mia' })
+    await openSettings()
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    await fireEvent.change(input, { target: { files: [Object.assign(new File([text], 'b.json'), { text: async () => text })] } })
+    await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: 'Unisci ai dati attuali' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(2))
+    closeToast()
+    const row = (await within(await screen.findByRole('group', { name: 'Copie automatiche' })).findByText(/^Prima di Unisci · /)).closest('.row') as HTMLElement
+    await fireEvent.click(within(row).getByRole('button', { name: 'Ripristina' }))
+    await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: /^Sostituisci tutto/ }))
+    await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.note)).toEqual(['mia']))
+  })
 })

@@ -353,13 +353,16 @@ describe('Settings import', () => {
     await pickFile(JSON.stringify(file))
     const sheet = await screen.findByRole('dialog', { name: 'Ripristina' })
     expect(sheet).toHaveTextContent('2 voci nel file del 10 set 2026.')
-    expect(sheet).toHaveTextContent('Unendo: 1 nuova, 0 aggiornate.')
+    // Missing here may mean deleted here since that backup: a merge brings it back, and the preview says so (#113).
+    expect(sheet).toHaveTextContent('Unendo: 1 che qui manca (anche se cancellata), 0 aggiornate.')
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Unisci ai dati attuali' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(2))
     expect((await db.entries.get(mine.id))?.layers[0].readings.pain).toBe(4)
     expect(await screen.findByText('Ripristinata 1 voce')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Annulla' })).not.toBeInTheDocument()
+    // A merge is undone like a replace (#113): from the copy it kept of the diary before it.
+    await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+    await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.id)).toEqual([mine.id]))
   })
 
   it('replaces everything, with undo', async () => {
