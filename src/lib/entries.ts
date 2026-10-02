@@ -89,12 +89,28 @@ export function shownReading(ep: Episode): Entry {
   return [ep.head, ...ep.updates].reduce((best, e) => (entryHeadline(e).value >= entryHeadline(best).value ? e : best))
 }
 
+/** The n of an update split from a version 7 history (§8), id `<head id>:<n>`; null for any other id. */
+function pointNumber(e: Entry): number | null {
+  const m = e.id.startsWith(`${e.episodeId}:`) ? /^\d+$/.exec(e.id.slice(e.episodeId!.length + 1)) : null
+  return m ? Number(m[0]) : null
+}
+
+/**
+ * Updates in time order. Readings at the same time (possible in split histories) go by their point's number, then by
+ * when they were written, then by id: as text, `h:10` came before `h:2`, and an older reading could show as the latest (#115).
+ */
+function byTime(a: Entry, b: Entry): number {
+  const na = pointNumber(a)
+  const nb = pointNumber(b)
+  return a.at.localeCompare(b.at) || (na !== null && nb !== null ? na - nb : 0) || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
+}
+
 /** Every episode among `entries`, by head id: updates whose head is not among them are left out. */
 export function episodesOf(entries: Entry[]): Map<string, Episode> {
   const out = new Map<string, Episode>()
   for (const e of entries) if (isHead(e)) out.set(e.id, { head: e, updates: [] })
   for (const e of entries) if (isUpdate(e)) out.get(e.episodeId!)?.updates.push(e)
-  for (const ep of out.values()) ep.updates.sort((a, b) => a.at.localeCompare(b.at))
+  for (const ep of out.values()) ep.updates.sort(byTime)
   return out
 }
 
