@@ -176,6 +176,17 @@ describe('Trends heatmap and chart', () => {
     expect(within(report).getByText('Tutto il corpo: 2 volte, media 3,5')).toBeInTheDocument()
   })
 
+  it('the map has its colour key, and the report its key and caption (#114)', async () => {
+    await addEntry({ at: at(0), ...legs(8) })
+    await openTrends()
+    const map = (await screen.findByText('Dove')).closest('.card') as HTMLElement
+    expect(within(map).getByRole('img', { name: 'Scala dei colori: da 0 a 10' })).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
+    const report = document.querySelector('article.page') as HTMLElement
+    expect(within(report).getByRole('img', { name: 'Scala dei colori: da 0 a 10' })).toBeInTheDocument()
+    expect(within(report).getByText('Colore: intensità media. Bordo: frequenza.')).toBeInTheDocument()
+  })
+
   it('says nothing of full body when no entry reads the symptom there', async () => {
     await addEntry({ at: at(0), ...legs(8) })
     await addEntry({ at: at(1), layers: [{ regions: ['*'], readings: { swelling: 4 }, tags: [] }] })
