@@ -49,6 +49,20 @@ const readFile = (f: Blob) =>
     fr.readAsText(f)
   })
 
+describe('Report rows', () => {
+  it('a noted entry that read nothing shows no level, and a 0 is named after its symptom (#114)', () => {
+    const entries = [
+      makeEntry({ at: at(1), layers: [{ regions: ['152'], readings: {}, tags: [] }], note: 'solo dove' }),
+      makeEntry({ at: at(0), layers: [{ regions: ['mind'], readings: { anxiety: 0 }, tags: [] }], note: 'tranquilla' }),
+    ]
+    render(Report, { days: 7, from: rangeStart(7), entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
+    const row = (note: string) => screen.getByText(note).closest('tr')!
+    expect(row('solo dove').querySelector('.pill')).toHaveTextContent('–')
+    expect(row('tranquilla').querySelector('.pill')).toHaveTextContent('0')
+    expect(row('tranquilla')).toHaveTextContent('ansia')
+  })
+})
+
 describe('Report page', () => {
   it('has the title, the range and the headline numbers', () => {
     const { from } = open()

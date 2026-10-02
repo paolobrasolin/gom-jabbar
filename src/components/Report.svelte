@@ -9,7 +9,7 @@
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
   import { PAIN, type Entry, type Symptom, type Tag } from '../lib/types'
-  import { entryHeadline, symptomName, trail } from '../lib/summary'
+  import { entryHeadline, symptomName, trail, isRead } from '../lib/summary'
   import { leadSymptom } from '../lib/vocabulary'
   import { intensityColor, intensityInk } from '../lib/color'
   import { shareOrDownload, exportFilename } from '../lib/backup'
@@ -53,7 +53,7 @@
     const ep = isHead(e) ? episodes.get(e.id) : undefined
     const cur = ep ? shownReading(ep) : e
     const hl = entryHeadline(cur, leadSymptom(symptoms))
-    return { cur, hl, shown: ep ? chainLayers(ep) : cur.layers, levels: ep && ep.updates.length ? trail([ep.head, ...ep.updates], hl.id) : [], dur: durationMs(e) }
+    return { cur, hl, read: isRead(cur.layers), shown: ep ? chainLayers(ep) : cur.layers, levels: ep && ep.updates.length ? trail([ep.head, ...ep.updates], hl.id) : [], dur: durationMs(e) }
   }
 
   $effect(() => {
@@ -157,9 +157,9 @@
               {@const r = rowOf(e)}
               <tr>
                 <td class="when">{fmtDay(e.at)} {formatTime(e.at, locale())}</td>
-                <td class="num"><span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.hl.value}</span></td>
+                <td class="num"><span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.read ? r.hl.value : '–'}</span></td>
                 <td>
-                  <EntrySummary lead={symptomName(r.hl.id, symptoms, tl)} layers={r.shown} tagDefs={tags} />
+                  <EntrySummary lead={r.read ? symptomName(r.hl.id, symptoms, tl) : ''} layers={r.shown} tagDefs={tags} />
                   {#if r.dur !== null}<span class="muted"> · {isActive(e) ? t('diary.ongoing') : formatDuration(r.dur, units)}</span>{/if}
                   {#if r.levels.length}<span class="muted"> · {r.levels.join(' → ')}</span>{/if}
                   {#if e.note}<div class="note">{e.note}</div>{/if}

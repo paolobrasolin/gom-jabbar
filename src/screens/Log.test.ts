@@ -7,7 +7,7 @@ import { go, back, presetButton, presetItem, pickPreset, episodesButton, episode
 import App from '../App.svelte'
 import { intensityColor } from '../lib/color'
 import { LEG_IDS, REGION_BY_ID, shapeOf, shapeCenter, viewBox } from '../lib/regions'
-import { addPreset } from '../lib/presets'
+import { addPreset, logPreset } from '../lib/presets'
 import { addEntry, isHead, isUpdate } from '../lib/entries'
 import { regionLabel } from '../lib/regionLabel'
 import { t } from '../i18n/index.svelte'
@@ -794,6 +794,15 @@ describe('Presets', () => {
     const [e] = await db.entries.toArray()
     expect(e).not.toHaveProperty('presetId')
     expect(e.layers[0].regions).toEqual([...LEG_IDS].sort())
+  })
+
+  it('a preset whose last sample read nothing shows no level in the dropdown, not a 0 (#114)', async () => {
+    const p = await addPreset({ name: 'Solo dove', layers: [{ regions: ['152'], asks: [] }], kind: 'chronic' })
+    await logPreset(p, [{}])
+    render(App)
+    const item = await presetItem(/Solo dove/)
+    await waitFor(() => expect(item).not.toHaveTextContent('mai'))
+    expect(item.querySelector('.dot')).toHaveTextContent('–')
   })
 
   it('undo on the created preset removes it; the form never carried it', async () => {

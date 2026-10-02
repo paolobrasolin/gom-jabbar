@@ -23,7 +23,7 @@
   import type { Entry, Preset } from '../lib/types'
   import { firstEnabled } from '../lib/vocabulary'
   import { lastByPreset, presetEntries } from '../lib/presets'
-  import { entryHeadline, symptomName } from '../lib/summary'
+  import { entryHeadline, symptomName, isRead } from '../lib/summary'
   import { backupReminder, buildExport, shareOrDownload, exportFilename, REMIND } from '../lib/backup'
   import { cloudBackup, driveInUse, failureText, doneText } from '../lib/cloudBackup'
   import type { CloudProvider } from '../lib/cloud'
@@ -209,12 +209,13 @@
           {#each active.value as ep (ep.head.id)}
             {@const cur = latest(ep)}
             {@const hl = entryHeadline(cur, head)}
+            {@const read = isRead(cur.layers)}
             <button role="menuitem" onclick={() => {
                 close()
                 episode = ep.head
               }}>
-              <span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>
-              <span><EntrySummary lead={symptomName(hl.id, symptoms.value, tl)} layers={chainLayers(ep)} tagDefs={tags.value} after={t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })} /></span>
+              <span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{read ? hl.value : '–'}</span>
+              <span><EntrySummary lead={read ? symptomName(hl.id, symptoms.value, tl) : ''} layers={chainLayers(ep)} tagDefs={tags.value} after={t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })} /></span>
             </button>
           {/each}
         {/snippet}
@@ -233,7 +234,7 @@
               close()
               presetOpen = p
             }}>
-            {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{hl.value}</span>{:else}<span class="dot empty"></span>{/if}
+            {#if hl}<span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{isRead(last.layers) ? hl.value : '–'}</span>{:else}<span class="dot empty"></span>{/if}
             <span class="grow">{p.name} · {last ? formatDuration(Math.max(0, tick - Date.parse(last.at)), units) : t('preset.never')}</span>
           </button>
         {/each}
