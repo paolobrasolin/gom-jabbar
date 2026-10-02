@@ -190,6 +190,9 @@ h1, h2, h3, p { margin: 0; }
 .msg.failure { background: var(--fail-bg); color: var(--fail-ink); font-weight: 600; }
 .msg.done, .msg.refusal { padding-right: 16px; }
 /* The storage error at startup (lib/startupError.ts): over the page, the app may not have drawn. */
+.msg.startup { flex-wrap: wrap; row-gap: 10px; padding: 14px 14px 14px 16px; }
+.msg.startup > .grow { flex: 1 1 12em; }
+.msg.startup .btn { flex: none; margin-left: auto; background: var(--fail-ink); color: var(--fail-bg); font-weight: 600; }
 .msg.startup { position: fixed; left: 12px; right: 12px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 99; }
 .small { font-size: 14px; }
 .row { display: flex; align-items: center; gap: 10px; }
