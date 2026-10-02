@@ -9,7 +9,7 @@ describe('RampKey', () => {
   it('draws every level from 0 to 10 in its colour, its number in the ink that reads on it', () => {
     prefs.lang = 'it'
     render(RampKey)
-    const key = screen.getByRole('img', { name: 'Scala dei colori: da 0 a 10' })
+    const key = screen.getByRole('img', { name: 'Scala dei colori: da 0 assente a 10 massimo' })
     const steps = within(key).getAllByText(/^\d+$/)
     expect(steps.map((s) => s.textContent)).toEqual(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
     // The DOM writes colours its own way: compare with the same colours written through it.
@@ -20,5 +20,11 @@ describe('RampKey', () => {
       expect(s.style.background).toBe(probe.style.background)
       expect(s.style.color).toBe(probe.style.color)
     })
+  })
+  it('names its ends under 0 and 10, as the sliders do (#112)', () => {
+    prefs.lang = 'it'
+    render(RampKey)
+    expect(screen.getByText('assente')).toBeTruthy()
+    expect(screen.getByText('massimo')).toBeTruthy()
   })
 })

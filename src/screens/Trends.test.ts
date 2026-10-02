@@ -236,10 +236,10 @@ describe('Trends heatmap and chart', () => {
     await addEntry({ at: at(0), ...legs(8) })
     await openTrends()
     const map = (await screen.findByText('Dove')).closest('.card') as HTMLElement
-    expect(within(map).getByRole('img', { name: 'Scala dei colori: da 0 a 10' })).toBeInTheDocument()
+    expect(within(map).getByRole('img', { name: 'Scala dei colori: da 0 assente a 10 massimo' })).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
     const report = document.querySelector('article.page') as HTMLElement
-    expect(within(report).getByRole('img', { name: 'Scala dei colori: da 0 a 10' })).toBeInTheDocument()
+    expect(within(report).getByRole('img', { name: 'Scala dei colori: da 0 assente a 10 massimo' })).toBeInTheDocument()
     expect(within(report).getByText('Colore: intensità media. Bordo: frequenza.')).toBeInTheDocument()
   })
 

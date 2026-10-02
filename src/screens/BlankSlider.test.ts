@@ -46,7 +46,7 @@ describe('a blank slider', () => {
     render(App)
     const slider = await screen.findByRole('slider', { name: 'Dolore' })
     await fireEvent.input(slider, { target: { value: '0' } })
-    expect(slider).toHaveAttribute('aria-valuetext', '0')
+    expect(slider).toHaveAttribute('aria-valuetext', '0 assente')
     await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(async () => expect(await db.entries.count()).toBe(1))
     expect((await db.entries.toArray())[0].layers[0].readings).toEqual({ pain: 0 })
