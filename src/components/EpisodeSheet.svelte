@@ -5,7 +5,7 @@
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
   import { endEpisode, reopenEpisode, logUpdate, loadEpisode, deleteEntry, latest, shownReading, durationMs, isActive, type Episode } from '../lib/entries'
-  import { entryHeadline, headline, symptomName, layerLevel, regionText } from '../lib/summary'
+  import { entryHeadline, headline, symptomName, layerLevel, regionText, isRead } from '../lib/summary'
   import { maxReadings, showsCategory } from '../lib/layers'
   import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
@@ -173,8 +173,8 @@
   {#if ep && now}
     <div class="card small">
       <div class="head">
-        <span class="pill" style="--c: {intensityColor(hl.value)}; --ink-on: {intensityInk(hl.value)}">{hl.value}</span>
-        <div class="grow"><EntrySummary lead={symptomName(hl.id, symptoms, tl)} layers={(shown ?? now).layers} tagDefs={[]} /></div>
+        <span class="pill" style="--c: {intensityColor(hl.value)}; --ink-on: {intensityInk(hl.value)}">{shown && isRead(shown.layers) ? hl.value : '–'}</span>
+        <div class="grow"><EntrySummary lead={shown && isRead(shown.layers) ? symptomName(hl.id, symptoms, tl) : ''} layers={(shown ?? now).layers} tagDefs={[]} /></div>
         <!-- Only while the start is what the card shows: with several readings each line opens its own. -->
         {#if points.length <= 1}<button class="edit" onclick={() => edit(ep!.head)}>{t('episode.editShort')}</button>{/if}
       </div>

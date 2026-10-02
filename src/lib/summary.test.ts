@@ -14,6 +14,9 @@ describe('headline', () => {
     // Pain is only the seed's lead (#36): whatever leads wins the tie.
     expect(headline({ pain: 5, swelling: 5 }, 'swelling')).toEqual({ id: 'swelling', value: 5 })
     expect(headline({}, 'swelling')).toEqual({ id: 'swelling', value: 0 })
+    // A 0 is named after its symptom: the lead stands in only when it was read, or nothing was (#114).
+    expect(headline({ anxiety: 0 }, 'pain')).toEqual({ id: 'anxiety', value: 0 })
+    expect(headline({ pain: 0, anxiety: 0 }, 'pain')).toEqual({ id: 'pain', value: 0 })
     // An entry's headline is over all its layers; a layer's level is its own headline.
     const e = makeEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }, { regions: ['mind'], readings: { fog: 6 } }] })
     expect(entryHeadline(e)).toEqual({ id: 'fog', value: 6 })

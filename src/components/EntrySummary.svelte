@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t, tl } from '../i18n/index.svelte'
-  import { regionText as rt, layerLevel } from '../lib/summary'
+  import { regionText as rt, layerLevel, isRead } from '../lib/summary'
   import { mergedTags, type Layer } from '../lib/layers'
   import type { Tag } from '../lib/types'
 
@@ -14,7 +14,7 @@
   const regionText = (regions: string[]) => rt(regions, t)
   const parts = $derived([
     ...(lead ? [lead] : []),
-    ...(where ? layers.filter((l) => l.regions.length).map((l) => (layers.length > 1 ? `${regionText(l.regions)} ${layerLevel(l)}` : regionText(l.regions))) : []),
+    ...(where ? layers.filter((l) => l.regions.length).map((l) => (layers.length > 1 && isRead([l]) ? `${regionText(l.regions)} ${layerLevel(l)}` : regionText(l.regions))) : []),
     ...(after ? [after] : []),
   ])
   const tagText = $derived(

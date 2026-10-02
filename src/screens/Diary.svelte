@@ -11,7 +11,7 @@
   import { dayKey, formatDay, formatTime, formatDuration } from '../lib/time'
   import type { Entry } from '../lib/types'
   import type { Episode } from '../lib/entries'
-  import { entryHeadline, symptomName, trail } from '../lib/summary'
+  import { entryHeadline, symptomName, trail, isRead } from '../lib/summary'
   import { leadSymptom } from '../lib/vocabulary'
   import { search, snippet, words, type SearchContext } from '../lib/search'
 
@@ -80,10 +80,11 @@
     const hl = entryHeadline(cur, leadSymptom(symptoms.value))
     const presetId = (head ?? e).presetId
     const name = presetId ? presets.value.find((p) => p.id === presetId)?.name : undefined
-    const lead = [name, symptomName(hl.id, symptoms.value, tl)].filter(Boolean).join(' · ')
+    const read = isRead(cur.layers)
+    const lead = [name, read ? symptomName(hl.id, symptoms.value, tl) : ''].filter(Boolean).join(' · ')
     const started = !head ? '' : [dayKey(head.at) === dayKey(e.at) ? '' : formatDay(head.at, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') }).toLowerCase(), formatTime(head.at, locale())].filter(Boolean).join(' ')
     return {
-      cur, hl, lead, head, started,
+      cur, hl, read, lead, head, started,
       shown: ep && !searching ? chainLayers(ep) : cur.layers,
       where: !name || cur.layers.length > 1,
       levels: ep && ep.updates.length ? trail([ep.head, ...ep.updates], hl.id) : [],
@@ -121,7 +122,7 @@
             {@const r = rowOf(e)}
             <button class="entry card row" class:hit={searching} onclick={() => (isHead(e) ? (episode = e) : r.head ? (episode = r.head) : (editing = e))}>
               <span class="time muted small">{formatTime(e.at, locale())}</span>
-              <span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.hl.value}</span>
+              <span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.read ? r.hl.value : '–'}</span>
               <span class="grow body">
                 <span class="line"><EntrySummary lead={r.lead} layers={r.shown} where={r.where} tagDefs={tags.value} /></span>
                 {#if r.dur !== null}

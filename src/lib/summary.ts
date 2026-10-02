@@ -17,12 +17,18 @@ export function regionText(regions: string[], t: T): string {
 
 export type Headline = { id: string; value: number }
 
-/** A headline reading: the highest one. The lead symptom (`leadSymptom`) wins ties and stands in when nothing is set. */
+/**
+ * A headline reading: the highest one. The lead symptom (`leadSymptom`) wins ties when it was read, and stands in when
+ * nothing was (then shown as no level, `isRead`); a lone 0 of another symptom is that symptom's 0 (#114).
+ */
 export function headline(readings: Record<string, number>, lead = ''): Headline {
-  let best: Headline = { id: lead, value: readings[lead] ?? 0 }
-  for (const [id, v] of Object.entries(readings)) if (id !== lead && v > best.value) best = { id, value: v }
-  return best
+  let best: Headline | null = readings[lead] !== undefined ? { id: lead, value: readings[lead] } : null
+  for (const [id, v] of Object.entries(readings)) if (id !== lead && (!best || v > best.value)) best = { id, value: v }
+  return best ?? { id: lead, value: 0 }
 }
+
+/** Whether any layer holds a reading: one with none has no level to show, not a 0 (#114). */
+export const isRead = (layers: { readings: Record<string, number> }[]): boolean => layers.some((l) => Object.keys(l.readings).length > 0)
 
 /** An entry's headline: over the readings of all its layers (§5.1). */
 export const entryHeadline = (e: { layers: { readings: Record<string, number> }[] }, lead?: string): Headline => headline(mergedReadings(e.layers), lead)

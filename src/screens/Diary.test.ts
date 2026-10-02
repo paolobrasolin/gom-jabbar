@@ -88,6 +88,22 @@ describe('Diary list', () => {
     expect(swelling).not.toHaveTextContent('gonfiore')
   })
 
+  it('a row with nothing read shows no level, a 0 is named after its symptom, a layer not read has no number (#114)', async () => {
+    await addEntry({ at: ago(30), layers: [{ regions: ['152'], readings: {}, tags: [] }] })
+    await addEntry({ at: ago(20), layers: [{ regions: ['mind'], readings: { anxiety: 0 }, tags: [] }] })
+    await addEntry({ at: ago(10), layers: [L(['152'], 8), { regions: ['130'], readings: {}, tags: [] }] })
+    await openDiary()
+    const [both, anxious, bare] = await waitFor(() => {
+      const r = rows()
+      expect(r).toHaveLength(3)
+      return r
+    })
+    expect(bare.querySelector('.pill')).toHaveTextContent('–')
+    expect(anxious.querySelector('.pill')).toHaveTextContent('0')
+    await waitFor(() => expect(anxious).toHaveTextContent('ansia'))
+    expect(both.querySelector('.line')).toHaveTextContent(/^coscia sx 8 · spalla sx$/)
+  })
+
   it('shows 30 days and loads 60 more at a time while older entries exist', async () => {
     await addEntry({ at: ago(10), layers: [L(['152'], 2)] })
     await addEntry({ at: ago(40 * DAY), layers: [L(['152'], 9)] })
