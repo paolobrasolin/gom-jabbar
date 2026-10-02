@@ -5,7 +5,8 @@ import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { addEntry, deleteEntry } from '../lib/entries'
 import { takeSnapshot } from '../lib/snapshots'
-import { parseImport } from '../lib/backup'
+import { parseImport, buildExport } from '../lib/backup'
+import { closeToast } from '../lib/toast.svelte'
 import { go } from '../test/nav'
 import App from '../App.svelte'
 
@@ -91,5 +92,23 @@ describe('the copies the app keeps', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Ripristina' })
     expect(sheet).toHaveTextContent('nel file del')
     expect(within(sheet).queryByRole('button', { name: 'Scarica come file' })).toBeNull()
+  })
+
+  it('Sostituisci tutto keeps the diary it replaced as a copy, which outlives the undo', async () => {
+    await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }], note: 'dal file' })
+    const text = JSON.stringify(await buildExport())
+    await db.entries.clear()
+    await addEntry({ at: '2026-09-01T10:00:00.000Z', layers: [{ regions: ['152'], readings: { pain: 4 } }], note: 'mia' })
+    await openSettings()
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    await fireEvent.change(input, { target: { files: [Object.assign(new File([text], 'b.json'), { text: async () => text })] } })
+    await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: /^Sostituisci tutto/ }))
+    await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.note)).toEqual(['dal file']))
+    // The undo's ten seconds go by.
+    closeToast()
+    const row = (await within(await screen.findByRole('group', { name: 'Copie automatiche' })).findByText(/^Prima di Sostituisci tutto · /)).closest('.row') as HTMLElement
+    await fireEvent.click(within(row).getByRole('button', { name: 'Ripristina' }))
+    await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: /^Sostituisci tutto/ }))
+    await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.note)).toEqual(['mia']))
   })
 })

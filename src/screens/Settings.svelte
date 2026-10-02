@@ -131,10 +131,8 @@
     if (!pending || busy) return
     busy = true
     const { file } = pending
-    let res: ImportPreview
-    let snapshot: ExportFile | null = null
+    let res: Awaited<ReturnType<typeof applyImport>>
     try {
-      snapshot = mode === 'replace' ? await buildExport() : null
       res = await applyImport(file, mode)
     } catch (err) {
       const e = err as Error & { inner?: Error }
@@ -154,7 +152,9 @@
       savePrefs()
     }
     const msg = tn('import.done', mode === 'replace' ? res.entries : res.added + res.updated)
-    if (snapshot) showToast(msg, { label: t('log.undo'), run: () => void applyImport(snapshot, 'replace').catch(failed) })
+    // The undo restores the copy replace kept (§4.1), which stays in Copie automatiche after the undo's ten seconds.
+    const copy = res.copy
+    if (copy) showToast(msg, { label: t('log.undo'), run: () => void applyImport(copy.file, 'replace').catch(failed) })
     else showToast(msg)
   }
 
