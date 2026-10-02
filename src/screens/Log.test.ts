@@ -968,6 +968,26 @@ describe('Presets', () => {
     await waitFor(async () => expect(await presetItem(/Le gambe/)).toHaveTextContent(/^6\s*Le gambe · 0m$/))
   })
 
+  it("an episode preset's sheet says it starts one: Inizio over the time, Inizia episodio on the button (#115)", async () => {
+    await addPreset({ name: 'Emicrania', layers: [{ regions: ['100'], asks: ['pain'] }], kind: 'episode' })
+    await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic' })
+    render(App)
+    await pickPreset(/Emicrania/)
+    const ep = await screen.findByRole('dialog', { name: 'Emicrania' })
+    expect(within(ep).getByRole('group', { name: 'Inizio' })).toBeInTheDocument()
+    // Captioned on screen too, as the log's time rows are.
+    expect(within(ep).getByText('Inizio')).toBeVisible()
+    await fireEvent.input(within(ep).getByRole('slider', { name: 'Dolore' }), { target: { value: '6' } })
+    await fireEvent.click(within(ep).getByRole('button', { name: 'Inizia episodio' }))
+    await waitFor(async () => expect((await db.entries.toArray()).filter((e) => e.kind === 'episode')).toHaveLength(1))
+    // A chronic preset's sheet stays as it was.
+    await pickPreset(/Schiena/)
+    const ch = await screen.findByRole('dialog', { name: 'Schiena' })
+    expect(within(ch).getByRole('group', { name: 'Quando' })).toBeInTheDocument()
+    expect(within(ch).getByText('Quando')).toBeVisible()
+    expect(within(ch).getByRole('button', { name: 'Salva' })).toBeInTheDocument()
+  })
+
   it('logs a preset at a chosen time: the sheet has the time chips', async () => {
     const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic' })
     render(App)
