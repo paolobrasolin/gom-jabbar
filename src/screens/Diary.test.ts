@@ -146,6 +146,18 @@ describe('Episode rows', () => {
     row = rows()[0]
     expect(row).toHaveTextContent('7 → 8 → 2')
   })
+
+  it('says it is an episode, going on or ended, and a chronic row does not (#115)', async () => {
+    const e = await addEntry({ at: ago(5 * 60), kind: 'episode', layers: [L(['152'], 7)] })
+    await logUpdate(e.id, [{ pain: 4 }], ago(4 * 60))
+    await addEntry({ at: ago(30), layers: [L(['224'], 3)] })
+    await openDiary()
+    await waitFor(() => expect(rows()).toHaveLength(2))
+    expect(rows()[1]).toHaveTextContent('Episodio · in corso · 7 → 4')
+    expect(rows()[0]).not.toHaveTextContent('Episodio')
+    await endEpisode(e.id, ago(3 * 60))
+    await waitFor(() => expect(rows()[1]).toHaveTextContent('Episodio · 2h · 7 → 4'))
+  })
 })
 
 describe('Diary window', () => {
