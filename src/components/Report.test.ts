@@ -63,6 +63,19 @@ describe('Report rows', () => {
   })
 })
 
+describe('Report tags', () => {
+  it('give each mean with its day count, as Trends does, under headers that say they are means (#114)', () => {
+    const entries = [
+      ...Array.from({ length: 6 }, (_, i) => makeEntry({ at: at(i), layers: [{ regions: ['152'], readings: { pain: 8 }, tags: ['rest'] }] })),
+      ...Array.from({ length: 5 }, (_, i) => makeEntry({ at: at(i + 6), layers: [{ regions: ['152'], readings: { pain: 3 }, tags: [] }] })),
+    ]
+    render(Report, { days: 30, from: rangeStart(30), entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
+    const table = screen.getByRole('columnheader', { name: 'Media con' }).closest('table')!
+    expect([...table.querySelectorAll('th')].map((th) => th.textContent)).toEqual(['Tag', 'Giorni', 'Media con', 'Media senza'])
+    expect([...within(table).getByText('Riposo').closest('tr')!.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['Riposo', '6', '8 (6 g)', '3 (5 g)'])
+  })
+})
+
 describe('Report page', () => {
   it('has the title, the range and the headline numbers', () => {
     const { from } = open()

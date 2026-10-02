@@ -318,7 +318,7 @@ A full-screen overlay in a fixed light palette, opened for the current range and
 2. Body heatmap for that symptom (front and back side by side), colour for the mean and a ring for frequency as on Trends (§6.3), strokes as shading (§5.3), and the full-body line under it.
 3. Intensity over time chart.
 4. Summary numbers: entries, daily mean/max (per day, then across days, §6.3) and days ≥ 5 of the symptom (left out when nothing in range reads it, §6.3), episode count and durations; the chart likewise; Altri sintomi without it.
-5. Tag summary table.
+5. Tag summary table: each tag, its days, and, when both sides have enough days (§6.3), the mean of the symptom's daily maximum on days with and without it, each with its day count, "8 (6 g)" (#114; the counts were missing and the headers said "giorni con").
 6. Chronological list of episodes and notes (compact), each where it hurt in the words of the diary rows (§5.3).
 
 The chronological list contains episodes and entries with notes, not every entry.
