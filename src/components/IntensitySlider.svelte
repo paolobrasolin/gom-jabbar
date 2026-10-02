@@ -11,6 +11,8 @@
   }: { value?: number | null; label?: string; onchange?: (v: number) => void } = $props()
 
   const blank = $derived(value === null || value === undefined)
+  /** What a number at either end means (#112): read aloud there, written inside the track. */
+  const valueText = $derived(blank ? t('slider.unset') : value === 0 ? `0 ${t('scale.min')}` : value === 10 ? `10 ${t('scale.max')}` : String(value))
   const color = $derived(blank ? 'var(--c-zero)' : intensityColor(value!))
   const ink = $derived(blank ? 'var(--ink-2)' : intensityInk(value!))
   /** One size for every symptom, pain included (#37). */
@@ -86,6 +88,8 @@
   {#if label}<span class="label">{label}</span>{/if}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="track-wrap" onpointerdown={down}>
+    <!-- The track's unfilled part, with the ends in words (#112): behind the input, so the fill and the thumb cover them. -->
+    <div class="ends" aria-hidden="true"><span>{t('scale.min')}</span><span>{t('scale.max')}</span></div>
     <input
       bind:this={input}
       type="range"
@@ -94,17 +98,39 @@
       step="1"
       value={value ?? 0}
       aria-label={label || 'intensity'}
-      aria-valuetext={blank ? t('slider.unset') : String(value)}
+      aria-valuetext={valueText}
       oninput={onInput} />
     <span class="bubble" aria-hidden="true">{blank ? '–' : value}</span>
   </div>
 </div>
 
 <style>
-  .slider { display: flex; flex-direction: column; gap: 2px; --thumb: 36px; }
+  .slider { display: flex; flex-direction: column; gap: 2px; --thumb: 36px; --reach: calc(var(--thumb) / 2 + var(--pct) * (100% - var(--thumb))); }
   .label { font-size: 13px; font-weight: 600; color: var(--ink-2); padding-left: 2px; }
   /* The slider looks 36px tall but takes a finger over 48 (§10), without taking more room. */
   .track-wrap { position: relative; touch-action: pan-y; padding: 6px 0; margin: -6px 0; }
+  /*
+   * The track is as tall as the thumb (#112), so its ends can say what 0 and 10 mean at the size of a label, in a row the
+   * thumb already takes. The words start past the thumb at 0; --ink, since --ink-2 on the zero grey is under 4.5:1 in light.
+   */
+  .ends {
+    position: absolute;
+    inset: 6px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px 0 calc(var(--thumb) + 10px);
+    border-radius: 999px;
+    background: var(--c-zero);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    pointer-events: none;
+  }
 
   input[type='range'] {
     -webkit-appearance: none;
@@ -117,25 +143,26 @@
     /* Pointers are handled by the wrapper (see the script); the native control keeps keyboard and a11y. */
     pointer-events: none;
     display: block;
+    position: relative;
   }
   input[type='range']:focus { outline: none; }
   input[type='range']:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 999px; }
 
+  /* The fill runs to the thumb's centre; the unfilled part is transparent over .ends, the zero grey with an edge (#23). */
   input[type='range']::-webkit-slider-runnable-track {
-    height: 16px;
+    height: var(--thumb);
     border-radius: 999px;
-    /* The unfilled part in the zero grey with an edge, so a slider at 0 still shows its track (#23). */
-    background: linear-gradient(to right, var(--fill) calc(var(--pct) * 100%), var(--c-zero) calc(var(--pct) * 100%));
-    box-shadow: inset 0 0 0 1px var(--border);
+    background: linear-gradient(to right, var(--fill) var(--reach), transparent var(--reach));
   }
-  input[type='range']::-moz-range-track { height: 16px; border-radius: 999px; background: var(--c-zero); box-shadow: inset 0 0 0 1px var(--border); }
-  input[type='range']::-moz-range-progress { height: 16px; border-radius: 999px; background: var(--fill); }
+  .blank input[type='range']::-webkit-slider-runnable-track { background: transparent; }
+  input[type='range']::-moz-range-track { height: var(--thumb); border-radius: 999px; background: transparent; }
+  input[type='range']::-moz-range-progress { height: var(--thumb); border-radius: 999px; background: var(--fill); }
+  .blank input[type='range']::-moz-range-progress { background: transparent; }
 
   input[type='range']::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: var(--thumb);
     height: var(--thumb);
-    margin-top: calc((16px - var(--thumb)) / 2);
     border-radius: 50%;
     background: var(--fill);
     border: 3px solid var(--surface);
@@ -152,6 +179,7 @@
   /* Number drawn over the native thumb. Thumb centre moves from thumb/2 to width - thumb/2. */
   .bubble {
     position: absolute;
+    z-index: 1;
     top: 50%;
     left: calc(var(--thumb) / 2 + var(--pct) * (100% - var(--thumb)));
     transform: translate(-50%, -50%);

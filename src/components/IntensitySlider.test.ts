@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
+import { prefs } from '../lib/prefs.svelte'
 import IntensitySlider from './IntensitySlider.svelte'
 
 /** A 136px wide slider with the 36px thumb: the thumb centre travels from x=18 (0) to x=118 (10). */
@@ -46,5 +47,26 @@ describe('IntensitySlider gestures', () => {
     const { input, onchange } = setup(5)
     await fireEvent.input(input, { target: { value: '7' } })
     expect(onchange).toHaveBeenCalledWith(7)
+  })
+})
+
+/** The scale names its ends (#112), in words that fit any symptom whatever its gender, inside the track so they take no room. */
+describe('IntensitySlider ends', () => {
+  it('names 0 and 10 inside the track, without numbers', () => {
+    prefs.lang = 'it'
+    render(IntensitySlider, { label: 'Gonfiore', value: null })
+    expect(screen.getByText('assente')).toBeTruthy()
+    expect(screen.getByText('massimo')).toBeTruthy()
+  })
+
+  it('reads the word aloud at either end, and the bare number between', async () => {
+    prefs.lang = 'it'
+    const { rerender } = render(IntensitySlider, { label: 'Dolore', value: 0 })
+    const input = screen.getByRole('slider', { name: 'Dolore' })
+    expect(input.getAttribute('aria-valuetext')).toBe('0 assente')
+    await rerender({ label: 'Dolore', value: 10 })
+    expect(input.getAttribute('aria-valuetext')).toBe('10 massimo')
+    await rerender({ label: 'Dolore', value: 4 })
+    expect(input.getAttribute('aria-valuetext')).toBe('4')
   })
 })
