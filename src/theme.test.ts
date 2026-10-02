@@ -27,6 +27,8 @@ const TEXT: [string, string][] = [
   // A refusal and a failure each have their own colours (#94).
   ['--warn-ink', '--warn-bg'],
   ['--fail-ink', '--fail-bg'],
+  // Level 0 on the ramp, and the slider's end words (#112).
+  ['--ink', '--c-zero'],
 ]
 
 describe('theme tokens', () => {
