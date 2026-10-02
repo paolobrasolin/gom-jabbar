@@ -7,6 +7,10 @@ describe('intensity ramp', () => {
     for (let n = 1; n <= 10; n++) expect(contrast(intensityInk(n), intensityColor(n)), `level ${n}`).toBeGreaterThanOrEqual(4.5)
   })
 
+  it('writes 0 in the theme ink, which reads on the zero grey in light and dark alike (the theme test checks the pair)', () => {
+    expect(intensityInk(0)).toBe('var(--ink)')
+  })
+
   it('is neutral at 0 and clamps above 10', () => {
     expect(intensityColor(0)).toBe('var(--c-zero)')
     expect(intensityColor(12)).toBe(intensityColor(10))
