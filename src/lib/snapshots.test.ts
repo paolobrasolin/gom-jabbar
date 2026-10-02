@@ -116,7 +116,31 @@ describe('kept', () => {
     const file = await buildExport()
     expect(Object.keys(file)).not.toContain('snapshots')
     expect(JSON.stringify(file)).not.toContain('"reason"')
-    await applyImport(parseImport(JSON.stringify({ ...file, entries: [] })), 'replace')
-    expect(await listSnapshots()).toHaveLength(1)
+    const { copy } = await applyImport(parseImport(JSON.stringify({ ...file, entries: [] })), 'replace')
+    // Replace keeps its own copy and leaves the others alone.
+    expect((await listSnapshots()).map((s) => s.reason)).toEqual(['replace', 'upgrade'])
+    expect(copy!.file.entries).toEqual(file.entries)
   })
 })
+
+describe('before a restore', () => {
+  it('Sostituisci tutto keeps the diary it replaces, in the same transaction', async () => {
+    await addEntry({ note: 'mine' })
+    const file = parseImport(JSON.stringify({ ...(await buildExport()), entries: [] }))
+    const before = await buildExport()
+    const res = await applyImport(file, 'replace')
+    expect(res.copy?.reason).toBe('replace')
+    expect(res.copy?.file.entries).toEqual(before.entries)
+    expect((await listSnapshots()).map((s) => s.id)).toEqual([res.copy!.id])
+  })
+
+  it('a replace that fails keeps no copy and changes nothing', async () => {
+    await addEntry({ note: 'mine' })
+    const file = parseImport(JSON.stringify(await buildExport()))
+    vi.spyOn(db.presets, 'bulkPut').mockRejectedValueOnce(new Error('full'))
+    await expect(applyImport(file, 'replace')).rejects.toThrow('full')
+    expect(await listSnapshots()).toEqual([])
+    expect((await db.entries.toArray()).map((e) => e.note)).toEqual(['mine'])
+  })
+})
+

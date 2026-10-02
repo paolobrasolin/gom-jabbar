@@ -1,4 +1,5 @@
 import { db } from './db'
+import { takeSnapshot, type Snapshot } from './snapshots'
 import type { Entry, Preset, Symptom, Tag } from './types'
 import type { Layer } from './layers'
 import { isHead } from './entries'
@@ -228,11 +229,16 @@ export async function previewImport(file: ExportFile): Promise<ImportPreview> {
 
 export type ImportMode = 'merge' | 'replace'
 
-/** Merge: upsert by id, newer `updatedAt` wins; vocabulary items are added if missing. Replace: wipe and load. */
-export async function applyImport(file: ExportFile, mode: ImportMode): Promise<ImportPreview> {
+/**
+ * Merge: upsert by id, newer `updatedAt` wins; vocabulary items are added if missing. Replace: wipe and load, after
+ * keeping the diary it wipes as a copy (`copy`, §4.1), in the same transaction: no copy, no replace.
+ */
+export async function applyImport(file: ExportFile, mode: ImportMode): Promise<ImportPreview & { copy?: Snapshot }> {
   const preview = await previewImport(file)
-  await db.transaction('rw', db.entries, db.symptoms, db.tags, db.presets, async () => {
+  let copy: Snapshot | undefined
+  await db.transaction('rw', [db.entries, db.symptoms, db.tags, db.presets, db.snapshots], async () => {
     if (mode === 'replace') {
+      copy = await takeSnapshot('replace')
       await Promise.all([db.entries.clear(), db.symptoms.clear(), db.tags.clear(), db.presets.clear()])
       await db.entries.bulkPut(file.entries)
       await db.presets.bulkPut(file.presets)
@@ -263,7 +269,7 @@ export async function applyImport(file: ExportFile, mode: ImportMode): Promise<I
     const haveP = new Set((await db.presets.toArray()).map((p) => p.id))
     await db.presets.bulkPut(file.presets.filter((p) => !haveP.has(p.id)))
   })
-  return preview
+  return { ...preview, copy }
 }
 
 /**

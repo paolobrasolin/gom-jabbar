@@ -373,6 +373,7 @@
   "drive.error.unavailable": "Drive non è disponibile in questa versione.",
   "settings.backup.copies": "Copie automatiche",
   "copy.upgrade": "Prima dell'aggiornamento",
+  "copy.replace": "Prima di Sostituisci tutto",
   "copy.open": "Ripristina",
   "copy.download": "Scarica come file",
   "copy.done": "Copia scaricata",
