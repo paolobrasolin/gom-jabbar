@@ -8,7 +8,7 @@
   import { db } from '../lib/db'
   import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { rangeStart, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE, type Summary } from '../lib/stats'
+  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE, type Summary } from '../lib/stats'
   import { formatDuration } from '../lib/time'
   import { allStrokes } from '../lib/strokes'
   import { PAIN } from '../lib/types'
@@ -18,7 +18,8 @@
   let showReport = $state(false)
 
   const from = $derived(rangeStart(days))
-  const entries = live(() => days, () => db.entries.where('at').aboveOrEqual(from.toISOString()).toArray(), [])
+  // The range ends with today, as the chart does: an entry dated later (a clock set wrong, a phone ahead in time) is in none (#114).
+  const entries = live(() => days, () => db.entries.where('at').between(from.toISOString(), rangeEnd(from, days).toISOString(), true, true).toArray(), [])
   const tags = live(() => null, () => db.tags.orderBy('order').toArray(), [])
   const symptoms = live(() => null, () => db.symptoms.orderBy('order').toArray(), [])
   const presets = live(() => null, () => db.presets.orderBy('order').toArray(), [])
