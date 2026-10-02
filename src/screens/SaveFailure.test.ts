@@ -156,7 +156,7 @@ describe('a failed read', () => {
     // Trends reads the range by time; that read fails, every other one works.
     const where = db.entries.where.bind(db.entries)
     const closing = () => Promise.reject(new DOMException('The database connection is closing.', 'InvalidStateError'))
-    vi.spyOn(db.entries, 'where').mockImplementation(((key: string) => (key === 'at' ? { aboveOrEqual: () => ({ toArray: closing }) } : where(key))) as never)
+    vi.spyOn(db.entries, 'where').mockImplementation(((key: string) => (key === 'at' ? { between: () => ({ toArray: closing }) } : where(key))) as never)
     render(App)
     await go('Andamento')
     expect((await screen.findByText(/Non riesco a leggere il diario/)).closest('[role=alert]')).not.toBeNull()

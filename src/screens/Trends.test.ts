@@ -63,6 +63,16 @@ describe('Trends summary', () => {
     expect(tile('Episodi')).toHaveTextContent('2')
   })
 
+  it('an entry dated after today is not in any range, as on the chart (#114)', async () => {
+    await addEntry({ at: at(0), ...legs(3) })
+    // A clock set wrong, a backup from a phone ahead in time: it is not part of the last 30 days.
+    await addEntry({ at: at(-2), ...legs(9, { tags: ['rest'] }) })
+    await openTrends()
+    await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
+    expect(tile('Media giornaliera')).toHaveTextContent('max 3')
+    expect(screen.queryByText('Riposo')).toBeNull()
+  })
+
   it('range chips change the data', async () => {
     await addEntry({ at: at(10), ...legs(9) })
     await addEntry({ at: at(0), ...legs(2) })

@@ -286,7 +286,7 @@ On save: haptic tick (`navigator.vibrate` where available), toast "Salvato · An
 
 ### 6.3 Trends
 
-Range picker: 7, 30, 90, 365 days.
+Range picker: 7, 30, 90, 365 days. A range is calendar days ending with today: an entry dated later (a clock set wrong, a backup from a phone ahead in time) is in none, for the tiles, the map, the tags and the report as for the chart (#114; until then only the chart was bounded).
 
 **One symptom at a time** (#38). Under the ranges, a chip row, **Sintomo**, offers every symptom read in range (a reading of 0 counts, disabled symptoms too: they stay in history), in the vocabulary editor's order, and the screen opens on the first: Dolore in the seed, whatever leads once reordered or once pain is off (§5.2). The tiles, the map, the chart and the tag comparison read the symptom picked; Per preset keeps its own rule. Their labels are neutral, **Media giornaliera · max 8**, **Giorni ≥ 5** ("almeno 5 nel giorno"), because the row already says which symptom and a name would need gender agreement ("gonfiore medio", "stanchezza media") that a user-made symptom does not carry; the chart's accessible name is "Gonfiore per giorno". The figures are over the entries that read the symptom: one without the reading (the mind alone, a symptom not asked) is not a 0, and a mean is taken per day first, then across days, so a day logged twenty times (a migraine and its updates) weighs as much as a day logged once: the figure is the typical day, not the typical entry; and a day without one sits out the tag comparison (#36). With nothing read in range there is no row, and the two symptom tiles and the chart are left out; Voci and Episodi stay. Until #38 every figure but the map read pain.
 
