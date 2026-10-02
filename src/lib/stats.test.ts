@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
-import { dailySeries, summarize, regionHeat, fullBody, tagComparison, symptomMeans, symptomsRead, rangeStart, rangeEnd, inRange, tagCounts, ringWidth, ringStyle } from './stats'
+import { dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, rangeStart, rangeEnd, inRange, tagCounts, ringWidth, ringStyle } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
 import { presetSeries } from './stats'
 import type { Preset } from './types'
@@ -91,10 +91,6 @@ describe('stats', () => {
     const s = summarize([e('1', 6), mind('1', 2), mind('2', 3)], 7)
     expect(s).toMatchObject({ entries: 3, daysWithEntries: 2, mean: 6, max: 6, daysAtLeast5: 1 })
     expect(summarize([mind('1', 2)], 7)).toMatchObject({ entries: 1, mean: null, max: null, daysAtLeast5: 0 })
-    // Days without a pain reading sit out the comparison.
-    const tagged = (day: string, tags: string[], pain?: number) => makeEntry({ at: at(day), layers: [{ regions: [], readings: pain === undefined ? { fog: 4 } : { pain }, tags }] })
-    const days = [tagged('1', ['heat'], 8), tagged('2', ['heat'], 6), tagged('3', [], 2), tagged('4', [], 4), tagged('5', ['heat']), tagged('6', [])]
-    expect(tagComparison(days, DEFAULT_TAGS, 'pain', 2)).toEqual([expect.objectContaining({ tag: expect.objectContaining({ id: 'heat' }), withN: 2, withoutN: 2, withMean: 7, withoutMean: 3 })])
   })
 
   it('computes region heat for one symptom, an entry counting once per region at the max over its layers', () => {
@@ -156,23 +152,10 @@ describe('stats', () => {
     expect(ringStyle(1)).toBe('stroke-width:5.00px')
   })
 
-  it('compares tags on days with vs without, with a minimum', () => {
+  it('counts tag use in days, medications first, the most used first within each group', () => {
     const entries = []
     for (let d = 1; d <= 6; d++) entries.push(e(String(d), 8, { tags: ['badsleep'] }))
-    for (let d = 7; d <= 12; d++) entries.push(e(String(d), 3))
     entries.push(e('13', 9, { tags: ['stress'] }))
-    const cmp = tagComparison(entries, DEFAULT_TAGS)
-    expect(cmp).toHaveLength(1)
-    expect(cmp[0].tag.id).toBe('badsleep')
-    expect(cmp[0].withN).toBe(6)
-    expect(cmp[0].withoutN).toBe(7)
-    expect(cmp[0].withMean).toBe(8)
-    expect(cmp[0].withoutMean).toBeCloseTo((3 * 6 + 9) / 7)
-    // Listed as the vocabulary is, never by the size of the gap, which put a few days of noise first (#114).
-    expect(tagComparison(entries, DEFAULT_TAGS, 'pain', 1).map((c) => c.tag.id)).toEqual(['stress', 'badsleep'])
-    const med = { id: 'med-x', group: 'medication' as const, label: 'Ibuprofene', enabled: true, order: 0 }
-    const mixed = [...entries.slice(0, 3).map((x) => ({ ...x, layers: x.layers.map((l) => ({ ...l, tags: [...l.tags, 'med-x', 'rest'] })) })), ...entries.slice(3)]
-    expect(tagComparison(mixed, [...DEFAULT_TAGS, med], 'pain', 1).map((c) => c.tag.id)).toEqual(['med-x', 'rest', 'stress', 'badsleep'])
     expect(tagCounts(entries, DEFAULT_TAGS).map((x) => [x.tag.id, x.days])).toEqual([['badsleep', 6], ['stress', 1]])
   })
 
@@ -204,8 +187,6 @@ describe('stats', () => {
     const entries = [sw('1', 3), sw('1', 7), sw('3', 5), e('4', 9)]
     expect(dailySeries(entries, new Date(2026, 2, 1), 4, 'swelling').map((p) => p.max)).toEqual([7, null, 5, null])
     expect(summarize(entries, 7, 'swelling')).toMatchObject({ entries: 4, daysWithEntries: 3, mean: 5, max: 7, daysAtLeast5: 2 })
-    const tagged = [sw('1', 8, ['heat']), sw('2', 6, ['heat']), sw('3', 2), sw('4', 4), e('5', 9, { tags: ['heat'] })]
-    expect(tagComparison(tagged, DEFAULT_TAGS, 'swelling', 2)).toEqual([expect.objectContaining({ withN: 2, withoutN: 2, withMean: 7, withoutMean: 3 })])
   })
 
   it('lists the symptoms read in range in vocabulary order, a reading of 0 included, disabled ones too', () => {

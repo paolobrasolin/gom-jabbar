@@ -5,7 +5,7 @@
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale, num, tn } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { dailySeries, summarize, regionHeat, fullBody, tagComparison, symptomMeans, symptomsRead, tagCounts, rangeEnd, type Summary } from '../lib/stats'
+  import { dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, tagCounts, rangeEnd, type Summary } from '../lib/stats'
   import { durationMs, episodesOf, isHead, isUpdate, isActive, shownReading, chainLayers } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
@@ -34,7 +34,6 @@
   const sid = $derived(symptom?.id ?? PAIN)
   const series = $derived(dailySeries(entries, from, days, sid))
   const summary = $derived(summarize(entries, days, sid))
-  const cmp = $derived(tagComparison(entries, tags, sid))
   const counts = $derived(tagCounts(entries, tags))
   const symMeans = $derived(symptomMeans(entries, symptoms, sid))
   /** The symptom's figures only when something in range reads it (#36). */
@@ -139,15 +138,13 @@
       <section>
         <h2>{t('trends.tags')}</h2>
         <table>
-          <thead><tr><th>{t('report.tag')}</th><th class="num">{t('report.days')}</th><th class="num">{t('report.meanWith')}</th><th class="num">{t('report.meanWithout')}</th></tr></thead>
+          <thead><tr><th>{t('report.tag')}</th><th class="num">{t('report.days')}</th></tr></thead>
           <tbody>
             {#each counts as c (c.tag.id)}
-              {@const r = cmp.find((x) => x.tag.id === c.tag.id)}
-              <tr><td>{tl(c.tag.label)}</td><td class="num">{c.days}</td><td class="num">{r ? t('report.meanDays', { m: fmt1(r.withMean), n: r.withN }) : '–'}</td><td class="num">{r ? t('report.meanDays', { m: fmt1(r.withoutMean), n: r.withoutN }) : '–'}</td></tr>
+              <tr><td>{tl(c.tag.label)}</td><td class="num">{c.days}</td></tr>
             {/each}
           </tbody>
         </table>
-        <p class="k">{t('trends.descriptive')}</p>
       </section>
     {/if}
 

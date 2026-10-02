@@ -167,34 +167,6 @@ export const ringStyle = (weight: number) => `stroke-width:${(2 * ringWidth(weig
 /** Tags are listed medications first, then remedies, then context (§6.3). */
 const GROUP_RANK: Record<Tag['group'], number> = { medication: 0, intervention: 1, context: 2 }
 
-export type TagComparison = { tag: Tag; withN: number; withoutN: number; withMean: number; withoutMean: number }
-
-export const MIN_DAYS_PER_SIDE = 5
-
-/** Mean daily max of the symptom on days with vs without each tag, over the days reading it. Only tags with enough days on both sides. */
-export function tagComparison(entries: Entry[], tags: Tag[], symptom = PAIN, minDays = MIN_DAYS_PER_SIDE): TagComparison[] {
-  const days = new Map<string, { max: number | undefined; tags: Set<string> }>()
-  for (const e of entries) {
-    const k = dayKey(e.at)
-    const d = days.get(k) ?? { max: undefined, tags: new Set<string>() }
-    const v = level(e, symptom)
-    if (v !== undefined) d.max = Math.max(d.max ?? 0, v)
-    mergedTags(e.layers).forEach((t) => d.tags.add(t))
-    days.set(k, d)
-  }
-  const all = [...days.values()].flatMap((d) => (d.max === undefined ? [] : [{ max: d.max, tags: d.tags }]))
-  const out: TagComparison[] = []
-  for (const tag of tags) {
-    const w = all.filter((d) => d.tags.has(tag.id))
-    const wo = all.filter((d) => !d.tags.has(tag.id))
-    if (w.length < minDays || wo.length < minDays) continue
-    const mean = (xs: { max: number }[]) => xs.reduce((a, b) => a + b.max, 0) / xs.length
-    out.push({ tag, withN: w.length, withoutN: wo.length, withMean: mean(w), withoutMean: mean(wo) })
-  }
-  // In vocabulary order, grouped as the tag counts are: sorted by the gap, a few days of noise came first (#114).
-  return out.sort((a, b) => GROUP_RANK[a.tag.group] - GROUP_RANK[b.tag.group] || a.tag.order - b.tag.order)
-}
-
 /** `count`: the days the symptom was recorded on. */
 export type SymptomMean = { symptom: Symptom; mean: number; count: number }
 
