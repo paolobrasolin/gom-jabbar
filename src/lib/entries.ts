@@ -161,11 +161,12 @@ export async function logUpdate(headId: string, readings: (Record<string, number
 }
 
 /**
- * What an episode's row shows (§5.5): its latest reading's layers, with every tag of the episode once, in the order first
- * met, on the first layer. Updates copy no tags, so the start's context and each dose appear here and nowhere twice.
+ * What an episode's row shows (§5.5): the layers of the reading it is shown by (`shownReading`: the latest while it goes
+ * on, the worst once ended, so the numbers agree with the pill, #114), with every tag of the episode once, in the order
+ * first met, on the first layer. Updates copy no tags, so the start's context and each dose appear here and nowhere twice.
  */
 export function chainLayers(ep: Episode): Layer[] {
-  const cur = latest(ep).layers
+  const cur = shownReading(ep).layers
   const all = [...new Set([ep.head, ...ep.updates].flatMap((e) => e.layers.flatMap((l) => l.tags)))]
   return cur.map((l, i) => ({ ...l, tags: i === 0 ? all : [] }))
 }
