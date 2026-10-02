@@ -6,11 +6,13 @@
     "symptoms": [
       { "id": "pain", "label": { "it": "Dolore", "en": "Pain" }, "enabled": true, "order": 0 },
       { "id": "swelling", "label": { "it": "Gonfiore", "en": "Swelling" }, "enabled": true, "order": 1 },
-      { "id": "fog", "label": { "it": "Nebbia mentale", "en": "Brain fog" }, "enabled": false, "order": 4 }
+      { "id": "fog", "label": { "it": "Nebbia mentale", "en": "Brain fog" }, "enabled": false, "order": 4 },
+      { "id": "sym-unknown-fields", "label": {"it": "Crampi", "en": "Cramps"}, "enabled": true, "order": 50, "unit": "mm" }
     ],
     "tags": [
       { "id": "compression", "label": { "it": "Compressione", "en": "Compression" }, "group": "intervention", "enabled": true, "order": 0 },
-      { "id": "med-x1", "label": { "it": "Tachipirina", "en": "Tachipirina" }, "group": "medication", "enabled": true, "order": 0 }
+      { "id": "med-x1", "label": { "it": "Tachipirina", "en": "Tachipirina" }, "group": "medication", "enabled": true, "order": 0 },
+      { "id": "tag-unknown-fields", "label": {"it": "Sauna", "en": "Sauna"}, "group": "intervention", "enabled": true, "order": 60, "colour": "red" }
     ]
   },
   "entries": [
@@ -57,6 +59,8 @@
       "regions": ["*"],
       "tags": [],
       "note": ""
-    }
+    },
+    { "id": "v1-unknown-fields", "at": "2026-08-01T07:30:00.000Z", "endedAt": null, "ongoing": false, "readings": {"pain": 6, "swelling": 3}, "regions": ["thigh.l", "thigh.r", "knee.l"], "tags": ["compression"], "note": "mattina pesante", "createdAt": "2026-08-01T07:31:00.000Z", "updatedAt": "2026-08-01T07:31:00.000Z", "origin": "watch", "extra": {"deep": [1, 2]} },
+    { "id": "v1-dirty-shape", "at": "2026-08-01T07:30:00.000Z", "endedAt": null, "ongoing": false, "readings": {"pain": 6, "swelling": 3}, "regions": ["thigh.l", "thigh.r", "knee.l"] }
   ]
 }

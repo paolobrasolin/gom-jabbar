@@ -3,10 +3,17 @@
  *
  * Every version that ever existed has a frozen fixture in `src/test/fixtures`:
  * `db-vN.json` (rows as they sat in IndexedDB under Dexie version N) and
- * `export-vN.json` (a backup file written by export version N). Each is pushed
- * through today's code and must arrive with every field intact, except for the
- * transformations listed in `UPGRADES` below. Bumping a version without adding
- * the fixture of the version you are leaving fails the guard test.
+ * `export-vN.json` (a backup file written by export version N), each with a row
+ * carrying fields no version knows and a row of a dirty shape (no note, no
+ * timestamps). Each is pushed through today's code and must arrive with every
+ * field intact, except for the transformations listed in `UPGRADES` below.
+ *
+ * A version change needs two fixtures: the version you leave, frozen before
+ * touching anything, and the version you arrive at, added once it works. The
+ * guard test wants one for every version up to today's, and the arrival is what
+ * the next change is checked against. `UPGRADES` is keyed by export version;
+ * a database version that changes only the database (a table, an index) maps to
+ * the export version before it in `EXPORT_OF_DATABASE` and needs no rule.
  */
 import { describe, it, expect } from 'vitest'
 import Dexie from 'dexie'
@@ -169,7 +176,7 @@ const UPGRADES: Record<number, Partial<Record<Table, (r: Row, ctx: Ctx) => Row |
   9: { symptoms: oneLabel('symptoms'), tags: oneLabel('tags') },
 }
 
-/** Rows a database upgrade adds, per version and table: the mind defaults that arrived with version 6, when their ids were free. */
+/** Rows a database upgrade adds, per database version and table: the mind defaults that arrived with version 6, when their ids were free. */
 const ADDED: Record<number, Partial<Record<Table, (rows: Row[]) => Row[]>>> = {
   6: { symptoms: (rows) => MIND_DEFAULTS_V6.filter((s) => !rows.some((r) => r.id === s.id)) as Row[] },
 }
@@ -257,8 +264,10 @@ describe.each(Object.entries(DB_FIXTURES).map(([v, f]) => [Number(v), f] as cons
       const got = byId(await now.table(table).toArray())
       const added: Row[] = []
       // Rows an upgrade added go through the upgrades after it, like every other row.
-      for (let v = version + 1; v <= now.verno; v++) added.push(...(ADDED[v]?.[table as Table]?.([...rows, ...added]) ?? []).flatMap((r) => today(r, v, now.verno, table as Table, ctx)))
-      const want = byId([...rows.flatMap((r) => today(r, version, now.verno, table as Table, ctx)), ...added])
+      // Rules are per export version: a database version converts as the export version of its rows.
+      const to = EXPORT_OF_DATABASE[now.verno]
+      for (let v = version + 1; v <= now.verno; v++) added.push(...(ADDED[v]?.[table as Table]?.([...rows, ...added]) ?? []).flatMap((r) => today(r, EXPORT_OF_DATABASE[v], to, table as Table, ctx)))
+      const want = byId([...rows.flatMap((r) => today(r, EXPORT_OF_DATABASE[version], to, table as Table, ctx)), ...added])
       expect(got, table).toEqual(want)
     }
   })

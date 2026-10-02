@@ -101,6 +101,14 @@
     "category": "mind",
     "enabled": false,
     "order": 12
+   },
+   {
+    "id": "sym-unknown-fields",
+    "label": "Crampi",
+    "enabled": true,
+    "order": 50,
+    "unit": "mm",
+    "category": "body"
    }
   ],
   "tags": [
@@ -152,6 +160,14 @@
     "group": "medication",
     "enabled": true,
     "order": 18
+   },
+   {
+    "id": "tag-unknown-fields",
+    "label": "Sauna",
+    "group": "intervention",
+    "enabled": true,
+    "order": 60,
+    "colour": "red"
    }
   ]
  },
@@ -812,6 +828,84 @@
    "note": "",
    "createdAt": "2026-09-21T23:04:13.108Z",
    "updatedAt": "2026-09-21T23:04:13.108Z"
+  },
+  {
+   "id": "v10-unknown-fields",
+   "at": "2026-09-01T07:30:00.000Z",
+   "note": "gambe e spalle",
+   "createdAt": "2026-09-01T07:31:00.000Z",
+   "updatedAt": "2026-09-01T07:31:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "150",
+      "151",
+      "152",
+      "153"
+     ],
+     "readings": {
+      "pain": 8,
+      "swelling": 4,
+      "sym-u7": 2
+     },
+     "tags": [
+      "compression",
+      "med-x1"
+     ]
+    },
+    {
+     "regions": [
+      "130",
+      "131"
+     ],
+     "readings": {
+      "pain": 3
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic",
+   "origin": "watch",
+   "extra": {
+    "deep": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "id": "v10-dirty-shape",
+   "at": "2026-09-01T07:30:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "150",
+      "151",
+      "152",
+      "153"
+     ],
+     "readings": {
+      "pain": 8,
+      "swelling": 4,
+      "sym-u7": 2
+     },
+     "tags": [
+      "compression",
+      "med-x1"
+     ]
+    },
+    {
+     "regions": [
+      "130",
+      "131"
+     ],
+     "readings": {
+      "pain": 3
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic"
   }
  ],
  "presets": [
@@ -1059,6 +1153,28 @@
    ],
    "kind": "chronic",
    "order": 10
+  },
+  {
+   "id": "p-unknown-fields",
+   "name": "Schiena",
+   "order": 99,
+   "kind": "chronic",
+   "layers": [
+    {
+     "regions": [
+      "224",
+      "225"
+     ],
+     "readings": {
+      "pain": 5
+     },
+     "tags": [],
+     "asks": [
+      "pain"
+     ]
+    }
+   ],
+   "colour": "blue"
   }
  ]
 }

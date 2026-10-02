@@ -664,6 +664,54 @@
     "note": "",
     "createdAt": "2026-09-21T23:04:13.108Z",
     "updatedAt": "2026-09-21T23:04:13.108Z"
+   },
+   {
+    "id": "v10-unknown-fields",
+    "at": "2026-09-10T22:00:00.000Z",
+    "note": "tutto",
+    "createdAt": "2026-09-10T22:00:00.000Z",
+    "updatedAt": "2026-09-10T22:05:00.000Z",
+    "layers": [
+     {
+      "regions": [
+       "*"
+      ],
+      "readings": {
+       "pain": 9,
+       "heaviness": 7
+      },
+      "tags": [
+       "period"
+      ]
+     }
+    ],
+    "kind": "chronic",
+    "origin": "watch",
+    "extra": {
+     "deep": [
+      1,
+      2
+     ]
+    }
+   },
+   {
+    "id": "v10-dirty-shape",
+    "at": "2026-09-10T22:00:00.000Z",
+    "layers": [
+     {
+      "regions": [
+       "*"
+      ],
+      "readings": {
+       "pain": 9,
+       "heaviness": 7
+      },
+      "tags": [
+       "period"
+      ]
+     }
+    ],
+    "kind": "chronic"
    }
   ],
   "symptoms": [
@@ -764,6 +812,14 @@
     "category": "mind",
     "enabled": false,
     "order": 12
+   },
+   {
+    "id": "sym-unknown-fields",
+    "label": "Crampi",
+    "enabled": true,
+    "order": 50,
+    "unit": "mm",
+    "category": "body"
    }
   ],
   "tags": [
@@ -815,6 +871,14 @@
     "group": "medication",
     "enabled": true,
     "order": 18
+   },
+   {
+    "id": "tag-unknown-fields",
+    "label": "Sauna",
+    "group": "intervention",
+    "enabled": true,
+    "order": 60,
+    "colour": "red"
    }
   ],
   "presets": [
@@ -1062,6 +1126,28 @@
     ],
     "kind": "chronic",
     "order": 10
+   },
+   {
+    "id": "p-unknown-fields",
+    "name": "Schiena",
+    "order": 99,
+    "kind": "chronic",
+    "layers": [
+     {
+      "regions": [
+       "224",
+       "225"
+      ],
+      "readings": {
+       "pain": 5
+      },
+      "tags": [],
+      "asks": [
+       "pain"
+      ]
+     }
+    ],
+    "colour": "blue"
    }
   ]
  }

@@ -2,6 +2,8 @@
 
 Automated on every push: type check, unit tests, build, bundle size gate, licence notices. A push to `main` also deploys to Pages, and the installed app switches to the release by itself within seconds of its next open or return to the foreground (SPEC §4). So the manual pass below cannot hold a release back from the tester: it runs right after the deploy, on the live app, and what it finds is fixed by another release. What another release cannot fix, a database upgrade above all, is proven before merging, by the migration tests and their fixtures (CLAUDE.md, "User data is never lost").
 
+Before merging a schema or export change into `main`: every step of the protocol in CLAUDE.md, "User data is never lost" (fixtures of the version left and of the version arrived at, the rule in `UPGRADES`, the frozen rules in `lib/legacy.ts`, export → import → export). The phone upgrades within seconds of the deploy; nothing after it can take an upgrade back.
+
 Release, from a clean tree on `main`:
 
 ```sh
@@ -43,7 +45,6 @@ Manual, on a real phone, right after the deploy (the tester already has the rele
 - [ ] Settings → Ripristina da file, the same file: the Ripristina sheet shows the counts, Unisci. Then Sostituisci tutto and Undo.
 - [ ] Preset: on the log pick zones and move a second slider, Preset → Nuovo preset; the form shows the zones, Chiede has Dolore and the second symptom pressed; unpress one, press another, name it, Crea preset; the Preset button stays plain and the log form is as it was; the dropdown lists the new preset with an empty dot and "mai". Pick it, set its sliders, Salva in its sheet: the dropdown shows the level and "0m", the diary row is named after the preset, Andamento has a Per preset line. Undo on "Preset creato" removes it from the dropdown. From a Diario entry, Crea preset da questa voce opens the form over the sheet; Escape closes only the form. In Impostazioni tap Modifica, rename, toggle a Chiede chip, Salva, undo; delete it and undo.
 - [ ] Preset with two zones: on the log pick the legs, "+ Altra zona", a shoulder, Preset → Nuovo preset; Chiede changes when you tap the other layer chip; Crea preset; pick it from Preset: the sheet has two layer chips, every slider at 0, the sliders follow the chips, Salva; the log form is empty afterwards; the diary row shows both levels ("Nome · gambe 5 · spalla 3").
-- [ ] Update from 0.5.0 with data: every old episode is one diary row with its trail, Andamento's counts include the updates, every old preset still opens its sheet with the same sliders, Settings → Esporta gives a version 9 file.
 - [ ] Vocabolario: add a medication tag, rename, disable, reorder. It shows up (or not) under Tutti i tag on the log form; a disabled symptom loses its slider. Sintomi shows Corpo and Mente; add one under Mente, it appears only with the mind (or nothing) selected. A used item says "N voci", an unused one has a bin: delete it, Annulla puts it back in its place. Switch Language to English: the defaults translate, a renamed item stays as typed.
 - [ ] Dolore off (#36): the log's slider becomes Gonfiore at 5, Salva saves swelling; move Pesantezza above Gonfiore and it leads instead. Switch Dolore back on.
 - [ ] Andamento (#38): the Sintomo row under the ranges lists the symptoms read, Dolore first; pick Gonfiore: Media, Giorni ≥ 5, the map, Nel tempo and the tag comparison change, Altri sintomi lists Dolore instead. Report per il medico says "Sintomo: Gonfiore" and shows its numbers.
@@ -64,7 +65,3 @@ Manual, on a real phone, right after the deploy (the tester already has the rele
 - [ ] Slider drag, long press without magnifier or callout, share sheet for backup.
 - [ ] Printing from the home-screen app may not work: use Report → Condividi file, open in Files, then Share → Print.
 - [ ] Safe areas: nothing hidden under the notch or the home indicator.
-
-## Before a schema change
-- [ ] Bump the Dexie version with an upgrade function and add a migration test.
-- [ ] Bump `EXPORT_VERSION` if the export shape changes, keep `parseImport` accepting older files.

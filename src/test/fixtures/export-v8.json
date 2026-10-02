@@ -93,6 +93,17 @@
     "category": "mind",
     "enabled": true,
     "order": 9
+   },
+   {
+    "id": "sym-unknown-fields",
+    "label": {
+     "it": "Crampi",
+     "en": "Cramps"
+    },
+    "enabled": true,
+    "order": 50,
+    "unit": "mm",
+    "category": "body"
    }
   ],
   "tags": [
@@ -125,6 +136,17 @@
     "group": "context",
     "enabled": false,
     "order": 0
+   },
+   {
+    "id": "tag-unknown-fields",
+    "label": {
+     "it": "Sauna",
+     "en": "Sauna"
+    },
+    "group": "intervention",
+    "enabled": true,
+    "order": 60,
+    "colour": "red"
    }
   ]
  },
@@ -785,6 +807,84 @@
    "note": "",
    "createdAt": "2026-09-21T23:04:13.108Z",
    "updatedAt": "2026-09-21T23:04:13.108Z"
+  },
+  {
+   "id": "v8-unknown-fields",
+   "at": "2026-09-01T07:30:00.000Z",
+   "note": "gambe e spalle",
+   "createdAt": "2026-09-01T07:31:00.000Z",
+   "updatedAt": "2026-09-01T07:31:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "150",
+      "151",
+      "152",
+      "153"
+     ],
+     "readings": {
+      "pain": 8,
+      "swelling": 4,
+      "sym-u7": 2
+     },
+     "tags": [
+      "compression",
+      "med-x1"
+     ]
+    },
+    {
+     "regions": [
+      "130",
+      "131"
+     ],
+     "readings": {
+      "pain": 3
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic",
+   "origin": "watch",
+   "extra": {
+    "deep": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "id": "v8-dirty-shape",
+   "at": "2026-09-01T07:30:00.000Z",
+   "layers": [
+    {
+     "regions": [
+      "150",
+      "151",
+      "152",
+      "153"
+     ],
+     "readings": {
+      "pain": 8,
+      "swelling": 4,
+      "sym-u7": 2
+     },
+     "tags": [
+      "compression",
+      "med-x1"
+     ]
+    },
+    {
+     "regions": [
+      "130",
+      "131"
+     ],
+     "readings": {
+      "pain": 3
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic"
   }
  ],
  "presets": [
@@ -997,6 +1097,28 @@
    ],
    "kind": "chronic",
    "order": 9
+  },
+  {
+   "id": "p-unknown-fields",
+   "name": "Schiena",
+   "symptomIds": [
+    "pain"
+   ],
+   "order": 99,
+   "layers": [
+    {
+     "regions": [
+      "224",
+      "225"
+     ],
+     "readings": {
+      "pain": 5
+     },
+     "tags": []
+    }
+   ],
+   "kind": "chronic",
+   "colour": "blue"
   }
  ]
 }
