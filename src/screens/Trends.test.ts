@@ -147,7 +147,7 @@ describe('Trends by any symptom (#38)', () => {
 describe('Trends heatmap and chart', () => {
   it('reads the symptom picked: pain first here, the mind lighting up under a mental symptom, read-only', async () => {
     await addEntry({ at: at(0), layers: [{ regions: ['mind'], readings: { fog: 6 } }] })
-    await addEntry({ at: at(1), layers: [{ regions: ['*'], readings: { pain: 2 } }] })
+    await addEntry({ at: at(1), layers: [{ regions: ['152'], readings: { pain: 2 } }] })
     await openTrends()
     const mind = () => document.querySelector('[data-region="mind"]') as SVGPathElement
     await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
@@ -161,6 +161,29 @@ describe('Trends heatmap and chart', () => {
     expect(document.querySelector('[data-ring="mind"]')!.getAttribute('style')).toContain('stroke-width: 5.00px')
     expect(document.querySelector('[data-region="152"]')).not.toHaveClass('on')
     expect(screen.queryByRole('button', { name: 'Mente' })).not.toBeInTheDocument()
+  })
+
+  it('counts full body apart, under the map, instead of lighting every region (#114)', async () => {
+    await addEntry({ at: at(0), ...legs(8) })
+    await addEntry({ at: at(1), layers: [{ regions: ['*'], readings: { pain: 2 }, tags: [] }] })
+    await addEntry({ at: at(2), layers: [{ regions: ['*'], readings: { pain: 5 }, tags: [] }] })
+    await openTrends()
+    await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
+    expect(document.querySelector('[data-region="110"]')).not.toHaveClass('on')
+    expect(screen.getByText('Tutto il corpo: 2 volte, media 3,5')).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
+    const report = document.querySelector('article.page') as HTMLElement
+    expect(within(report).getByText('Tutto il corpo: 2 volte, media 3,5')).toBeInTheDocument()
+  })
+
+  it('says nothing of full body when no entry reads the symptom there', async () => {
+    await addEntry({ at: at(0), ...legs(8) })
+    await addEntry({ at: at(1), layers: [{ regions: ['*'], readings: { swelling: 4 }, tags: [] }] })
+    await openTrends()
+    await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
+    expect(screen.queryByText(/^Tutto il corpo/)).toBeNull()
+    await fireEvent.click(within(await screen.findByRole('group', { name: 'Sintomo' })).getByRole('button', { name: 'Gonfiore' }))
+    expect(await screen.findByText('Tutto il corpo: 1 volta, media 4')).toBeInTheDocument()
   })
 
   it('keeps colour for the mean and draws frequency as a ring inside the region, on a log scale (#23)', async () => {
