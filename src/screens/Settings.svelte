@@ -12,8 +12,9 @@
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
   import type { Lang } from '../lib/types'
-  import { buildExport, parseImport, previewImport, applyImport, shareOrDownload, exportFilename, type ExportFile, type ImportPreview } from '../lib/backup'
+  import { parseImport, previewImport, applyImport, shareOrDownload, exportFilename, type ExportFile, type ImportPreview } from '../lib/backup'
   import { showToast, showFailure, showRefusal, haptic } from '../lib/toast.svelte'
+  import { fileBackup } from '../lib/fileBackup'
   import { failed } from '../lib/failure'
   import { deletePreset, restorePreset } from '../lib/presets'
   import { listSnapshots, type Snapshot } from '../lib/snapshots'
@@ -63,15 +64,7 @@
     if (busy) return
     busy = true
     try {
-      const file = await buildExport()
-      await shareOrDownload(exportFilename('json'), JSON.stringify(file, null, 1), 'application/json')
-      prefs.lastBackupAt = new Date().toISOString()
-      prefs.backupSnoozedUntil = null
-      savePrefs()
-      haptic(20)
-      showToast(t('backup.done'))
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') showFailure(t('backup.failed'))
+      await fileBackup()
     } finally {
       busy = false
     }

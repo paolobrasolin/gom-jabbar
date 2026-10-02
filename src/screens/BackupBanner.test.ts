@@ -64,6 +64,25 @@ describe('Backup banner without Drive', () => {
     await waitFor(() => expect(screen.queryByText("È da un po' che non fai un backup.")).not.toBeInTheDocument())
   })
 
+  it("a double tap on the banner's Backup shares one file, not two (#115)", async () => {
+    await diarySince(15)
+    // The share sheet stays open until released, as on the phone: the second tap lands while the first is in flight.
+    let release = () => {}
+    const open = new Promise<void>((r) => (release = r))
+    let shares = 0
+    vi.stubGlobal('navigator', { ...navigator, canShare: () => true, share: async () => void (shares++, await open) })
+    render(App, { props: { cloud: g.provider } })
+    await screen.findByText("È da un po' che non fai un backup.")
+    const button = screen.getByRole('button', { name: 'Backup' })
+    await fireEvent.click(button)
+    await fireEvent.click(button)
+    await waitFor(() => expect(shares).toBeGreaterThan(0))
+    await new Promise((r) => setTimeout(r, 50))
+    release()
+    expect(await screen.findByText('Backup su file fatto')).toBeInTheDocument()
+    expect(shares).toBe(1)
+  })
+
   it('stays quiet for 13 days, and for 7 more after Più tardi', async () => {
     await diarySince(13)
     render(App, { props: { cloud: g.provider } })

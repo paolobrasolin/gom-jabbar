@@ -24,7 +24,8 @@
   import { firstEnabled } from '../lib/vocabulary'
   import { lastByPreset, presetEntries } from '../lib/presets'
   import { entryHeadline, symptomName, isRead } from '../lib/summary'
-  import { backupReminder, buildExport, shareOrDownload, exportFilename, REMIND } from '../lib/backup'
+  import { backupReminder, REMIND } from '../lib/backup'
+  import { fileBackup } from '../lib/fileBackup'
   import { cloudBackup, driveInUse, failureText, doneText } from '../lib/cloudBackup'
   import type { CloudProvider } from '../lib/cloud'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
@@ -39,18 +40,6 @@
   const lastBy = live(() => null, async () => lastByPreset(await presetEntries()), {} as Record<string, Entry>)
   const oldest = live(() => null, async () => (await db.entries.orderBy('createdAt').first())?.createdAt ?? null, null)
 
-  async function backupNow() {
-    try {
-      await shareOrDownload(exportFilename('json'), JSON.stringify(await buildExport(), null, 1), 'application/json')
-      prefs.lastBackupAt = new Date().toISOString()
-      prefs.backupSnoozedUntil = null
-      savePrefs()
-      haptic(20)
-      showToast(t('backup.done'))
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') showFailure(t('backup.failed'))
-    }
-  }
   /** The banner's button once Drive is in use: the same step as Backup su Drive in Settings. */
   async function driveNow() {
     const res = await cloudBackup(cloud)
@@ -265,7 +254,7 @@
         <button class="chip small" onclick={driveNow}>{t('drive.backup')}</button>
       {:else}
         <span class="grow">{t('backup.nudge')}</span>
-        <button class="chip small" onclick={backupNow}>{t('backup.now')}</button>
+        <button class="chip small" onclick={fileBackup}>{t('backup.now')}</button>
       {/if}
       <button class="chip small outline" onclick={snooze} aria-label={t('backup.later')}>✕</button>
     </div>
