@@ -1,6 +1,7 @@
 <script lang="ts">
   import BodyMap from '../components/BodyMap.svelte'
   import RampKey from '../components/RampKey.svelte'
+  import WorstDays from '../components/WorstDays.svelte'
   import DailyChart from '../components/DailyChart.svelte'
   import Report from '../components/Report.svelte'
   import PresetLines from '../components/PresetLines.svelte'
@@ -122,10 +123,16 @@
       <div class="card tile"><span class="small muted">{t('trends.entries')}</span><b>{summary.entries}</b><span class="small muted">{tn('trends.onDays', summary.daysWithEntries)}</span></div>
       {#if read}
         <div class="card tile"><span class="small muted">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="small muted">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
-        <div class="card tile"><span class="small muted">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="small muted">{t('trends.badDaysHint')}</span></div>
       {/if}
       <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="small muted">{episodeLine(summary)}</span></div>
     </div>
+
+    {#if read}
+      <div class="card">
+        <p class="small muted label">{t('trends.worst')}</p>
+        <WorstDays worst={summary.worst} median={summary.median} {days} />
+      </div>
+    {/if}
 
     <div class="card">
       <p class="small muted label">{t('trends.heatmap')}</p>
@@ -183,6 +190,8 @@
   .ranges { flex: none; flex-wrap: wrap; }
   .since { font: inherit; padding: 10px 12px; border-radius: var(--radius-s); border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* Three tiles: the last takes the whole row rather than leaving a hole. */
+  .tile:last-child:nth-child(odd) { grid-column: span 2; }
   .tile { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
   .tile b { font-size: 28px; line-height: 1.1; }
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }

@@ -80,13 +80,26 @@ function dailyMean(vals: { at: string; v: number }[]): { mean: number; days: num
   return { mean: means.reduce((a, b) => a + b, 0) / means.length, days: means.length }
 }
 
+const median = (vs: number[]): number | null => {
+  if (!vs.length) return null
+  const s = [...vs].sort((a, b) => a - b)
+  const mid = s.length >> 1
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
+}
+
 export type Summary = {
   entries: number
   daysWithEntries: number
   /** The symptom's mean per day, then across days, and its max, over the entries reading it; null when none does. */
   mean: number | null
   max: number | null
-  daysAtLeast5: number
+  /**
+   * Each day reading the symptom counted once at its worst, level by level: `worst[4]` is how many days were at worst
+   * 4 (#114). A mean to one decimal swings on one bad day and the scale is ordinal; this is the shape of the range.
+   */
+  worst: number[]
+  /** The median of those days' worst, null when none reads the symptom. */
+  median: number | null
   episodes: number
   /**
    * The median length of the episodes that have ended; null when none has (§6.3). An episode still going on is not a
@@ -110,7 +123,8 @@ export function summarize(entries: Entry[], days: number, symptom = PAIN, now = 
     daysWithEntries: series.size,
     mean: dailyMean(read.map(({ e, v }) => ({ at: e.at, v })))?.mean ?? null,
     max: vs.length ? Math.max(...vs) : null,
-    daysAtLeast5: [...dayMax.values()].filter((v) => v >= 5).length,
+    worst: [...dayMax.values()].reduce((n, v) => (n[Math.min(10, Math.max(0, Math.round(v)))]++, n), Array<number>(11).fill(0)),
+    median: median([...dayMax.values()]),
     episodes: heads.length,
     medianEpisodeMs: ended.length ? (ended.length % 2 ? ended[mid] : (ended[mid - 1] + ended[mid]) / 2) : null,
     ongoing: heads.length - ended.length,

@@ -54,7 +54,11 @@ describe('Trends summary', () => {
     expect(tile('Voci')).toHaveTextContent('in 2 giorni')
     expect(tile('Media giornaliera')).toHaveTextContent('6')
     expect(tile('Media giornaliera')).toHaveTextContent('max 8')
-    expect(tile('Giorni ≥ 5')).toHaveTextContent('2')
+    // Each day at its worst (#114): 8 today, 6 yesterday.
+    const days = screen.getByRole('list', { name: 'Giorni per livello peggiore' })
+    expect(within(days).getAllByRole('listitem').map((b) => b.getAttribute('aria-label'))).toEqual(['0: 0 giorni', '1: 0 giorni', '2: 0 giorni', '3: 0 giorni', '4: 0 giorni', '5: 0 giorni', '6: 1 giorno', '7: 0 giorni', '8: 1 giorno', '9: 0 giorni', '10: 0 giorni'])
+    expect(days.closest('.card')).toHaveTextContent('mediana 7 · 2 giorni letti su 30')
+    expect(screen.queryByText('Giorni ≥ 5')).toBeNull()
     expect(tile('Episodi')).toHaveTextContent('1')
     expect(tile('Episodi')).toHaveTextContent('durata mediana 2h')
     // One begun and not ended: counted apart, not as a length.
@@ -102,6 +106,20 @@ describe('Trends summary', () => {
     expect(screen.getByRole('button', { name: 'Dal…' })).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('Dal… refuses a day after today and an emptied field, and a second tap puts the field away', async () => {
+    await addEntry({ at: at(0), ...legs(4) })
+    await openTrends()
+    await fireEvent.click(await screen.findByRole('button', { name: 'Dal…' }))
+    const field = screen.getByLabelText('Dal giorno') as HTMLInputElement
+    const later = daysAgo(-3)
+    await fireEvent.change(field, { target: { value: `${later.getFullYear()}-${String(later.getMonth() + 1).padStart(2, '0')}-${String(later.getDate()).padStart(2, '0')}` } })
+    await fireEvent.change(field, { target: { value: '' } })
+    expect(screen.getByRole('button', { name: 'Dal…' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: '30 giorni' })).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(screen.getByRole('button', { name: 'Dal…' }))
+    expect(screen.queryByLabelText('Dal giorno')).toBeNull()
+  })
+
   it('the report button sits under the ranges, before the figures (#114)', async () => {
     await addEntry({ at: at(0), ...legs(4) })
     await openTrends()
@@ -144,7 +162,7 @@ describe('Trends by any symptom (#38)', () => {
     await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
     expect(tile('Media giornaliera')).toHaveTextContent('5')
     expect(tile('Media giornaliera')).toHaveTextContent('max 6')
-    expect(tile('Giorni ≥ 5')).toHaveTextContent('1')
+    expect(screen.getByRole('list', { name: 'Giorni per livello peggiore' }).closest('.card')).toHaveTextContent('mediana 5')
     expect(screen.getByRole('img', { name: 'Gonfiore per giorno' })).toBeInTheDocument()
     await waitFor(() => expect(document.querySelector('[data-region="152"]')!.getAttribute('style')).toContain(`fill: ${intensityColor(5)}`))
     // Altri sintomi: the others, pain among them.
@@ -167,7 +185,7 @@ describe('Trends by any symptom (#38)', () => {
     await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
     expect(screen.queryByRole('group', { name: 'Sintomo' })).not.toBeInTheDocument()
     expect(screen.queryByText('Media giornaliera')).not.toBeInTheDocument()
-    expect(screen.queryByText('Giorni ≥ 5')).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Giorni per livello peggiore' })).not.toBeInTheDocument()
     expect(screen.queryByText('Nel tempo')).not.toBeInTheDocument()
   })
 
