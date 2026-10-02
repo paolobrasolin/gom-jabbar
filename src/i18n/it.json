@@ -64,6 +64,7 @@
   "diary.edit": "Modifica",
   "diary.delete": "Elimina",
   "diary.deleted": "Eliminato",
+  "diary.discarded": "Modifiche scartate",
   "settings.language": "Lingua",
   "settings.theme": "Tema",
   "settings.theme.system": "Sistema",

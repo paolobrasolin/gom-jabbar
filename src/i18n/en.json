@@ -64,6 +64,7 @@
   "diary.edit": "Edit",
   "diary.delete": "Delete",
   "diary.deleted": "Deleted",
+  "diary.discarded": "Changes discarded",
   "settings.language": "Language",
   "settings.theme": "Theme",
   "settings.theme.system": "System",

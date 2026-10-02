@@ -21,11 +21,21 @@
   /** The entry as it stands in the form, handed to the preset form (§5.6); this sheet stays open and nothing else is saved. */
   let presetSeed = $state.raw<PresetSeed | null>(null)
 
+  /** The form as it opened, to tell a close that drops edits from one that drops nothing (#115). */
+  let initial = ''
+  /** Salva or Elimina closed the sheet: nothing is being discarded. */
+  let done = false
+  /** The edits a discard's undo brings back, in place of the entry as stored. */
+  let resume: EntryDraft | null = null
+
   $effect(() => {
     if (entry) {
       dismissToast()
       editing = entry
-      draft = draftFromEntry(entry)
+      initial = JSON.stringify(draftFromEntry(entry))
+      draft = resume ?? draftFromEntry(entry)
+      resume = null
+      done = false
       lock = isUpdate(entry) ? 'reading' : 'none'
       open = true
       if (isHead(entry)) void loadEpisode(entry.id).then((ep) => { if (ep?.updates.length && editing === entry) lock = 'kind' })
@@ -33,7 +43,21 @@
   })
 
   $effect(() => {
-    if (!open) entry = null
+    if (open) return
+    // Back, Escape or the backdrop with edits made: they go, with an undo that reopens the sheet holding them (#115).
+    const left = untrack(() => editing)
+    if (left && !done && JSON.stringify($state.snapshot(untrack(() => draft))) !== initial) {
+      const kept = $state.snapshot(untrack(() => draft)) as EntryDraft
+      showToast(t('diary.discarded'), {
+        label: t('log.undo'),
+        run: () => {
+          resume = kept
+          entry = left
+        },
+      })
+    }
+    editing = null
+    entry = null
   })
 
   let form = $state<EntryForm>()
@@ -100,6 +124,7 @@
       busy = false
     }
     haptic(20)
+    done = true
     open = false
     // An edit is undone like any other change: the row goes back exactly as it was.
     showToast(t('log.saved'), before && { label: t('log.undo'), run: () => void restoreEntries([before]).catch(failed) })
@@ -114,6 +139,7 @@
     } catch (e) {
       return failed(e)
     }
+    done = true
     open = false
     haptic(20)
     if (gone.length) showToast(t('diary.deleted'), { label: t('log.undo'), run: () => void restoreEntries(gone).catch(failed) })
