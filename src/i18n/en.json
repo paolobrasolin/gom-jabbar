@@ -8,6 +8,7 @@
   "log.saved": "Saved",
   "log.undo": "Undo",
   "log.noLevel": "How much? Move the slider",
+  "log.noPlace": "Where? Tap the figure",
   "slider.unset": "not set",
   "scale.min": "none",
   "scale.max": "max",

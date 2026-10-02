@@ -89,6 +89,11 @@
   export function pointAtLevel() {
     formEl?.querySelector<HTMLInputElement>('input[type="range"]')?.focus()
   }
+  /** Salva with a level or a tag on a layer with no place (#115): that layer, current, and the figure to tap. */
+  export function pointAtLayer(i: number) {
+    apply(selectLayer(st(), i))
+    open = false
+  }
   /** Whether the form offers anything to measure: a slider for its headline. */
   export function measures(): boolean {
     return !!formEl?.querySelector('input[type="range"]')

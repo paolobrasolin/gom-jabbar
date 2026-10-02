@@ -14,6 +14,7 @@
   import { outdated } from '../lib/outdated.svelte'
   import { prefs, savePrefs, type Tab } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
+  import { strandedLayer } from '../lib/layers'
   import { loadDraft, storeDraft, pruneUnknown } from '../lib/logDraft'
   import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, timeProblem, type Episode } from '../lib/entries'
   import { showToast, showFailure, showRefusal, haptic, toastState } from '../lib/toast.svelte'
@@ -148,6 +149,13 @@
     if (!times.layers?.some((l) => Object.keys(l.readings ?? {}).length) && form?.measures()) {
       showRefusal(t('log.noLevel'))
       form?.pointAtLevel()
+      return
+    }
+    // A level or a tag on a layer with no place would vanish on save (#115): say where it is missing and show the figure.
+    const stranded = strandedLayer(draft.layers)
+    if (stranded !== null) {
+      showRefusal(t('log.noPlace'))
+      form?.pointAtLayer(stranded)
       return
     }
     if (timeProblem({ at: times.at!, endedAt: times.endedAt })) {

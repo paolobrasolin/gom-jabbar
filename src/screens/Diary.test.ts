@@ -587,6 +587,23 @@ describe('editing a migrated entry', () => {
   })
 })
 
+describe('A layer without a place, in the edit sheet', () => {
+  it("refuses Salva and leaves the entry as it was, as on the log (#115)", async () => {
+    const e = await addEntry({ at: ago(60), layers: [L(['152'], 4)] })
+    const before = await db.entries.get(e.id)
+    await openDiary()
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+    const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
+    await within(sheet).findByRole('slider', { name: /^Dolore/ })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Altra zona' }))
+    await fireEvent.input(await within(sheet).findByRole('slider', { name: /^Dolore/ }), { target: { value: '8' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
+    expect(await findToast()).toHaveTextContent('Dove? Tocca la figura')
+    expect(screen.getByRole('dialog', { name: 'Modifica' })).toBeInTheDocument()
+    expect(await db.entries.get(e.id)).toEqual(before)
+  })
+})
+
 describe('Times that cannot be, in the edit sheet', () => {
   it("an update moved before its episode's start, or the start moved after its first update, is not saved", async () => {
     const e = await addEntry({ at: ago(120), kind: 'episode', layers: [L(['152'], 7)] })

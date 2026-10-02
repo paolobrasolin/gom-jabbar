@@ -74,6 +74,30 @@ describe('Stage rails', () => {
   })
 })
 
+describe('Log layer without a place', () => {
+  it("refuses Salva while a layer holds a level but no place, and shows that layer's figure (#115)", async () => {
+    render(App)
+    await screen.findByRole('slider', { name: 'Dolore' })
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '5' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
+    await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '7' } })
+    await salva()
+    expect(await findToast()).toHaveTextContent('Dove? Tocca la figura')
+    expect(await db.entries.count()).toBe(0)
+    // The layer with no place stays current with its level, and a tap gives it a place. (Switching away drops it,
+    // the way a layer is deleted, §5.4.)
+    expect(document.querySelectorAll<HTMLElement>('.areas .chip')[1]).toHaveAttribute('aria-pressed', 'true')
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia sx' }))
+    await salva()
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    const [e] = await db.entries.toArray()
+    // Both layers kept, each with its place and its level.
+    expect(e.layers.map((l) => l.readings)).toEqual([{ pain: 5 }, { pain: 7 }])
+    expect(e.layers.every((l) => l.regions.length > 0)).toBe(true)
+  })
+})
+
 describe('Log fast path', () => {
   it('tap region, set intensity, save', async () => {
     render(App)
