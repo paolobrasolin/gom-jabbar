@@ -4,7 +4,8 @@
   import ToolButton from './ToolButton.svelte'
   import IntensitySlider from './IntensitySlider.svelte'
   import EntrySummary from './EntrySummary.svelte'
-  import TimeChips, { timeLabel } from './TimeChips.svelte'
+  import TimeChips, { timeLabel, revealPressed } from './TimeChips.svelte'
+  import { overflowFade } from '../lib/overflow'
   import { regionText, layerLevel, headline, symptomName } from '../lib/summary'
   import { t, tl } from '../i18n/index.svelte'
   import { prefs, savePrefs } from '../lib/prefs.svelte'
@@ -135,6 +136,13 @@
   const rest = $derived([...(showBody ? bodySymptoms : []), ...(showMind ? mindSymptoms : [])].filter((s) => s.id !== headSym?.id))
   /** The layers as they will be saved: a layer is coloured and numbered by the readings its regions show, not by a hidden slider. */
   const shown = $derived(draft.layers.map((l) => ({ ...l, readings: readingsFor(l, l.readings, symptoms) })))
+  /** The row of layer chips. Its pressed chip is kept in sight after + or a switch, as the time rows do (#115). */
+  let areasRow = $state<HTMLElement>()
+  $effect(() => {
+    void draft.cur
+    void draft.layers.length
+    void tick().then(() => revealPressed(areasRow))
+  })
   const full = $derived(isFull(cur))
   const curRegions = $derived(cur.regions)
   const setOn = (ids: string[]) => !full && ids.every((id) => curRegions.includes(id))
@@ -315,7 +323,7 @@
     <div class="inner" bind:clientHeight={innerH}>
       <!-- The spine, the layer tabs: one layer without regions is the plain form; the chips appear once something is located (§6.1). -->
       <div class="spine">
-        <div class="chips areas">
+        <div class="chips areas fade-x" bind:this={areasRow} use:overflowFade>
           {#if !located}
             <span class="small muted placeholder">{t('log.noArea')}</span>
           {:else}

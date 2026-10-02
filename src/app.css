@@ -150,6 +150,12 @@ h1, h2, h3, p { margin: 0; }
 .btn:disabled { opacity: 0.55; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* A scrolling row fades at an end that hides content (`overflowFade` in lib/overflow.ts, #115), so a cut chip reads as "more this way". */
+.fade-x { --fade-dir: to right; }
+.fade-y { --fade-dir: to bottom; }
+:is(.fade-x, .fade-y)[data-more='end'] { mask-image: linear-gradient(var(--fade-dir), #000 calc(100% - 28px), transparent); }
+:is(.fade-x, .fade-y)[data-more='start'] { mask-image: linear-gradient(var(--fade-dir), transparent, #000 28px); }
+:is(.fade-x, .fade-y)[data-more='start end'] { mask-image: linear-gradient(var(--fade-dir), transparent, #000 28px, #000 calc(100% - 28px), transparent); }
 .chip {
   position: relative;
   min-height: 40px;
