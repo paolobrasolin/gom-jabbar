@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest'
 import Dexie from 'dexie'
 import { db, resetDb } from './db'
-import { parseImport, applyImport, buildExport, EXPORT_VERSION } from './backup'
+import { parseImport, applyImport, buildExport, EXPORT_VERSION, EXPORT_OF_DATABASE } from './backup'
 import { upgradeRegions } from './regions'
 import { defaultCategory } from './vocabulary'
 import { MIND_DEFAULTS_V6 } from './legacy'
@@ -198,6 +198,16 @@ describe('every version has a fixture', () => {
     const d = fresh()
     await d.open()
     for (let v = 1; v <= d.verno; v++) expect(DB_FIXTURES[v], `db-v${v}.json`).toBeDefined()
+  })
+  it("each database version names the export version of its rows, never going back, today's last", async () => {
+    const d = fresh()
+    await d.open()
+    for (let v = 1; v <= d.verno; v++) {
+      expect(EXPORT_OF_DATABASE[v], `database ${v}`).toBeDefined()
+      if (v > 1) expect(EXPORT_OF_DATABASE[v]).toBeGreaterThanOrEqual(EXPORT_OF_DATABASE[v - 1])
+    }
+    expect(EXPORT_OF_DATABASE[d.verno]).toBe(EXPORT_VERSION)
+    expect(Object.keys(EXPORT_OF_DATABASE)).toHaveLength(d.verno)
   })
 })
 

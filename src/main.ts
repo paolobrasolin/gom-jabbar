@@ -2,11 +2,10 @@ import { mount } from 'svelte'
 import './app.css'
 import App from './App.svelte'
 
-import { db, NewerDatabaseError } from './lib/db'
-import { t } from './i18n/index.svelte'
+import { db } from './lib/db'
 import { initInstall } from './lib/install.svelte'
 import { googleDrive } from './lib/drive'
-import { showStartupError } from './lib/startupError'
+import { startupFailed } from './lib/startupError'
 import { keepUpdated } from './lib/update'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -16,13 +15,9 @@ const resumed = googleDrive.resume()
 const target = document.getElementById('app')!
 const app = mount(App, { target, props: { resumed } })
 
-// Surface a storage failure (private windows on old Safari, disabled IndexedDB) instead of a blank, silent app.
-// A database a newer release left is no failure: the app says so itself and asks for a reload (§4.1).
-db.open().catch((err) => {
-  console.error(err)
-  if (err instanceof NewerDatabaseError) return
-  showStartupError(t('app.dbError'))
-})
+// Surface a storage failure (disabled IndexedDB, a failed upgrade) instead of a blank, silent app, and offer the data
+// raw; a database a newer release left is the app's own notice (§4.1).
+db.open().catch((err) => startupFailed(err))
 
 // Install prompt capture, first-standalone-launch bookkeeping and the persistent storage request.
 initInstall()

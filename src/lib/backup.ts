@@ -8,6 +8,12 @@ import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
 
 export const EXPORT_VERSION = 10
 
+/**
+ * The export version whose rows each database version stores (§8). Equal up to 10; a version that changes only the
+ * database (a table, an index) maps to the export version before it. Every database version has one: a test says so.
+ */
+export const EXPORT_OF_DATABASE: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10 }
+
 export type ExportFile = {
   app: 'gom-jabbar'
   version: number
