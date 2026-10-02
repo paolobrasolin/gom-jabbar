@@ -191,4 +191,18 @@ describe('snippet', () => {
     const note = 'Molte cose da raccontare oggi, ma soprattutto perché il ginocchio cede'
     expect(snippet(note, 'PERCHE')).toMatch(/^…ma soprattutto perché/)
   })
+
+  it('never starts after the match when the words before it have no space (#115)', () => {
+    // The first space after the window's start lies past the match: the preview used to begin there.
+    const list = 'Farmaci di oggi: ibuprofene,paracetamolo,tachipirina,aspirina e poi riposo'
+    expect(snippet(list, 'tachipirina')).toBe('…tachipirina,aspirina e poi riposo')
+    // No space anywhere: the preview used to be the whole note behind an ellipsis.
+    const link = 'https://esempio.it/articoli/emicrania/tachipirina-dosi'
+    expect(snippet(link, 'tachipirina')).toBe('…tachipirina-dosi')
+  })
+
+  it('keeps up to 20 characters before the match, from the start of a word', () => {
+    const note = 'Una giornata pesante e poi alle sei di sera la Tachipirina'
+    expect(snippet(note, 'tachipirina')).toBe('…sei di sera la Tachipirina')
+  })
 })

@@ -113,7 +113,10 @@ export function search(entries: Entry[], query: string, ctx: SearchContext): Ent
 
 const LEAD = 20
 
-/** A long note from the word before the first match, so the match shows in a one-line preview. */
+/**
+ * A long note from the word before the first match, so the match shows in a one-line preview: from the first word that
+ * starts in the 20 characters before it, or from the match itself when they hold no space (a list, a link, #115).
+ */
 export function snippet(note: string, query: string): string {
   // Fold one character at a time, keeping where each folded character came from.
   let folded = ''
@@ -131,5 +134,5 @@ export function snippet(note: string, query: string): string {
   const at = from[Math.min(...hits)]
   if (at <= LEAD) return note
   const space = note.indexOf(' ', at - LEAD)
-  return `…${note.slice(space + 1)}`
+  return `…${note.slice(space >= 0 && space < at ? space + 1 : at)}`
 }
