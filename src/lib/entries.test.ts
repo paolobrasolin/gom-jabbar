@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { resetDb } from './db'
-import { addEntry, updateEntry, editEntry, deleteEntry, restoreEntries, endEpisode, reopenEpisode, activeEpisodes, durationMs, makeEntry, logUpdate, loadEpisode, latest, chainLayers, timeProblem, episodesOf, isHead, isUpdate, isActive } from './entries'
+import { addEntry, updateEntry, editEntry, deleteEntry, restoreEntries, endEpisode, reopenEpisode, activeEpisodes, durationMs, makeEntry, logUpdate, loadEpisode, latest, chainLayers, timeProblem, episodesOf, isHead, isUpdate, isActive, isStale } from './entries'
 import { draftFromEntry, draftToInput, emptyDraft } from './draft'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
 import { selectLayer } from './layers'
@@ -176,6 +176,20 @@ describe('entries', () => {
     // Nothing else tells them apart: the id does, so the order never depends on how they were loaded.
     const twin = { ...second, id: 'bb' }
     expect(episodesOf([head, twin, second]).get('h')?.updates.map((u) => u.id)).toEqual(['aa', 'bb'])
+  })
+
+  it('calls an episode stale after 24 h without a reading; a new reading or its end answers that (#115)', async () => {
+    const T = (h: number) => new Date(Date.parse('2026-01-01T10:00:00.000Z') + h * 3600_000).toISOString()
+    const e = await addEntry({ at: T(0), kind: 'episode', readings: { pain: 6 } })
+    const at = (h: number) => Date.parse(T(h))
+    expect(isStale((await loadEpisode(e.id))!, at(23.9))).toBe(false)
+    expect(isStale((await loadEpisode(e.id))!, at(24))).toBe(true)
+    // A reading later counts from itself, not from the start.
+    await logUpdate(e.id, [{ pain: 3 }], T(20))
+    expect(isStale((await loadEpisode(e.id))!, at(30))).toBe(false)
+    expect(isStale((await loadEpisode(e.id))!, at(44))).toBe(true)
+    await endEpisode(e.id, T(21))
+    expect(isStale((await loadEpisode(e.id))!, at(100))).toBe(false)
   })
 
   it('updates, deletes and restores', async () => {

@@ -270,3 +270,105 @@ describe('a migrated episode', () => {
     await waitFor(async () => expect((await updates())[0]?.layers[0].readings).toEqual({ pain: 6, fog: 3 }))
   })
 })
+
+describe('A forgotten episode (#115)', () => {
+  /** An episode started two days ago at 7, read last at 5 a day and a half ago: nothing since. */
+  async function seedStale() {
+    const e = await addEntry({ at: ago(48 * 60), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }] })
+    await logUpdate(e.id, [{ pain: 5 }], ago(36 * 60))
+    return e.id
+  }
+  const LAST = () => ago(36 * 60)
+
+  it('asks whether it is still going, says since when nothing was read, and the dropdown line asks too', async () => {
+    await seedStale()
+    render(App)
+    expect(await screen.findByRole('button', { name: /^1 in corso$/ })).toBeInTheDocument()
+    const sheet = await openEpisode()
+    const card = within(sheet).getByRole('group', { name: 'Ancora in corso?' })
+    expect(card).toHaveTextContent('Nessuna lettura da 1g 12h.')
+    expect(within(card).getByRole('button', { name: /^Finito all'ultima lettura, ieri 03:00$/ })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Finito adesso' })).toBeInTheDocument()
+  })
+
+  it("ends it at the last reading, and undo reopens it", async () => {
+    const id = await seedStale()
+    render(App)
+    const sheet = await openEpisode()
+    const card = within(sheet).getByRole('group', { name: 'Ancora in corso?' })
+    await fireEvent.click(within(card).getByRole('button', { name: /^Finito all'ultima lettura/ }))
+    await waitFor(async () => expect((await db.entries.get(id))?.endedAt).toBe(LAST()))
+    // Nothing more was read: ending in the past records no reading.
+    expect(await updates()).toHaveLength(1)
+    const toast = await screen.findByRole('status')
+    expect(toast).toHaveTextContent('Episodio terminato')
+    await fireEvent.click(within(toast).getByRole('button', { name: 'Annulla' }))
+    await waitFor(async () => expect((await db.entries.get(id))?.endedAt).toBeNull())
+  })
+
+  it('ends it now, or at a time picked between the last reading and now, refusing one before it', async () => {
+    const id = await seedStale()
+    render(App)
+    let card = within(await openEpisode()).getByRole('group', { name: 'Ancora in corso?' })
+    const picker = within(card).getByLabelText('Quando è finito')
+    // Two days ago is before the last reading: refused, nothing written.
+    await fireEvent.input(picker, { target: { value: toLocal(ago(47 * 60)) } })
+    await fireEvent.click(within(card).getByRole('button', { name: 'Termina' }))
+    expect(await screen.findByRole('status')).toHaveTextContent("La fine viene dopo l'ultima lettura")
+    expect((await db.entries.get(id))?.endedAt).toBeNull()
+    await fireEvent.input(picker, { target: { value: toLocal(ago(30 * 60)) } })
+    await fireEvent.click(within(card).getByRole('button', { name: 'Termina' }))
+    await waitFor(async () => expect((await db.entries.get(id))?.endedAt).toBe(ago(30 * 60)))
+    // Reopened, then ended now.
+    await db.entries.update(id, { endedAt: null })
+    card = within(await openEpisode()).getByRole('group', { name: 'Ancora in corso?' })
+    await fireEvent.click(within(card).getByRole('button', { name: 'Finito adesso' }))
+    await waitFor(async () => expect((await db.entries.get(id))?.endedAt).toBe(new Date().toISOString()))
+  })
+
+  it("refuses a time to come, ignores a cleared picker, and takes the last reading's own minute as the last reading", async () => {
+    const e = await addEntry({ at: ago(48 * 60), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 7 } }] })
+    // Read at 03:00:30: the picker's 03:00 is that minute.
+    const last = new Date(Date.now() - 36 * 3600_000 + 30_000).toISOString()
+    await logUpdate(e.id, [{ pain: 5 }], last)
+    render(App)
+    const card = within(await openEpisode()).getByRole('group', { name: 'Ancora in corso?' })
+    const picker = within(card).getByLabelText('Quando è finito')
+    await fireEvent.input(picker, { target: { value: toLocal(new Date(Date.now() + 3600_000).toISOString()) } })
+    await fireEvent.click(within(card).getByRole('button', { name: 'Termina' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('La fine non può essere nel futuro')
+    await fireEvent.input(picker, { target: { value: '' } })
+    await fireEvent.click(within(card).getByRole('button', { name: 'Termina' }))
+    expect((await db.entries.get(e.id))?.endedAt).toBeNull()
+    await fireEvent.input(picker, { target: { value: toLocal(last) } })
+    await fireEvent.click(within(card).getByRole('button', { name: 'Termina' }))
+    await waitFor(async () => expect((await db.entries.get(e.id))?.endedAt).toBe(last))
+  })
+
+  it('a fresh episode is not asked', async () => {
+    await seedEpisode()
+    render(App)
+    const sheet = await openEpisode()
+    expect(within(sheet).queryByRole('group', { name: 'Ancora in corso?' })).not.toBeInTheDocument()
+  })
+
+  it('Aggiorna on a stale episode answers the question: a reading now makes it fresh', async () => {
+    await seedStale()
+    render(App)
+    let sheet = await openEpisode()
+    expect(within(sheet).getByRole('group', { name: 'Ancora in corso?' })).toBeInTheDocument()
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Dolore' }), { target: { value: '3' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
+    await waitFor(async () => expect(await updates()).toHaveLength(2))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    sheet = await openEpisode()
+    expect(within(sheet).queryByRole('group', { name: 'Ancora in corso?' })).not.toBeInTheDocument()
+  })
+})
+
+/** An ISO time as a datetime-local field holds it, in local time to the minute. */
+function toLocal(iso: string): string {
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}

@@ -4,12 +4,12 @@
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { endEpisode, reopenEpisode, logUpdate, loadEpisode, deleteEntry, latest, shownReading, durationMs, isActive, type Episode } from '../lib/entries'
+  import { endEpisode, reopenEpisode, logUpdate, loadEpisode, deleteEntry, latest, shownReading, durationMs, isActive, isStale, type Episode } from '../lib/entries'
   import { entryHeadline, headline, symptomName, layerLevel, regionText, isRead } from '../lib/summary'
   import { maxReadings, showsCategory } from '../lib/layers'
-  import { showToast, haptic, dismissToast } from '../lib/toast.svelte'
+  import { showToast, showRefusal, haptic, dismissToast } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
-  import { formatDuration, formatTime, formatDay, dayKey } from '../lib/time'
+  import { formatDuration, formatTime, formatDay, dayKey, fromLocalInput, toLocalInput } from '../lib/time'
   import { intensityColor, intensityInk } from '../lib/color'
   import { type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
   import { firstEnabled, leadSymptom } from '../lib/vocabulary'
@@ -90,6 +90,44 @@
   const manyDays = $derived(!!ep && new Set([ep.head, ...ep.updates].map((e) => new Date(e.at).toDateString())).size > 1)
   const when = (iso: string) =>
     manyDays ? `${formatDay(iso, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') })} ${formatTime(iso, locale())}` : formatTime(iso, locale())
+  /**
+   * A forgotten episode (#115): going on with no reading for a day. The sheet opens asking whether it still is, and offers
+   * its end at the last reading, now, or at a time picked between the two. Aggiorna answers it too: a reading now.
+   */
+  const stale = $derived(!!ep && isStale(ep))
+  /** The last reading's time in a sentence, "ieri 03:00": the day always, the reading being a day old or more. */
+  const lastWhen = (iso: string) => `${formatDay(iso, locale(), { today: t('diary.today'), yesterday: t('diary.yesterday') }).toLowerCase()} ${formatTime(iso, locale())}`
+  /** The picker's value, local time to the minute; it opens on the last reading. */
+  let endPick = $state('')
+  $effect(() => {
+    if (stale && now) endPick = toLocalInput(now.at)
+  })
+  /** End a stale episode in the past: nothing is read at that time, so no reading is logged; undo reopens it. */
+  async function endAt(at: string) {
+    if (!ep || busy) return
+    busy = true
+    const id = ep.head.id
+    try {
+      await endEpisode(id, at)
+    } catch (e) {
+      return failed(e)
+    } finally {
+      busy = false
+    }
+    haptic(20)
+    open = false
+    showToast(t('episode.ended'), { label: t('log.undo'), run: () => void reopenEpisode(id).catch(failed) })
+  }
+  function endAtPicked() {
+    const at = fromLocalInput(endPick)
+    if (!now || !at) return
+    // The picker works to the minute: the last reading's own minute counts as after it.
+    if (at < toLocalMinute(now.at)) return showRefusal(t('episode.endBeforeLast'))
+    if (Date.parse(at) > Date.now()) return showRefusal(t('episode.endInFuture'))
+    void endAt(at < now.at ? now.at : at)
+  }
+  const toLocalMinute = (iso: string) => fromLocalInput(toLocalInput(iso))!
+
   /** When an ended episode ended: "finito alle 12:00" today, "finito ieri alle 21:06" on another day. */
   function endedText(iso: string): string {
     const time = formatTime(iso, locale())
@@ -170,6 +208,20 @@
 
 <!-- An ended episode is just "Episodio": "Episodio terminato" is what the toast says when one ends. -->
 <Sheet bind:open title={t(active ? 'episode.active' : 'episode.title')}>
+  {#if ep && now && stale}
+    <div class="card small stale" role="group" aria-label={t('episode.stale')}>
+      <p class="ask">{t('episode.stale')}</p>
+      <p class="small muted">{t('episode.staleSince', { d: formatDuration(Date.now() - Date.parse(now.at), units) })}</p>
+      <div class="chips">
+        <button class="chip small" onclick={() => endAt(now!.at)}>{t('episode.endedAtLast', { when: lastWhen(now.at) })}</button>
+        <button class="chip small" onclick={() => endAt(new Date().toISOString())}>{t('episode.endedNow')}</button>
+      </div>
+      <div class="pick">
+        <input type="datetime-local" aria-label={t('episode.endedWhen')} bind:value={endPick} min={toLocalInput(now.at)} max={toLocalInput(new Date().toISOString())} />
+        <button class="chip small outline" onclick={endAtPicked}>{t('episode.endAtPicked')}</button>
+      </div>
+    </div>
+  {/if}
   {#if ep && now}
     <div class="card small">
       <div class="head">
@@ -232,6 +284,11 @@
 
 <style>
   .head { display: flex; align-items: flex-start; gap: 8px; }
+  /* The forgotten episode's question (#115), first in the sheet. */
+  .stale { display: flex; flex-direction: column; gap: 8px; border: 1.5px solid var(--accent); }
+  .ask { margin: 0; font-weight: 700; }
+  .pick { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pick input { min-height: 44px; flex: 1; min-width: 0; font: inherit; padding: 0 8px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); color: var(--ink); }
   .edit { background: none; min-height: 44px; padding: 0 8px; font-size: 15px; font-weight: 600; color: var(--accent); border-radius: 8px; margin: -10px -8px 0 0; }
   .history { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
   .go { width: 16px; height: 16px; flex: none; margin-left: auto; color: var(--ink-2); }

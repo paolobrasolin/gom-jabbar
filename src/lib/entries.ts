@@ -85,6 +85,17 @@ export type Episode = { head: Entry; updates: Entry[] }
 /** The most recent reading of an episode: what the card and the sheet show. */
 export const latest = (ep: Episode): Entry => ep.updates[ep.updates.length - 1] ?? ep.head
 
+/** How long an episode may go on without a reading before the app asks whether it still does (#115). */
+export const STALE_MS = 24 * 3600_000
+
+/**
+ * An episode going on with no reading for a day (§5.5): probably forgotten, so the app asks "Ancora in corso?". A new
+ * reading answers it, as does its end.
+ */
+export function isStale(ep: Episode, at: number = Date.now()): boolean {
+  return isActive(ep.head) && at - Date.parse(latest(ep).at) >= STALE_MS
+}
+
 /**
  * The reading an episode is shown by (§5.5): while it goes on, the latest, how it is now; once it has ended, its worst,
  * the reading with the highest headline (the later of equals), so a migraine that peaked at 8 is not shown at the 2 it

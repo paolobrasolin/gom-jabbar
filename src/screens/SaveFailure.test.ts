@@ -88,6 +88,18 @@ describe('a failed write', () => {
     expect((await db.entries.toArray())[0].endedAt).toBeNull()
   })
 
+  it("ending a forgotten episode in the past: say so and keep the sheet open (#115)", async () => {
+    await addEntry({ at: ago(48 * 60), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 6 } }] })
+    render(App)
+    const sheet = await openEpisode()
+    vi.spyOn(db.entries, 'update').mockRejectedValueOnce(full())
+    const card = within(sheet).getByRole('group', { name: 'Ancora in corso?' })
+    await fireEvent.click(within(card).getByRole('button', { name: /^Finito all'ultima lettura/ }))
+    await said()
+    expect(screen.getByRole('dialog', { name: 'Episodio in corso' })).toBeInTheDocument()
+    expect((await db.entries.toArray())[0].endedAt).toBeNull()
+  })
+
   it('a preset sheet and the preset form: say so and stay open', async () => {
     await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic' })
     render(App)
