@@ -95,7 +95,8 @@
               <!-- svelte-ignore a11y_autofocus -->
               <input class="grow rename" type="text" bind:value={editText} onblur={commitEdit} onkeydown={(e) => e.key === 'Enter' && commitEdit()} autofocus />
             {:else}
-              <button class="grow name" onclick={() => startEdit(item)}>{tl(item.label)}</button>
+              <!-- A tap renames in place (#115): the pencil says so, where the name alone read as plain text. -->
+              <button class="grow name" onclick={() => startEdit(item)}>{tl(item.label)}<svg class="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></svg></button>
             {/if}
             {#if u}
               <span class="small muted use">{usageText(u)}</span>
@@ -131,7 +132,8 @@
   .list { display: flex; flex-direction: column; gap: 4px; }
   .item { display: flex; align-items: center; gap: 8px; min-height: 48px; }
   .item.off .name { color: var(--ink-2); text-decoration: line-through; }
-  .name { text-align: left; min-height: 44px; padding: 0 6px; border-radius: 8px; }
+  .name { display: flex; align-items: center; gap: 8px; text-align: left; min-height: 44px; padding: 0 6px; border-radius: 8px; }
+  .pencil { width: 14px; height: 14px; flex: none; color: var(--ink-2); }
   .name:active { background: var(--surface-2); }
   .rename, .add input { min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); }
   .use { flex: none; max-width: 30%; text-align: right; line-height: 1.2; }

@@ -104,6 +104,16 @@ describe('Episode sheet', () => {
     expect(within(ended).queryByRole('button', { name: 'Modifica' })).not.toBeInTheDocument()
   })
 
+  it('each reading line looks tappable: it ends in a chevron, outside its name (#115)', async () => {
+    await seedEpisode()
+    const sheet = await openSheet()
+    for (const b of within(within(sheet).getByLabelText('Letture')).getAllByRole('button')) {
+      const cue = b.querySelector('svg.go')
+      expect(cue).toHaveAttribute('aria-hidden', 'true')
+      expect(b.lastElementChild).toBe(cue)
+    }
+  })
+
   it('a reading is an entry: its line opens it, and an edit shows on that line and nowhere else', async () => {
     await seedEpisode()
     let sheet = await openSheet()
