@@ -6,6 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
 import { packageOf, noticeOf, renderNotices } from './src/build/notices.ts'
+import { csp } from './src/build/csp.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 
@@ -89,6 +90,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     svelte(),
     notices(),
+    csp(),
     VitePWA({
       registerType: 'autoUpdate',
       // Registered by src/lib/update.ts through virtual:pwa-register, so nothing is injected. Keep injectRegister on its
