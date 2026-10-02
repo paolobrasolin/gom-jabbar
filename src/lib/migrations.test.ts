@@ -13,7 +13,6 @@ import Dexie from 'dexie'
 import { db, resetDb } from './db'
 import { parseImport, applyImport, buildExport, EXPORT_VERSION, EXPORT_OF_DATABASE } from './backup'
 import { upgradeRegions } from './regions'
-import { defaultCategory } from './vocabulary'
 import { MIND_DEFAULTS_V6 } from './legacy'
 import type { SymptomCategory } from './types'
 import exportV1 from '../test/fixtures/export-v1.json'
@@ -49,7 +48,7 @@ const regionCodes = (e: Row): Row => (Array.isArray(e.areas) ? { ...e, areas: (e
 
 /** What a rule may need to know about the rest of the file: the category of a symptom id (§5.2). */
 type Ctx = { categoryOf: (id: string) => SymptomCategory }
-const ctxOf = (symptoms: Row[]): Ctx => ({ categoryOf: (id) => (symptoms.find((s) => s.id === id)?.category as SymptomCategory | undefined) ?? defaultCategory(id) })
+const ctxOf = (symptoms: Row[]): Ctx => ({ categoryOf: (id) => (symptoms.find((s) => s.id === id)?.category as SymptomCategory | undefined) ?? (id === 'fog' ? 'mind' : 'body') })
 
 type AreaRow = { regions: string[]; intensity: number; strokes?: unknown }
 type Readings = Record<string, number>

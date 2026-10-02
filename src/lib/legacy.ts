@@ -1,6 +1,49 @@
-import { PAIN, type Entry, type Label, type SymptomCategory } from './types'
-import { hasBody, holdsMind, showsCategory, type Layer, type Stroke } from './layers'
-import { defaultCategory, I18N } from './vocabulary'
+import type { Entry, Label, Symptom, SymptomCategory, Tag } from './types'
+import type { Layer, Stroke } from './layers'
+
+/*
+ * Frozen (#113): the upgrades (`lib/db.ts`) and the importer (`parseImport`) read only this file, never today's helpers,
+ * so a change to what the app shows or defaults today cannot change how an old database or an old backup converts.
+ * Each copy below is the rule as it stood when the conversion reading it was written; edit none of them.
+ */
+
+/** The pain symptom's id, the one reading versions 1 to 6 knew by name. */
+export const PAIN_V1 = 'pain'
+/** The mind's region id since version 6 (§5.3). */
+const MIND_V6 = 'mind'
+/** The prefix of a label read from the dictionaries, as version 10 stores it (§5.2). */
+const I18N_V10 = 'i18n:'
+const hasBody = (l: { regions: string[] }): boolean => l.regions.some((r) => r !== MIND_V6)
+const holdsMind = (l: { regions: string[] }): boolean => l.regions.includes(MIND_V6)
+/** Which symptoms a layer showed in version 8 (§5.6): body regions the body ones, the brain the mind ones, nothing all. */
+function showsCategory(l: { regions: string[] }, category: SymptomCategory): boolean {
+  const body = hasBody(l)
+  const mind = holdsMind(l)
+  if (!body && !mind) return true
+  return category === 'body' ? body : mind
+}
+
+/** The category of a symptom row written before version 6, which had none: fog is mind, the rest body (§5.2). */
+export function categoryV5(id: string): SymptomCategory {
+  return id === 'fog' ? 'mind' : 'body'
+}
+
+const seedV10 = (id: string) => `${I18N_V10}vocab.${id}`
+/**
+ * The seed as of export version 10 (0.9.10), which a backup without a vocabulary reads as carrying (§8): no version
+ * ever wrote one, `scripts/seed.mjs` did. Fresh copies on every call.
+ */
+export const seedSymptomsV10 = (): Symptom[] =>
+  (
+    [
+      ['pain', 'body'], ['swelling', 'body'], ['heaviness', 'body'], ['fatigue', 'body'], ['fog', 'mind'], ['tenderness', 'body'],
+      ['stiffness', 'body'], ['anxiety', 'mind'], ['depression', 'mind'],
+    ] as const
+  ).map(([id, category], order) => ({ id, label: seedV10(id), category, enabled: true, order }))
+export const seedTagsV10 = (): Tag[] => [
+  ...(['compression', 'mld', 'exercise', 'rest', 'heat', 'cold', 'stretching', 'meditation'] as const).map((id, i) => ({ id, group: 'intervention' as const, label: seedV10(id), enabled: true, order: i })),
+  ...(['period', 'stress', 'badsleep', 'standing', 'sitting', 'hot_weather', 'cold_weather', 'travel'] as const).map((id, i) => ({ id, group: 'context' as const, label: seedV10(id), enabled: true, order: 10 + i })),
+]
 
 /** A symptom's or tag's name as written before version 10 (§5.2): both languages. */
 export type LabelV9 = { it: string; en: string }
@@ -52,7 +95,7 @@ export function oneLabel(table: 'symptoms' | 'tags', id: string, label: unknown)
   if (typeof label === 'string') return label
   const l = (label ?? {}) as Partial<LabelV9>
   const seed = SEED_V9[table][id]
-  if (seed && l.it === seed.it) return `${I18N}vocab.${id}`
+  if (seed && l.it === seed.it) return seedV10(id)
   return l.it || l.en || ''
 }
 
@@ -96,7 +139,7 @@ export type CategoryOf = (symptomId: string) => SymptomCategory
 /** The category of each symptom id, from the vocabulary at hand; an id it does not know gets the default for its id. */
 export function categoryLookup(symptoms: { id: string; category?: SymptomCategory }[]): CategoryOf {
   const known = new Map(symptoms.map((s) => [s.id, s.category]))
-  return (id) => known.get(id) ?? defaultCategory(id)
+  return (id) => known.get(id) ?? categoryV5(id)
 }
 
 /**
@@ -111,7 +154,7 @@ export function placeReadings(readings: Record<string, number>, layers: { region
   return out
 }
 
-const layerOf = (a: AreaV6): Layer => ({ regions: a.regions, readings: hasBody(a) ? { [PAIN]: a.intensity } : {}, tags: [], ...(a.strokes ? { strokes: a.strokes } : {}) })
+const layerOf = (a: AreaV6): Layer => ({ regions: a.regions, readings: hasBody(a) ? { [PAIN_V1]: a.intensity } : {}, tags: [], ...(a.strokes ? { strokes: a.strokes } : {}) })
 
 /**
  * The layers of a version 6 entry (§8, 6 → 7): one per area, its level as the pain there (an area holding
@@ -127,8 +170,8 @@ export function entryToLayers(e: EntryV6, categoryOf: CategoryOf): { layers: Lay
   if (!e.areas?.length) layers = [{ regions: [], readings: { ...readings }, tags: [...tags] }]
   else {
     layers = e.areas.map(layerOf)
-    const { [PAIN]: pain, ...rest } = readings
-    const placed = placeReadings(layers.some(hasBody) || pain === undefined ? rest : { [PAIN]: pain, ...rest }, layers, categoryOf)
+    const { [PAIN_V1]: pain, ...rest } = readings
+    const placed = placeReadings(layers.some(hasBody) || pain === undefined ? rest : { [PAIN_V1]: pain, ...rest }, layers, categoryOf)
     layers = layers.map((l, i) => ({ ...l, readings: { ...l.readings, ...placed[i] } }))
     layers[0] = { ...layers[0], tags: [...tags] }
   }
