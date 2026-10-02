@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Entry, Preset, Symptom, Tag } from './types'
+import { snapshotUpgrade, type Snapshot } from './snapshots'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from './vocabulary'
 import { upgradeRegions } from './regions'
 import { outdated } from './outdated.svelte'
@@ -19,6 +20,7 @@ export class GomJabbarDB extends Dexie {
   symptoms!: EntityTable<Symptom, 'id'>
   tags!: EntityTable<Tag, 'id'>
   presets!: EntityTable<Preset, 'id'>
+  snapshots!: EntityTable<Snapshot, 'id'>
 
   constructor(name = 'gom-jabbar') {
     super(name)
@@ -144,6 +146,11 @@ export class GomJabbarDB extends Dexie {
           })
         }
       })
+    // 11: snapshots (§4.1, #113), copies of the diary kept inside the database. From here on every upgrade takes one
+    // first (`snapshotUpgrade`), this one included: the diary as version 10 left it. No row changes; export stays 10.
+    this.version(11)
+      .stores({ snapshots: '++id, reason' })
+      .upgrade((tx) => snapshotUpgrade(tx, 10))
     // Dexie opens a database newer than its code without complaint (#113), and this code would write rows of its own,
     // older shape into it. Refused at every open, reopens included (sticky): nothing is read or written. The native
     // number is the version times ten; Dexie adds one to patch a schema in place, which is not a newer version.

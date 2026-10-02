@@ -8,7 +8,9 @@ import Dexie from 'dexie'
 
 const exports = import.meta.glob<{ default: Record<string, unknown> }>('../test/fixtures/export-v*.json', { eager: true })
 const dbs = import.meta.glob<{ default: { version: number; stores: Record<string, string>; tables: Record<string, unknown[]> } }>('../test/fixtures/db-v*.json', { eager: true })
-const byId = (rows: { id: string }[]) => [...rows].sort((a, b) => a.id.localeCompare(b.id))
+const byId = (rows: { id: string | number }[]) => [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)))
+/** A snapshot taken by the upgrade, without the moment it was taken. */
+const timeless = (r: Record<string, unknown>) => ('takenAt' in r ? { ...r, takenAt: null, file: { ...(r.file as object), exportedAt: null } } : r)
 
 async function convertAll() {
   const { parseImport } = await import('./backup')
@@ -29,7 +31,7 @@ async function convertAll() {
     old.close()
     const now = new GomJabbarDB(name)
     await now.open()
-    for (const t of now.tables) rows.push([path, t.name, byId((await t.toArray()) as { id: string }[])])
+    for (const t of now.tables) rows.push([path, t.name, byId((await t.toArray()) as { id: string }[]).map(timeless)])
     now.close()
   }
   return { files, rows }

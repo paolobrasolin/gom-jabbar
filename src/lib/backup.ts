@@ -11,7 +11,7 @@ export const EXPORT_VERSION = 10
  * The export version whose rows each database version stores (§8). Equal up to 10; a version that changes only the
  * database (a table, an index) maps to the export version before it. Every database version has one: a test says so.
  */
-export const EXPORT_OF_DATABASE: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10 }
+export const EXPORT_OF_DATABASE: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10, 11: 10 }
 
 export type ExportFile = {
   app: 'gom-jabbar'
@@ -42,11 +42,21 @@ export async function buildExport(): Promise<ExportFile> {
   const [symptoms, tags, entries, presets] = await db.transaction('r', db.symptoms, db.tags, db.entries, db.presets, () =>
     Promise.all([db.symptoms.toArray(), db.tags.toArray(), db.entries.toArray(), db.presets.toArray()]),
   )
+  return exportOf({ symptoms, tags, entries, presets })
+}
+
+/** The four tables as a backup file of `version` (§8): rows sorted, nothing else touched. Snapshots are made the same way. */
+export function exportOf(
+  rows: { symptoms: Symptom[]; tags: Tag[]; entries: Entry[]; presets: Preset[] },
+  version = EXPORT_VERSION,
+  exportedAt = new Date().toISOString(),
+): ExportFile {
+  const { symptoms, tags, entries, presets } = rows
   sortedBy(symptoms, (r) => r.order)
   sortedBy(tags, (r) => r.order)
   sortedBy(entries, (r) => r.at)
   sortedBy(presets, (r) => r.order)
-  return { app: 'gom-jabbar', version: EXPORT_VERSION, exportedAt: new Date().toISOString(), vocabulary: { symptoms, tags }, entries, presets }
+  return { app: 'gom-jabbar', version, exportedAt, vocabulary: { symptoms, tags }, entries, presets }
 }
 
 export function exportFilename(kind: 'json' | 'html', d = new Date()): string {
