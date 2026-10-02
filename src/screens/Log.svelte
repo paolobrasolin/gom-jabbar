@@ -11,6 +11,7 @@
   import { t, tl, tn } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live } from '../lib/live.svelte'
+  import { outdated } from '../lib/outdated.svelte'
   import { prefs, savePrefs, type Tab } from '../lib/prefs.svelte'
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
   import { loadDraft, storeDraft, pruneUnknown } from '../lib/logDraft'
@@ -274,7 +275,7 @@
     {#snippet actions()}
       <div class="actions">
         <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>
-        <button class="btn primary grow" onclick={save} disabled={saving || cooling}>{t('log.save')}</button>
+        <button class="btn primary grow" onclick={save} disabled={saving || cooling || outdated.value}>{t('log.save')}</button>
       </div>
     {/snippet}
   </EntryForm>

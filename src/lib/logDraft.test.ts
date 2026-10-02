@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { loadDraft, storeDraft, DRAFT_KEY, DRAFT_SCHEMA, DRAFT_TTL, pruneUnknown } from './logDraft'
+import { loadDraft, storeDraft, DRAFT_KEY, DRAFT_SCHEMA, DRAFT_SINCE, DRAFT_TTL, pruneUnknown } from './logDraft'
 import { emptyDraft } from './draft'
-import { resetDb } from './db'
+import { db, resetDb } from './db'
 import { addTag, addSymptom } from './vocab'
 import { addPreset } from './presets'
 
@@ -33,6 +33,18 @@ describe('the log draft outlives the log', () => {
     localStorage.setItem(DRAFT_KEY, '{nope')
     expect(loadDraft(2000)).toBeNull()
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...base, draft: { layers: 'x' } }))
+    expect(loadDraft(2000)).toBeNull()
+  })
+
+  it('reaches the next release: a draft from any version since DRAFT_SINCE loads, one from a newer copy does not (#113)', () => {
+    const base = { schema: DRAFT_SCHEMA, savedAt: 1000, draft: sample() }
+    for (let verno = DRAFT_SINCE; verno <= db.verno; verno++) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...base, verno }))
+      expect(loadDraft(2000), `version ${verno}`).toEqual(sample())
+    }
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...base, verno: DRAFT_SINCE - 1 }))
+    expect(loadDraft(2000)).toBeNull()
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...base, verno: db.verno + 1 }))
     expect(loadDraft(2000)).toBeNull()
   })
 

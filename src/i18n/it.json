@@ -327,6 +327,7 @@
   "diary.started": "inizio {when}",
   "app.dbError": "Non riesco ad aprire l'archivio dei dati su questo browser. Prova ad aprire l'app in Chrome o Safari, non in una finestra privata.",
   "app.readError": "Non riesco a leggere il diario. I dati restano sul telefono: ricarica l'app.",
+  "app.outdated": "È uscita una nuova versione dell'app.",
   "app.reload": "Ricarica",
   "report.share": "Condividi file",
   "report.shared": "Report condiviso",

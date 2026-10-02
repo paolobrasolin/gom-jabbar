@@ -11,6 +11,11 @@ import type { EntryInput } from './entries'
 export const DRAFT_KEY = 'gj.draft'
 /** Bump when `EntryDraft` changes shape: a draft stored by another build is dropped, never guessed at. */
 export const DRAFT_SCHEMA = 1
+/**
+ * The oldest database version whose drafts this code reads: a draft written just before a release reaches the release
+ * (#113). Bump it when an upgrade changes what a draft refers to (region, symptom, tag or preset ids).
+ */
+export const DRAFT_SINCE = 10
 /** A draft older than this is not brought back: half a day later it is not what is being entered any more. */
 export const DRAFT_TTL = 12 * 3_600_000
 
@@ -25,14 +30,14 @@ export function storeDraft(d: EntryDraft, now = Date.now()): void {
 }
 
 /**
- * The stored draft, or null: none, too old, of another shape, or from another database version (an upgrade may have
- * changed the ids it refers to).
+ * The stored draft, or null: none, too old, of another shape, from a database version before `DRAFT_SINCE` (an upgrade
+ * changed the ids it refers to) or after this code's (a newer copy wrote it).
  */
 export function loadDraft(now = Date.now()): EntryDraft | null {
   try {
     const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') as Partial<Stored> | null
     const d = raw?.draft
-    if (raw?.schema !== DRAFT_SCHEMA || raw.verno !== db.verno || typeof raw.savedAt !== 'number' || now - raw.savedAt > DRAFT_TTL) return null
+    if (raw?.schema !== DRAFT_SCHEMA || typeof raw.verno !== 'number' || raw.verno < DRAFT_SINCE || raw.verno > db.verno || typeof raw.savedAt !== 'number' || now - raw.savedAt > DRAFT_TTL) return null
     if (!d || !Array.isArray(d.layers) || !d.layers.length || typeof d.cur !== 'number') return null
     return d
   } catch {

@@ -2,7 +2,13 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Entry, Preset, Symptom, Tag } from './types'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS, defaultCategory } from './vocabulary'
 import { upgradeRegions } from './regions'
+import { outdated } from './outdated.svelte'
 import { entryToLayers, presetToLayers, categoryLookup, splitEpisode, presetKind, presetAsks, oneLabel, MIND_DEFAULTS_V6, type AreaV6, type EntryV6, type EntryV7, type PresetV6, type PresetV7, type PresetV8 } from './legacy'
+
+/** The database on the phone is newer than this code (§4.1): an older copy of the app, open across a release. */
+export class NewerDatabaseError extends Error {
+  name = 'NewerDatabaseError'
+}
 
 export class GomJabbarDB extends Dexie {
   entries!: EntityTable<Entry, 'id'>
@@ -134,6 +140,24 @@ export class GomJabbarDB extends Dexie {
           })
         }
       })
+    // Dexie opens a database newer than its code without complaint (#113), and this code would write rows of its own,
+    // older shape into it. Refused at every open, reopens included (sticky): nothing is read or written. The native
+    // number is the version times ten; Dexie adds one to patch a schema in place, which is not a newer version.
+    this.on(
+      'ready',
+      (vip) => {
+        if (Math.floor((vip as Dexie).backendDB().version / 10) <= this.verno) return
+        outdated.value = true
+        throw new NewerDatabaseError()
+      },
+      true,
+    )
+    // A newer copy is upgrading (or deleting) the database: Dexie closes this connection and would reopen it at the
+    // next query. Closed for good instead; the open guard above would refuse the reopen anyway.
+    this.on('versionchange', () => {
+      this.close({ disableAutoOpen: true })
+      outdated.value = true
+    })
     this.on('populate', () => {
       this.symptoms.bulkAdd(DEFAULT_SYMPTOMS)
       this.tags.bulkAdd(DEFAULT_TAGS)

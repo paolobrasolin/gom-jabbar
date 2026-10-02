@@ -10,7 +10,7 @@ npm version patch      # refuses if check or tests fail; commits and tags vX.Y.Z
 git push               # tags follow (push.followTags is set)
 ```
 
-A bad release is undone by another one: revert on `development` and release again as above. Never redeploy an older tag, re-run the deploy on an old commit or reset `main`: older code opens the database the newer one upgraded and writes rows of the old shape into it (CLAUDE.md, "User data is never lost", rule 8).
+A bad release is undone by another one: revert on `development` and release again as above. Never redeploy an older tag, re-run the deploy on an old commit or reset `main`: older code finds the database the newer one upgraded: since #113 it refuses to touch it and the app is stuck asking for a reload, and builds from before #113 write rows of the old shape into it (CLAUDE.md, "User data is never lost", rule 8).
 
 The Settings footer shows `Gom Jabbar X.Y.Z · <commit day> · <short commit>`; `-dirty` after the hash means a local build, never a deploy.
 
