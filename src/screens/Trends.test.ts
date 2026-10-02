@@ -265,7 +265,7 @@ describe('Trends tags and symptoms', () => {
     expect(getComputedStyle(row).alignItems).not.toBe('center')
   })
 
-  it('shows the mean of every other symptom that was recorded', async () => {
+  it('shows the mean of every other symptom that was recorded, at 0 too (#114)', async () => {
     await addEntry({ at: at(0), readings: { pain: 3, swelling: 4 } })
     await addEntry({ at: at(1), readings: { pain: 5, swelling: 6, fatigue: 0 } })
     await openTrends()
@@ -273,7 +273,9 @@ describe('Trends tags and symptoms', () => {
     await waitFor(() => expect(card).toHaveTextContent('Gonfiore'))
     expect(card).toHaveTextContent('2 giorni')
     expect(within(card as HTMLElement).getByText('5')).toBeInTheDocument()
-    expect(card).not.toHaveTextContent('Stanchezza')
+    // Recorded at 0 is recorded: its mean is 0, as the tile would say with Stanchezza picked.
+    expect(card).toHaveTextContent('Stanchezza')
+    expect(card).toHaveTextContent('1 giorno')
   })
 })
 

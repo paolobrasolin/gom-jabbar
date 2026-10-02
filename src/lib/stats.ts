@@ -183,16 +183,15 @@ export function tagComparison(entries: Entry[], tags: Tag[], symptom = PAIN, min
 /** `count`: the days the symptom was recorded on. */
 export type SymptomMean = { symptom: Symptom; mean: number; count: number }
 
-/** Mean of every symptom but `except` (the one picked, §6.3), per day then across days, where it was recorded above zero. */
+/**
+ * Mean of every symptom but `except` (the one picked, §6.3), per day then across days, over the entries reading it, a 0
+ * included: the same number the tile shows when that symptom is picked (#114; until then a 0 was left out here).
+ */
 export function symptomMeans(entries: Entry[], symptoms: Symptom[], except = PAIN): SymptomMean[] {
   return symptoms
     .filter((s) => s.id !== except)
     .flatMap((symptom) => {
-      const vals = entries.flatMap((e) => {
-        const v = readings(e)[symptom.id]
-        return typeof v === 'number' && v > 0 ? [{ at: e.at, v }] : []
-      })
-      const m = dailyMean(vals)
+      const m = dailyMean(withLevel(entries, symptom.id).map(({ e, v }) => ({ at: e.at, v })))
       return m ? [{ symptom, mean: m.mean, count: m.days }] : []
     })
     .sort((a, b) => b.mean - a.mean)
