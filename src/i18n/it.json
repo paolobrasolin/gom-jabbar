@@ -203,7 +203,7 @@
   "trends.tagsNeedData": "Servono almeno {n} giorni con e {n} senza un tag per confrontarli.",
   "trends.symptoms": "Altri sintomi",
   "trends.report": "Report per il medico",
-  "report.title": "Diario del dolore",
+  "report.title": "Diario dei sintomi",
   "report.range": "Dal {a} al {b}",
   "report.symptom": "Sintomo: {name}",
   "report.generated": "generato il {d}",
