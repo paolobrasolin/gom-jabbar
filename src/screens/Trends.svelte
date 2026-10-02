@@ -2,14 +2,13 @@
   import BodyMap from '../components/BodyMap.svelte'
   import RampKey from '../components/RampKey.svelte'
   import DailyChart from '../components/DailyChart.svelte'
-  import TagCompare from '../components/TagCompare.svelte'
   import Report from '../components/Report.svelte'
   import PresetLines from '../components/PresetLines.svelte'
   import { t, tl, num, tn } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, fullBody, tagComparison, symptomMeans, symptomsRead, tagCounts, presetSeries, MIN_DAYS_PER_SIDE, type Summary } from '../lib/stats'
+  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, tagCounts, presetSeries, type Summary } from '../lib/stats'
   import { formatDuration } from '../lib/time'
   import { allStrokes } from '../lib/strokes'
   import { PAIN } from '../lib/types'
@@ -42,7 +41,6 @@
   const sid = $derived(symptom?.id ?? PAIN)
   const series = $derived(dailySeries(entries.value, from, days, sid))
   const summary = $derived(summarize(entries.value, days, sid))
-  const cmp = $derived(tagComparison(entries.value, tags.value, sid))
   const symMeans = $derived(symptomMeans(entries.value, symptoms.value, sid))
   /** The symptom's figures only when something in range reads it: an entry without the reading is not a 0 (#36). */
   const read = $derived(summary.mean !== null)
@@ -109,20 +107,15 @@
       </div>
     {/if}
 
-    <div class="card">
-      <p class="small muted label">{t('trends.tags')}</p>
-      {#if cmp.length}
-        <TagCompare rows={cmp} />
-        <p class="small muted top">{t('trends.descriptive')}</p>
-      {:else}
-        <p class="small muted">{t('trends.tagsNeedData', { n: MIN_DAYS_PER_SIDE })}</p>
-        {#if counts.length}
-          <div class="chips top">
-            {#each counts as c (c.tag.id)}<span class="chip small outline">{tl(c.tag.label)} · {tn('diary.days', c.days)}</span>{/each}
-          </div>
-        {/if}
-      {/if}
-    </div>
+    <!-- Tag use in days (§6.3). No comparison of days with and without: it could not be read honestly (#114, #120). -->
+    {#if counts.length}
+      <div class="card">
+        <p class="small muted label">{t('trends.tags')}</p>
+        <div class="chips">
+          {#each counts as c (c.tag.id)}<span class="chip small outline">{tl(c.tag.label)} · {tn('diary.days', c.days)}</span>{/each}
+        </div>
+      </div>
+    {/if}
 
     {#if symMeans.length}
       <div class="card">

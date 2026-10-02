@@ -267,36 +267,22 @@ describe('Trends heatmap and chart', () => {
 })
 
 describe('Trends tags and symptoms', () => {
-  it('lists tag counts while a comparison would rest on too few days', async () => {
-    for (let n = 0; n < 4; n++) await addEntry({ at: at(n), ...legs(8, { tags: ['rest'] }) })
-    for (let n = 4; n < 8; n++) await addEntry({ at: at(n), ...legs(2) })
+  it('shows tag use in days, most used first within its group, and never compares days with and without (#114, #120)', async () => {
+    for (let n = 0; n < 6; n++) await addEntry({ at: at(n), ...legs(8, { tags: n < 2 ? ['rest', 'stress'] : ['rest'] }) })
+    for (let n = 6; n < 12; n++) await addEntry({ at: at(n), ...legs(2) })
     await openTrends()
-    expect(await screen.findByText('Servono almeno 5 giorni con e 5 senza un tag per confrontarli.')).toBeInTheDocument()
-    expect(await screen.findByText('Riposo · 4 giorni')).toBeInTheDocument()
-    expect(screen.queryByText('giorni con')).not.toBeInTheDocument()
+    const card = (await screen.findByText('Riposo · 6 giorni')).closest('.card') as HTMLElement
+    expect([...card.querySelectorAll('.chip')].map((c) => c.textContent)).toEqual(['Riposo · 6 giorni', 'Stress · 2 giorni'])
+    // Five days a side was noise, and a dose is taken because the pain is high: the comparison is gone (#120).
+    expect(card).not.toHaveTextContent(/con|senza|descrittivo/)
+    expect(card.querySelector('.bar')).toBeNull()
   })
 
-  it('compares days with and without a tag once both sides have 5 days', async () => {
-    for (let n = 0; n < 5; n++) await addEntry({ at: at(n), ...legs(8, { tags: ['rest'] }) })
-    for (let n = 5; n < 11; n++) await addEntry({ at: at(n), ...legs(2) })
+  it('has no tag card when no tag was used in range', async () => {
+    await addEntry({ at: at(0), ...legs(4) })
     await openTrends()
-    const card = (await screen.findByText('giorni con')).closest('.card')!
-    // Day counts that say what they count: "(5/6 giorni)" read as a date, the 5th of June.
-    expect(card.querySelector('.name')).toHaveTextContent(/^Riposo · 5 con · 6 senza$/)
-    const bars = Array.from(card.querySelectorAll('.bar')).map((b) => b.getAttribute('style'))
-    expect(bars).toEqual(['width: 80%;', 'width: 20%;'])
-    expect(Array.from(card.querySelectorAll('.val')).map((v) => v.textContent)).toEqual(['8,0', '2,0'])
-    expect(card).toHaveTextContent('Solo descrittivo')
-  })
-
-  it('keeps the global centred .row off the comparison rows, so the bars get the card\'s width', async () => {
-    loadAppCss()
-    for (let n = 0; n < 5; n++) await addEntry({ at: at(n), ...legs(8, { tags: ['rest'] }) })
-    for (let n = 5; n < 10; n++) await addEntry({ at: at(n), ...legs(2) })
-    await openTrends()
-    const card = (await screen.findByText('giorni con')).closest('.card')!
-    const row = card.querySelector('.bar')!.parentElement!.parentElement!
-    expect(getComputedStyle(row).alignItems).not.toBe('center')
+    await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
+    expect(screen.queryByText('Tag')).toBeNull()
   })
 
   it('shows the mean of every other symptom that was recorded, at 0 too (#114)', async () => {
