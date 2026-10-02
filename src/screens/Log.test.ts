@@ -685,7 +685,7 @@ describe('Mind and mind symptoms', () => {
     ])
     await go('Diario')
     const row = (await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0]
-    expect(row).toHaveAccessibleName(/7\s*gambe 7 · cosce 6 · Compressione · Impacco caldo/)
+    expect(row).toHaveAccessibleName(/7\s*gambe 7 · cosce 6 gonfiore · Compressione · Impacco caldo/)
   })
 
   it('a mind-only episode is updated from its sheet without a pain slider', async () => {

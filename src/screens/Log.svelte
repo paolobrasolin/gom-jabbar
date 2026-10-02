@@ -215,7 +215,7 @@
                 episode = ep.head
               }}>
               <span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{read ? hl.value : '–'}</span>
-              <span><EntrySummary lead={read ? symptomName(hl.id, symptoms.value, tl) : ''} layers={chainLayers(ep)} tagDefs={tags.value} after={t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })} /></span>
+              <span><EntrySummary lead={read ? symptomName(hl.id, symptoms.value, tl) : ''} layers={chainLayers(ep)} tagDefs={tags.value} symptoms={symptoms.value} after={t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })} /></span>
             </button>
           {/each}
         {/snippet}

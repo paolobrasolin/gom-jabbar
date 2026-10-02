@@ -124,7 +124,7 @@
               <span class="time muted small">{formatTime(e.at, locale())}</span>
               <span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.read ? r.hl.value : '–'}</span>
               <span class="grow body">
-                <span class="line"><EntrySummary lead={r.lead} layers={r.shown} where={r.where} tagDefs={tags.value} /></span>
+                <span class="line"><EntrySummary lead={r.lead} layers={r.shown} where={r.where} tagDefs={tags.value} symptoms={symptoms.value} /></span>
                 {#if r.dur !== null}
                   <span class="small muted">{isActive(e) ? t('diary.ongoing') : formatDuration(r.dur, units)}{#if r.levels.length}{` · ${r.levels.join(' → ')}`}{/if}</span>
                 {/if}
