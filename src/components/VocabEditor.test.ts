@@ -72,6 +72,13 @@ describe('Vocabulary editor: symptoms', () => {
     await waitFor(() => expect(itemOf('Gonfiore')).not.toHaveClass('off'))
   })
 
+  it('a name looks tappable: a pencil says it renames, and the button keeps the name as its name (#115)', async () => {
+    render(VocabEditor, { table: 'symptoms' })
+    const name = await screen.findByRole('button', { name: 'Gonfiore' })
+    expect(name.querySelector('svg.pencil')).toHaveAttribute('aria-hidden', 'true')
+    expect(names()[1]).toBe('Gonfiore')
+  })
+
   it('renames on Enter: the typed word replaces the name, in every language', async () => {
     render(VocabEditor, { table: 'symptoms' })
     await fireEvent.click(await screen.findByRole('button', { name: 'Gonfiore' }))

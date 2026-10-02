@@ -187,6 +187,8 @@
               <span class="time">{when(p.entry.at)}</span>
               <span class="pill" style="--c: {intensityColor(p.value)}; --ink-on: {intensityInk(p.value)}">{p.value}</span>
               <span class="what">{[p.name, ...p.where, ...(p.done.length ? [p.done.join(', ')] : [])].join(' · ')}{#if p.note}{' · '}<i>{p.note}</i>{/if}</span>
+              <!-- The line opens its reading's form (#115): read as plain text, nothing said it could be tapped. -->
+              <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
             </button>
           </li>
         {/each}
@@ -232,6 +234,7 @@
   .head { display: flex; align-items: flex-start; gap: 8px; }
   .edit { background: none; min-height: 44px; padding: 0 8px; font-size: 15px; font-weight: 600; color: var(--accent); border-radius: 8px; margin: -10px -8px 0 0; }
   .history { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
+  .go { width: 16px; height: 16px; flex: none; margin-left: auto; color: var(--ink-2); }
   .point { display: flex; align-items: center; gap: 10px; width: 100%; background: none; padding: 6px 4px; min-height: 44px; color: var(--ink); border-radius: 8px; text-align: left; }
   .time { color: var(--ink-2); min-width: 44px; }
   .pill { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 8px; background: var(--c); color: var(--ink-on); font-weight: 700; font-size: 14px; flex: none; }
