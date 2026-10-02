@@ -5,7 +5,7 @@
   import EntrySummary from './EntrySummary.svelte'
   import TimeChips from './TimeChips.svelte'
   import { t, tl } from '../i18n/index.svelte'
-  import { logPreset } from '../lib/presets'
+  import { logPreset, liveAsks } from '../lib/presets'
   import { deleteEntry } from '../lib/entries'
   import { showToast, showRefusal, haptic, dismissToast } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
@@ -54,7 +54,7 @@
     if (!current || busy) return
     // Nothing measured where something is asked: say so and put the finger on the first slider (§6.1 item 7). A preset
     // asking nothing is the one-tap "nothing to report" (§5.6) and saves as it is.
-    if (current.layers.some((l) => l.asks.length) && !levels.some((l) => Object.keys(l).length)) {
+    if (current.layers.some((l) => liveAsks(l, symptoms).length) && !levels.some((l) => Object.keys(l).length)) {
       showRefusal(t('log.noLevel'))
       sheetEl?.querySelector<HTMLInputElement>('input[type="range"]')?.focus()
       return
@@ -94,7 +94,8 @@
       </div>
     {/if}
     <div class="sliders" bind:this={sheetEl}>
-      {#each current.layers[cur]?.asks ?? [] as id (`${cur}:${id}`)}
+      <!-- What is switched off is not asked, though the preset keeps it (#115). -->
+      {#each current.layers[cur] ? liveAsks(current.layers[cur], symptoms) : [] as id (`${cur}:${id}`)}
         <IntensitySlider label={label(id)} value={levels[cur]?.[id] ?? null} onchange={(v) => (levels[cur][id] = v)} />
       {/each}
     </div>

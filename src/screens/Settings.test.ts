@@ -141,6 +141,22 @@ describe('Settings presets', () => {
     await waitFor(async () => expect(await db.presets.get(p.id)).toMatchObject({ name: 'Schiena', kind: 'chronic', layers: [{ regions: ['224'], asks: ['pain'] }, { regions: LEG_IDS, asks: ['pain', 'swelling'] }] }))
   })
 
+  it('editing a preset while a symptom it asks is off keeps asking it (#115)', async () => {
+    const p = await addPreset({ name: 'Gambe', layers: [{ regions: LEG_IDS, asks: ['pain', 'swelling'] }], kind: 'chronic' })
+    await db.symptoms.update('swelling', { enabled: false })
+    await openSettings()
+    await fireEvent.click(await screen.findByRole('button', { name: 'Modifica Gambe' }))
+    const form = await screen.findByRole('dialog', { name: 'Modifica preset' })
+    const asks = within(form).getByRole('group', { name: 'Chiede' })
+    // Off, it is not offered; nothing else changes.
+    expect(await within(asks).findByRole('button', { name: 'Dolore' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(asks).queryByRole('button', { name: 'Gonfiore' })).not.toBeInTheDocument()
+    await fireEvent.input(within(form).getByRole('textbox', { name: 'Nome del preset' }), { target: { value: 'Gambe pesanti' } })
+    await fireEvent.click(within(form).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect((await db.presets.get(p.id))?.name).toBe('Gambe pesanti'))
+    expect((await db.presets.get(p.id))?.layers[0].asks).toEqual(['pain', 'swelling'])
+  })
+
   it('saving the form of a preset deleted meanwhile changes nothing', async () => {
     const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic' })
     await openSettings()
