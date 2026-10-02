@@ -136,11 +136,11 @@
       <section>
         <h2>{t('trends.tags')}</h2>
         <table>
-          <thead><tr><th>{t('report.tag')}</th><th class="num">{t('report.days')}</th><th class="num">{t('trends.withTag')}</th><th class="num">{t('trends.withoutTag')}</th></tr></thead>
+          <thead><tr><th>{t('report.tag')}</th><th class="num">{t('report.days')}</th><th class="num">{t('report.meanWith')}</th><th class="num">{t('report.meanWithout')}</th></tr></thead>
           <tbody>
             {#each counts as c (c.tag.id)}
               {@const r = cmp.find((x) => x.tag.id === c.tag.id)}
-              <tr><td>{tl(c.tag.label)}</td><td class="num">{c.days}</td><td class="num">{r ? fmt1(r.withMean) : '–'}</td><td class="num">{r ? fmt1(r.withoutMean) : '–'}</td></tr>
+              <tr><td>{tl(c.tag.label)}</td><td class="num">{c.days}</td><td class="num">{r ? t('report.meanDays', { m: fmt1(r.withMean), n: r.withN }) : '–'}</td><td class="num">{r ? t('report.meanDays', { m: fmt1(r.withoutMean), n: r.withoutN }) : '–'}</td></tr>
             {/each}
           </tbody>
         </table>
