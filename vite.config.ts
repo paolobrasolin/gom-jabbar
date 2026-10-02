@@ -31,10 +31,12 @@ function gitDate(): string {
   }
 }
 
-// The service worker's runtime, which the PWA plugin bundles after this build: generateSW with a precache and a
-// navigation fallback ships these (`npm run notices` fails if dist/workbox-*.js ever names another), plus
-// registerSW.js from the plugin itself.
-const SW_PACKAGES = ['workbox-core', 'workbox-precaching', 'workbox-routing', 'workbox-strategies', 'vite-plugin-pwa']
+// Code the build writes into the output that is not in the app's module graph, listed by hand (`npm run notices` fails
+// when the output shows one that is not here, #117): the service worker's runtime, which the PWA plugin bundles after
+// this build (generateSW with a precache and a navigation fallback ships these Workbox modules), the AMD loader sw.js
+// begins with (Google's, from Workbox's fork of rollup-plugin-off-main-thread), registerSW.js from the plugin itself,
+// and Vite's own runtime helpers in the bundle (the modulepreload polyfill, the preload of the dynamic import).
+const OUTPUT_PACKAGES = ['workbox-core', 'workbox-precaching', 'workbox-routing', 'workbox-strategies', '@trickfilm400/rollup-plugin-off-main-thread', 'vite-plugin-pwa', 'vite']
 
 /** open-source-licences.html next to the app (#35): every package bundled into it, the service worker's runtime, the body map. */
 function notices(): Plugin {
@@ -57,7 +59,7 @@ function notices(): Plugin {
       })
     },
     generateBundle(_, bundle) {
-      const dirs = new Map<string, string>(SW_PACKAGES.map((n) => [n, `node_modules/${n}`]))
+      const dirs = new Map<string, string>(OUTPUT_PACKAGES.map((n) => [n, `node_modules/${n}`]))
       for (const out of Object.values(bundle)) {
         if (out.type !== 'chunk') continue
         for (const id of Object.keys(out.modules)) {
