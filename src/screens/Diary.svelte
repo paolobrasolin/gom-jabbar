@@ -126,7 +126,8 @@
               <span class="grow body">
                 <span class="line"><EntrySummary lead={r.lead} layers={r.shown} where={r.where} tagDefs={tags.value} symptoms={symptoms.value} /></span>
                 {#if r.dur !== null}
-                  <span class="small muted">{isActive(e) ? t('diary.ongoing') : formatDuration(r.dur, units)}{#if r.levels.length}{` · ${r.levels.join(' → ')}`}{/if}</span>
+                  <!-- Named (#115): "5h · 7 → 4" alone did not say it was an episode. -->
+                  <span class="small muted">{t('episode.title')} · {isActive(e) ? t('diary.ongoing') : formatDuration(r.dur, units)}{#if r.levels.length}{` · ${r.levels.join(' → ')}`}{/if}</span>
                 {/if}
                 {#if r.head}<span class="small muted">{t('diary.update')} · {t('diary.started', { when: r.started })}</span>{/if}
                 {#if r.note}<span class="small muted note">{r.note}</span>{/if}
@@ -153,8 +154,10 @@
   .entry { width: 100%; text-align: left; padding: 10px 12px; }
   .time { min-width: 44px; flex: none; font-variant-numeric: tabular-nums; }
   .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Places and tags over two lines at most (#115): on one, the later tags never showed without opening the entry. */
+  .line { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
   .note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* A search hit wraps: what matched may sit at the end of a long line. */
+  .hit .line { display: block; }
   .hit .line, .hit .note { white-space: normal; overflow-wrap: anywhere; }
 </style>
