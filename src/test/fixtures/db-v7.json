@@ -532,6 +532,56 @@
         "note": "senza zona",
         "createdAt": "2026-09-21T12:00:00.000Z",
         "updatedAt": "2026-09-21T12:00:00.000Z"
+      },
+      {
+        "id": "v7-unknown-fields",
+        "at": "2026-09-10T22:00:00.000Z",
+        "endedAt": null,
+        "ongoing": false,
+        "note": "tutto",
+        "createdAt": "2026-09-10T22:00:00.000Z",
+        "updatedAt": "2026-09-10T22:05:00.000Z",
+        "layers": [
+          {
+            "regions": [
+              "*"
+            ],
+            "readings": {
+              "pain": 9,
+              "heaviness": 7
+            },
+            "tags": [
+              "period"
+            ]
+          }
+        ],
+        "origin": "watch",
+        "extra": {
+          "deep": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "id": "v7-dirty-shape",
+        "at": "2026-09-10T22:00:00.000Z",
+        "endedAt": null,
+        "ongoing": false,
+        "layers": [
+          {
+            "regions": [
+              "*"
+            ],
+            "readings": {
+              "pain": 9,
+              "heaviness": 7
+            },
+            "tags": [
+              "period"
+            ]
+          }
+        ]
       }
     ],
     "symptoms": [
@@ -624,6 +674,17 @@
         "category": "mind",
         "enabled": true,
         "order": 9
+      },
+      {
+        "id": "sym-unknown-fields",
+        "label": {
+          "it": "Crampi",
+          "en": "Cramps"
+        },
+        "enabled": true,
+        "order": 50,
+        "unit": "mm",
+        "category": "body"
       }
     ],
     "tags": [
@@ -656,6 +717,17 @@
         "group": "context",
         "enabled": false,
         "order": 0
+      },
+      {
+        "id": "tag-unknown-fields",
+        "label": {
+          "it": "Sauna",
+          "en": "Sauna"
+        },
+        "group": "intervention",
+        "enabled": true,
+        "order": 60,
+        "colour": "red"
       }
     ],
     "presets": [
@@ -770,6 +842,28 @@
         ],
         "ongoing": false,
         "order": 3
+      },
+      {
+        "id": "p-unknown-fields",
+        "name": "Schiena",
+        "symptomIds": [
+          "pain"
+        ],
+        "ongoing": false,
+        "order": 99,
+        "layers": [
+          {
+            "regions": [
+              "224",
+              "225"
+            ],
+            "readings": {
+              "pain": 5
+            },
+            "tags": []
+          }
+        ],
+        "colour": "blue"
       }
     ]
   }

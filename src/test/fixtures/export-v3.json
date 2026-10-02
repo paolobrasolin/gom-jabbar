@@ -39,6 +39,16 @@
         },
         "enabled": true,
         "order": 7
+      },
+      {
+        "id": "sym-unknown-fields",
+        "label": {
+          "it": "Crampi",
+          "en": "Cramps"
+        },
+        "enabled": true,
+        "order": 50,
+        "unit": "mm"
       }
     ],
     "tags": [
@@ -71,6 +81,17 @@
         "group": "medication",
         "enabled": true,
         "order": 0
+      },
+      {
+        "id": "tag-unknown-fields",
+        "label": {
+          "it": "Sauna",
+          "en": "Sauna"
+        },
+        "group": "intervention",
+        "enabled": true,
+        "order": 60,
+        "colour": "red"
       }
     ]
   },
@@ -258,6 +279,78 @@
       "note": "gambe gonfie",
       "createdAt": "2026-09-15T08:00:00.000Z",
       "updatedAt": "2026-09-15T12:00:00.000Z"
+    },
+    {
+      "id": "v3-unknown-fields",
+      "at": "2026-09-01T07:30:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 8,
+        "swelling": 4,
+        "sym-u7": 2
+      },
+      "areas": [
+        {
+          "regions": [
+            "hip.l",
+            "hip.r",
+            "thigh.l",
+            "thigh.r"
+          ],
+          "intensity": 8
+        },
+        {
+          "regions": [
+            "shoulder.l",
+            "shoulder.r"
+          ],
+          "intensity": 3
+        }
+      ],
+      "tags": [
+        "compression",
+        "med-x1"
+      ],
+      "note": "gambe e spalle",
+      "createdAt": "2026-09-01T07:31:00.000Z",
+      "updatedAt": "2026-09-01T07:31:00.000Z",
+      "origin": "watch",
+      "extra": {
+        "deep": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "id": "v3-dirty-shape",
+      "at": "2026-09-01T07:30:00.000Z",
+      "endedAt": null,
+      "ongoing": false,
+      "readings": {
+        "pain": 8,
+        "swelling": 4,
+        "sym-u7": 2
+      },
+      "areas": [
+        {
+          "regions": [
+            "hip.l",
+            "hip.r",
+            "thigh.l",
+            "thigh.r"
+          ],
+          "intensity": 8
+        },
+        {
+          "regions": [
+            "shoulder.l",
+            "shoulder.r"
+          ],
+          "intensity": 3
+        }
+      ]
     }
   ]
 }
