@@ -4,6 +4,11 @@ Automated on every push: type check, unit tests, build, bundle size gate, licenc
 
 Before merging a schema or export change into `main`: every step of the protocol in CLAUDE.md, "User data is never lost" (fixtures of the version left and of the version arrived at, the rule in `UPGRADES`, the frozen rules in `lib/legacy.ts`, export → import → export). The phone upgrades within seconds of the deploy; nothing after it can take an upgrade back.
 
+Optional, for a database version: a rehearsal on real storage, never on the tester's phone. Pages only serves `main`, so both builds are served in turn at the same address (one origin, one database), in desktop Chrome or on a dev phone over the LAN:
+- [ ] The previous release: `git worktree add ../gj-prev vX.Y.Z`, then `npm ci && npm run build && npm run preview` there. Open it, Settings → Ripristina da file with the output of `node scripts/seed.mjs`, Sostituisci tutto, then Backup su file.
+- [ ] Stop it; `npm run build && npm run preview` here, same port. Open the app twice: no notice, the diary as it was; Copie automatiche shows one "Prima dell'aggiornamento". Backup su file again.
+- [ ] The two backups hold the same entries, presets and vocabulary, field for field, except what the new rule in `UPGRADES` says. `git worktree remove ../gj-prev`.
+
 Release, from a clean tree on `main`:
 
 ```sh
