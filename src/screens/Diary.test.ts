@@ -587,6 +587,52 @@ describe('editing a migrated entry', () => {
   })
 })
 
+describe('Leaving the edit sheet without saving (#115)', () => {
+  async function openEdit() {
+    await openDiary()
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+    const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
+    await within(sheet).findByRole('slider', { name: /^Dolore/ })
+    return sheet
+  }
+
+  it('back discards the edits with an undo that brings them back, and Salva then saves them', async () => {
+    const e = await addEntry({ at: ago(60), layers: [L(['152'], 4)], note: 'prima' })
+    const sheet = await openEdit()
+    await fireEvent.input(within(sheet).getByRole('slider', { name: /^Dolore/ }), { target: { value: '8' } })
+    history.back()
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Modifica' })).not.toBeInTheDocument())
+    const toast = await findToast()
+    expect(toast).toHaveTextContent('Modifiche scartate')
+    expect((await db.entries.get(e.id))?.layers[0].readings.pain).toBe(4)
+    await fireEvent.click(within(toast).getByRole('button', { name: 'Annulla' }))
+    const again = await screen.findByRole('dialog', { name: 'Modifica' })
+    expect(await within(again).findByRole('slider', { name: /^Dolore/ })).toHaveValue('8')
+    await fireEvent.click(within(again).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect((await db.entries.get(e.id))?.layers[0].readings.pain).toBe(8))
+  })
+
+  it('says nothing when nothing was changed, or when Salva or Elimina closed it', async () => {
+    await addEntry({ at: ago(60), layers: [L(['152'], 4)] })
+    await openEdit()
+    await fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Modifica' })).not.toBeInTheDocument())
+    expect(screen.queryByText('Modifiche scartate')).not.toBeInTheDocument()
+    const sheet = await openEditAgain()
+    await fireEvent.input(within(sheet).getByRole('slider', { name: /^Dolore/ }), { target: { value: '6' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
+    expect(await findToast()).toHaveTextContent('Salvato')
+    expect(screen.queryByText('Modifiche scartate')).not.toBeInTheDocument()
+  })
+
+  async function openEditAgain() {
+    await fireEvent.click((await screen.findAllByRole('button', { name: /\d\d:\d\d/ }))[0])
+    const sheet = await screen.findByRole('dialog', { name: 'Modifica' })
+    await within(sheet).findByRole('slider', { name: /^Dolore/ })
+    return sheet
+  }
+})
+
 describe('A layer without a place, in the edit sheet', () => {
   it("refuses Salva and leaves the entry as it was, as on the log (#115)", async () => {
     const e = await addEntry({ at: ago(60), layers: [L(['152'], 4)] })
