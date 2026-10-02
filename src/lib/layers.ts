@@ -147,6 +147,17 @@ export function pieceCount(layers: Layer[]): number {
   return layers.reduce((t, l) => t + (l.strokes?.length ?? 0), 0)
 }
 
+/**
+ * A layer a save would drop with something set on it (#115): no place, but a level or a tag, while another layer has a
+ * place (a reading with no place at all is valid, §6.1). Its index, or null. Switching away still drops it: that is how a
+ * layer is deleted (§5.4), so in the form it can only be the current one.
+ */
+export function strandedLayer(layers: Layer[]): number | null {
+  if (!layers.some((l) => l.regions.length)) return null
+  const i = layers.findIndex((l) => !l.regions.length && (Object.keys(l.readings).length > 0 || l.tags.length > 0))
+  return i < 0 ? null : i
+}
+
 /** The layers a save keeps, in order: the located ones, or the first alone when none is. */
 export function keptLayers<T extends { regions: string[] }>(layers: T[]): T[] {
   const located = layers.filter((l) => l.regions.length > 0)

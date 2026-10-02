@@ -5,6 +5,7 @@
   import PresetForm, { type PresetSeed } from './PresetForm.svelte'
   import { t } from '../i18n/index.svelte'
   import { draftFromEntry, draftToInput, emptyDraft, type EntryDraft } from '../lib/draft'
+  import { strandedLayer } from '../lib/layers'
   import { editEntry, deleteEntry, restoreEntries, isUpdate, isHead, loadEpisode, timeProblem, type TimeProblem } from '../lib/entries'
   import { showToast, showRefusal, haptic, dismissToast, toastState } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
@@ -65,6 +66,14 @@
     if (!editing || busy) return
     busy = true
     const input = draftToInput(draft)
+    // A level or a tag on a layer with no place would vanish on save (#115), as on the log.
+    const stranded = strandedLayer(draft.layers)
+    if (stranded !== null) {
+      busy = false
+      showRefusal(t('log.noPlace'))
+      form?.pointAtLayer(stranded)
+      return
+    }
     // A reading stays inside its episode and an end after its start (§5.5): otherwise say so and show the row.
     const problem = await timesOf(editing, input)
     if (problem) {

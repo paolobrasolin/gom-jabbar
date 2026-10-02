@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   newLayer, showsCategory, allRegions, maxReadings, mergedReadings, mergedTags, prune, tapRegion, tapSet, toggleFull, addLayer, selectLayer,
-  setReading, toggleTag, pieceCount, finalize, readingsFor, hasBody, holdsMind, type Layer, type LayerState,
+  setReading, toggleTag, pieceCount, finalize, readingsFor, hasBody, holdsMind, strandedLayer, type Layer, type LayerState,
 } from './layers'
 import { LEG_IDS, MIND } from './regions'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
@@ -142,5 +142,21 @@ describe('finalize', () => {
     expect(out).toHaveLength(3)
     expect(readingsFor(L([MIND]), { pain: 4, fog: 2, custom: 1 }, DEFAULT_SYMPTOMS)).toEqual({ fog: 2, custom: 1 })
     expect(readingsFor(L([]), { pain: 4, fog: 2 }, DEFAULT_SYMPTOMS)).toEqual({ pain: 4, fog: 2 })
+  })
+})
+
+describe('strandedLayer (#115)', () => {
+  it('finds a layer with levels or tags but no place, while another layer has one', () => {
+    expect(strandedLayer([L(['152']), L([], { pain: 7 })])).toBe(1)
+    expect(strandedLayer([L(['152']), L([], {}, ['heat'])])).toBe(1)
+    expect(strandedLayer([L([], { pain: 3 }), L(['152'])])).toBe(0)
+  })
+
+  it('lets through what a save keeps on purpose', () => {
+    // A reading with no place at all is valid: places are optional (§6.1).
+    expect(strandedLayer([L([], { pain: 4 })])).toBeNull()
+    // A layer added and left empty is dropped silently: nothing set there is lost.
+    expect(strandedLayer([L(['152']), L([], {})])).toBeNull()
+    expect(strandedLayer([L(['152']), L(['153'], { pain: 2 })])).toBeNull()
   })
 })
