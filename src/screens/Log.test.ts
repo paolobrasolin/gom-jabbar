@@ -58,6 +58,22 @@ describe('Log layer chips', () => {
   }, 10_000)
 })
 
+describe('Stage rails', () => {
+  it('fade where they hide buttons, in the preset form where they scroll (#115)', async () => {
+    render(App)
+    await screen.findByRole('slider', { name: 'Dolore' })
+    await pickPreset('Nuovo preset')
+    const form = await screen.findByRole('dialog', { name: 'Nuovo preset' })
+    // jsdom has no layout, so nothing overflows: the marks are there, empty, for the fade to follow.
+    const rails = form.querySelectorAll('.rail')
+    expect(rails).toHaveLength(2)
+    for (const r of rails) {
+      expect(r).toHaveClass('fade-y')
+      expect(r).toHaveAttribute('data-more', '')
+    }
+  })
+})
+
 describe('Log fast path', () => {
   it('tap region, set intensity, save', async () => {
     render(App)
