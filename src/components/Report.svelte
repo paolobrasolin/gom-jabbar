@@ -1,5 +1,6 @@
 <script lang="ts">
   import BodyMap from './BodyMap.svelte'
+  import RampKey from './RampKey.svelte'
   import DailyChart from './DailyChart.svelte'
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale, num, tn } from '../i18n/index.svelte'
@@ -114,7 +115,9 @@
       <div>
         <h2>{t('trends.heatmap')}</h2>
         <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
+        <RampKey />
         {#if whole}<p>{tn('trends.fullBody', whole.count, { m: num(whole.mean) })}</p>{/if}
+        <p class="muted">{t('trends.heatmapHint')}</p>
       </div>
       <div>
         {#if read && symptom}

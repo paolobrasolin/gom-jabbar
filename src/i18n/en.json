@@ -187,6 +187,7 @@
   "trends.heatmap": "Where",
   "trends.fullBody": "Whole body: {n} times, mean {m}",
   "trends.fullBody.one": "Whole body: once, mean {m}",
+  "trends.rampKey": "Colour scale: 0 to 10",
   "trends.heatmapHint": "Colour: mean intensity. Outline: frequency.",
   "trends.overTime": "Over time",
   "trends.legendMax": "daily max",

@@ -187,6 +187,7 @@
   "trends.heatmap": "Dove",
   "trends.fullBody": "Tutto il corpo: {n} volte, media {m}",
   "trends.fullBody.one": "Tutto il corpo: {n} volta, media {m}",
+  "trends.rampKey": "Scala dei colori: da 0 a 10",
   "trends.heatmapHint": "Colore: intensità media. Bordo: frequenza.",
   "trends.overTime": "Nel tempo",
   "trends.legendMax": "max del giorno",

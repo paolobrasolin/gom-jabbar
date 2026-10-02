@@ -1,5 +1,6 @@
 <script lang="ts">
   import BodyMap from '../components/BodyMap.svelte'
+  import RampKey from '../components/RampKey.svelte'
   import DailyChart from '../components/DailyChart.svelte'
   import TagCompare from '../components/TagCompare.svelte'
   import Report from '../components/Report.svelte'
@@ -88,6 +89,7 @@
     <div class="card">
       <p class="small muted label">{t('trends.heatmap')}</p>
       <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
+      <RampKey />
       {#if whole}<p class="small">{tn('trends.fullBody', whole.count, { m: num(whole.mean) })}</p>{/if}
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
