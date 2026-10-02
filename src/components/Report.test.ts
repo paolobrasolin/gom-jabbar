@@ -90,7 +90,9 @@ describe('Report page', () => {
     expect(box('Media giornaliera')).toHaveTextContent('4,8')
     expect(box('Media giornaliera')).toHaveTextContent('max 8')
     expect(screen.getByText('Sintomo: Dolore')).toBeInTheDocument()
-    expect(box('Giorni ≥ 5')).toHaveTextContent('2')
+    const days = screen.getByRole('list', { name: 'Giorni per livello peggiore' })
+    expect(within(days).getAllByRole('listitem').filter((b) => !b.getAttribute('aria-label')!.endsWith(': 0 giorni')).map((b) => b.getAttribute('aria-label'))).toEqual(['2: 1 giorno', '6: 1 giorno', '8: 1 giorno'])
+    expect(days.parentElement).toHaveTextContent('mediana 6 · 3 giorni letti su 7')
     expect(box('Episodi')).toHaveTextContent('1')
     expect(box('Episodi')).toHaveTextContent('durata mediana 2h')
   })
@@ -188,7 +190,7 @@ describe('Report for another symptom (#38)', () => {
     expect(screen.getByText('Sintomo: Gonfiore')).toBeInTheDocument()
     const box = (k: string) => screen.getByText(k).parentElement!
     expect(box('Media giornaliera')).toHaveTextContent('5')
-    expect(box('Giorni ≥ 5')).toHaveTextContent('1')
+    expect(screen.getByRole('list', { name: 'Giorni per livello peggiore' }).parentElement).toHaveTextContent('mediana 5')
     expect(screen.getByRole('img', { name: 'Gonfiore per giorno' })).toBeInTheDocument()
     // Swelling was read without a place: the map stays empty.
     expect(document.querySelector('[data-region="152"]')).not.toHaveClass('on')
@@ -202,7 +204,7 @@ describe('Report for another symptom (#38)', () => {
     const entries = [makeEntry({ at: at(0), layers: [{ regions: ['152'], readings: {}, tags: [] }] })]
     render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
     expect(screen.queryByText('Media giornaliera')).not.toBeInTheDocument()
-    expect(screen.queryByText('Giorni ≥ 5')).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Giorni per livello peggiore' })).not.toBeInTheDocument()
     expect(screen.queryByText(/^Sintomo:/)).not.toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).not.toContain('Nel tempo')
   })

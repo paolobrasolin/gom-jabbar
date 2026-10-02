@@ -1,6 +1,7 @@
 <script lang="ts">
   import BodyMap from './BodyMap.svelte'
   import RampKey from './RampKey.svelte'
+  import WorstDays from './WorstDays.svelte'
   import DailyChart from './DailyChart.svelte'
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale, num, tn } from '../i18n/index.svelte'
@@ -101,14 +102,20 @@
       {#if read && symptom}<p class="muted">{t('report.symptom', { name: tl(symptom.label) })}</p>{/if}
     </header>
 
-    <section class="grid4">
+    <section class="figures">
       <div><span class="k">{t('trends.entries')}</span><b>{summary.entries}</b><span class="k">{tn('trends.onDays', summary.daysWithEntries)}</span></div>
       {#if read}
         <div><span class="k">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="k">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
-        <div><span class="k">{t('trends.badDays')}</span><b>{summary.daysAtLeast5}</b><span class="k">{t('trends.badDaysHint')}</span></div>
       {/if}
       <div><span class="k">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="k">{episodeLine(summary)}</span></div>
     </section>
+
+    {#if read}
+      <section class="worst">
+        <span class="k">{t('trends.worst')}</span>
+        <WorstDays worst={summary.worst} median={summary.median} {days} />
+      </section>
+    {/if}
 
     <section class="two">
       <div>
@@ -186,9 +193,10 @@
   h1 { font-size: 22px; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); margin: 10px 0 6px; }
   .k { font-size: 13px; color: var(--ink-2); display: block; }
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .grid4 > div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
-  .grid4 b { font-size: 22px; display: block; line-height: 1.2; }
+  .figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .worst { margin-top: 12px; }
+  .figures > div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .figures b { font-size: 22px; display: block; line-height: 1.2; }
   .two { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; }
   .map { height: 260px; }
   table { width: 100%; border-collapse: collapse; }
@@ -199,7 +207,9 @@
   .pill { min-width: 26px; height: 22px; font-size: 12px; }
   .note { color: var(--ink-2); font-style: italic; }
   @media (max-width: 520px) {
-    .grid4 { grid-template-columns: 1fr 1fr; }
+    .figures { grid-template-columns: 1fr 1fr; }
+    /* Three figures two by two: the last takes the row rather than leaving a hole. */
+    .figures > div:last-child:nth-child(odd) { grid-column: span 2; }
     .two { grid-template-columns: 1fr; }
   }
   @media print {
@@ -209,7 +219,8 @@
     .page { max-width: none; padding: 0; font-size: 13px; }
     .k, th { font-size: 11px; }
     .two { grid-template-columns: 1fr 1.3fr; }
-    .grid4 { grid-template-columns: repeat(4, 1fr); }
+    .figures { grid-template-columns: repeat(3, 1fr); }
+    .figures > div:last-child:nth-child(odd) { grid-column: auto; }
     section { break-inside: avoid; }
   }
   .disclaimer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 12px; }
