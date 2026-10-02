@@ -25,7 +25,7 @@
   import { lastByPreset, presetEntries } from '../lib/presets'
   import { entryHeadline, symptomName } from '../lib/summary'
   import { backupReminder, buildExport, shareOrDownload, exportFilename, REMIND } from '../lib/backup'
-  import { cloudBackup, driveInUse, failureText } from '../lib/cloudBackup'
+  import { cloudBackup, driveInUse, failureText, doneText } from '../lib/cloudBackup'
   import type { CloudProvider } from '../lib/cloud'
   import { install, installDue, isStandalone, isIOS, requestInstall } from '../lib/install.svelte'
   import MessageIcon from '../components/MessageIcon.svelte'
@@ -58,7 +58,7 @@
     if (res === 'left') return
     if (!res.ok) return showFailure(failureText(res))
     haptic(20)
-    showToast(t('drive.done'))
+    showToast(doneText(res.value))
   }
   function snooze() {
     prefs.backupSnoozedUntil = new Date(Date.now() + REMIND[nudge?.drive ? 'drive' : 'file'].snooze * 86_400_000).toISOString()

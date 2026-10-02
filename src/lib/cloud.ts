@@ -35,6 +35,9 @@ export type CloudStatus = {
   lastWriteAt: string | null
 }
 
+/** A backup that landed: when, and when the much larger file it replaced was written, kept as a restore point (#113). */
+export type Uploaded = { at: string; kept: string | null }
+
 export type Resumed = { intent: Intent; error?: Failure } | null
 
 export interface CloudProvider {
@@ -45,8 +48,12 @@ export interface CloudProvider {
   resume(loc?: Pick<Location, 'hash' | 'pathname' | 'search'>, hist?: Pick<History, 'replaceState' | 'state'>): Resumed
   status(): CloudStatus
   whoami(): Promise<Result<Account>>
-  /** Uploads unless the remote moved under us (`conflict`); `force` keeps the remote version as a restore point and writes anyway. */
-  put(text: string, opts?: { force?: boolean }): Promise<Result<{ at: string }>>
+  /**
+   * Uploads unless the remote moved under us (`conflict`); `force` keeps the remote version as a restore point and writes
+   * anyway. An upload much smaller than the file it replaces keeps that file as a restore point first: `kept` is when
+   * that file was written, null otherwise.
+   */
+  put(text: string, opts?: { force?: boolean }): Promise<Result<Uploaded>>
   /** Newest first. */
   list(): Promise<Result<RestorePoint[]>>
   get(id: string): Promise<Result<string>>

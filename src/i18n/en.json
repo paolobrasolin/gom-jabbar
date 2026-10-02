@@ -359,6 +359,7 @@
   "drive.disconnect": "Disconnect",
   "drive.overwrite": "Overwrite",
   "drive.done": "Backed up to Drive",
+  "drive.doneKept": "Backed up to Drive. The one from {d} was larger: it stays in Restore from Drive.",
   "drive.disconnected": "Drive disconnected",
   "drive.forgotten": "Disconnected here. Google keeps the permission",
   "drive.removePermission": "Remove",

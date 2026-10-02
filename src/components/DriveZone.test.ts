@@ -110,6 +110,20 @@ describe('Drive zone', () => {
     expect(g.drive.files.size).toBe(1)
   })
 
+  it('a backup much smaller than the one in Drive keeps that one and says so (#113)', async () => {
+    for (let i = 0; i < 20; i++) await addEntry({ layers: [{ regions: ['152'], readings: { pain: 4 } }], note: `voce ${i}` })
+    start(g.signIn('backup'))
+    await screen.findByText('Backup su Drive fatto')
+    const big = [...g.drive.files.values()][0].revs.at(-1)!
+    clock += MIN
+    await db.entries.clear()
+    dismissToast()
+    await fireEvent.click(within(card()).getByRole('button', { name: 'Backup su Drive' }))
+    const when = new Intl.DateTimeFormat('it', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(big.modifiedTime))
+    expect(await screen.findByText(`Backup su Drive fatto. Quello del ${when} era più grande: resta in Ripristina da Drive.`)).toBeInTheDocument()
+    expect(big.keepForever).toBe(true)
+  })
+
   it('says so when the person refuses on the consent screen', async () => {
     g.provider.connect('backup')
     history.replaceState(null, '', '/#error=access_denied&state=state1')

@@ -5,7 +5,7 @@
   import Sheet from './Sheet.svelte'
   import { t } from '../i18n/index.svelte'
   import type { CloudProvider, Failure, RestorePoint, Resumed } from '../lib/cloud'
-  import { cloudBackup, driveTime, failureText } from '../lib/cloudBackup'
+  import { cloudBackup, driveTime, failureText, doneText } from '../lib/cloudBackup'
   import { showToast, haptic } from '../lib/toast.svelte'
 
   /**
@@ -50,7 +50,7 @@
       if (res === 'left') return
       if (!res.ok) return void (problem = res)
       haptic(20)
-      showToast(t('drive.done'))
+      showToast(doneText(res.value))
     })
 
   const restore = () => {

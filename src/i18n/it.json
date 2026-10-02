@@ -359,6 +359,7 @@
   "drive.disconnect": "Scollega",
   "drive.overwrite": "Sovrascrivi",
   "drive.done": "Backup su Drive fatto",
+  "drive.doneKept": "Backup su Drive fatto. Quello del {d} era più grande: resta in Ripristina da Drive.",
   "drive.disconnected": "Drive scollegato",
   "drive.forgotten": "Scollegato qui. Il permesso resta su Google",
   "drive.removePermission": "Rimuovi",

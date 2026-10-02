@@ -1,4 +1,4 @@
-import type { Account, CloudProvider, CloudStatus, Failure, Intent, RestorePoint, Result, Resumed } from './cloud'
+import type { Account, CloudProvider, CloudStatus, Failure, Intent, RestorePoint, Result, Resumed, Uploaded } from './cloud'
 
 /**
  * Google Drive behind the cloud interface (§4.2). The token comes from the implicit redirect flow, written by hand:
@@ -12,6 +12,8 @@ import type { Account, CloudProvider, CloudStatus, Failure, Intent, RestorePoint
 
 export const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_PINNED = 12
+/** An upload under this share of the file it replaces is much smaller: that file is kept as a restore point first (#113). */
+const SHRINK = 0.5
 /** A token this close to its end is treated as dead: a backup must not start and fail halfway. */
 const MARGIN = 60 * 1000
 
@@ -209,14 +211,21 @@ export function createDrive(deps: DriveDeps): CloudProvider {
       }),
 
     put: (text, opts = {}) =>
-      run(async () => {
+      run<Uploaded>(async () => {
         let f = await findFile()
+        let kept: string | null = null
         if (f) {
           const last = load().lastWriteAt
           const moved = !last || Date.parse(f.modifiedTime) > Date.parse(last)
           if (moved && !opts.force) throw new Conflict(f.modifiedTime)
           // Overwriting what someone else wrote: keep it downloadable first.
           if (moved) await pin(f.id, f.headRevisionId, true)
+          // Much smaller than what it replaces (a diary emptied by mistake, a restore gone wrong): unpinned, that file would
+          // be gone in 30 days. Kept first, and said; no pin, no overwrite.
+          else if (new TextEncoder().encode(text).length < Number(f.size) * SHRINK) {
+            await pin(f.id, f.headRevisionId, true)
+            kept = f.modifiedTime
+          }
         } else {
           f = await call<Meta>(`${API}/files?fields=${META}`, {
             method: 'POST',
@@ -232,7 +241,7 @@ export function createDrive(deps: DriveDeps): CloudProvider {
         })
         save({ fileId: up.id, lastWriteAt: up.modifiedTime })
         await pinWeekly(up.id, up.headRevisionId)
-        return { at: up.modifiedTime }
+        return { at: up.modifiedTime, kept }
       }),
 
     list: () =>
