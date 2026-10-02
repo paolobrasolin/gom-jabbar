@@ -115,6 +115,22 @@ describe('Preset sheet and switched-off symptoms', () => {
   }, 10_000)
 })
 
+describe('A forgotten episode in the dropdown (#115)', () => {
+  it('its line asks "ancora?" after 24 h without a reading', async () => {
+    const day = 86_400_000
+    await addEntry({ at: new Date(Date.now() - 2 * day).toISOString(), kind: 'episode', layers: [{ regions: ['152'], readings: { pain: 6 }, tags: [] }] })
+    await addEntry({ at: new Date(Date.now() - 3600_000).toISOString(), kind: 'episode', layers: [{ regions: ['224'], readings: { pain: 4 }, tags: [] }] })
+    render(App)
+    const items = await episodeItems()
+    expect(items).toHaveLength(2)
+    const stale = items.filter((i) => /ancora\?$/.test(i.textContent!.trim()))
+    expect(stale).toHaveLength(1)
+    expect(stale[0]).toHaveTextContent('da 2g')
+    // Set apart from what comes before it, whatever that is.
+    expect(stale[0]).toHaveTextContent(/ · ancora\?$/)
+  })
+})
+
 describe('Log fast path', () => {
   it('tap region, set intensity, save', async () => {
     render(App)

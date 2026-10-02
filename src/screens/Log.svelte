@@ -16,7 +16,7 @@
   import { emptyDraft, draftToInput, type EntryDraft } from '../lib/draft'
   import { strandedLayer } from '../lib/layers'
   import { loadDraft, storeDraft, pruneUnknown } from '../lib/logDraft'
-  import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, timeProblem, type Episode } from '../lib/entries'
+  import { addEntry, deleteEntry, durationMs, activeEpisodes, latest, chainLayers, timeProblem, isStale, type Episode } from '../lib/entries'
   import { showToast, showFailure, showRefusal, haptic, toastState } from '../lib/toast.svelte'
   import { failed } from '../lib/failure'
   import { intensityColor, intensityInk } from '../lib/color'
@@ -212,7 +212,7 @@
                 episode = ep.head
               }}>
               <span class="dot" style="background: {intensityColor(hl.value)}; color: {intensityInk(hl.value)}">{read ? hl.value : '–'}</span>
-              <span><EntrySummary lead={read ? symptomName(hl.id, symptoms.value, tl) : ''} layers={chainLayers(ep)} tagDefs={tags.value} symptoms={symptoms.value} after={t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })} /></span>
+              <span><EntrySummary lead={read ? symptomName(hl.id, symptoms.value, tl) : ''} layers={chainLayers(ep)} tagDefs={tags.value} symptoms={symptoms.value} after={t('episode.since', { d: formatDuration(durationMs(ep.head, tick) ?? 0, units) })} />{#if isStale(ep, tick)}<!-- A day without a reading (#115): the line ends asking. -->{' · '}<strong class="still">{t('episode.stillQ')}</strong>{/if}</span>
             </button>
           {/each}
         {/snippet}
@@ -295,6 +295,7 @@
 </Sheet>
 
 <style>
+  .still { color: var(--accent); white-space: nowrap; }
   /* Nothing scrolls here (§6.1): the slot takes what the frame leaves. Only when the banners crowd it does the page give, so Salva is always reachable. */
   .log { padding-bottom: 0; }
   .log > :global(.form) { min-height: 440px; }
