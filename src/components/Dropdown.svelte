@@ -82,7 +82,8 @@
   .menu :global([role='menuitem']) {
     min-height: var(--tap);
     display: flex; align-items: center; gap: 12px;
-    padding: 0 12px;
+    /* Room above and below a line that wraps (#115); a one-line item keeps its height, the tap target's. */
+    padding: 8px 12px;
     border-radius: 10px;
     text-align: left;
     overflow-wrap: anywhere;
