@@ -34,7 +34,9 @@
     const c = chip.getBoundingClientRect()
     // The row's own padding, so the chip does not sit flush against the edge.
     const pad = 12
-    if (c.right > r.right) row.scrollLeft += c.right - r.right + pad
+    // A chip wider than the row (a layer tab with a long summary, #115) shows from its start, where its words begin.
+    if (c.width > r.width - 2 * pad) row.scrollLeft += c.left - r.left - pad
+    else if (c.right > r.right) row.scrollLeft += c.right - r.right + pad
     else if (c.left < r.left) row.scrollLeft -= r.left - c.left + pad
   }
 </script>
