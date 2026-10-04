@@ -98,6 +98,8 @@
   "common.save": "Save",
   "common.close": "Close",
   "log.addArea": "Another area",
+  "log.removeArea": "Delete area",
+  "log.areaRemoved": "Area deleted",
   "episode.updated": "Level updated",
   "episode.editShort": "Edit",
   "episode.update": "Update",

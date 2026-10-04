@@ -131,6 +131,47 @@ describe('A forgotten episode in the dropdown (#115)', () => {
   })
 })
 
+describe('Deleting a layer (#115)', () => {
+  it('a bin before +, while there are two layers or more, drawer open or not, removes the current one, and undo brings it back', async () => {
+    render(App)
+    await screen.findByRole('slider', { name: 'Dolore' })
+    // One layer: nothing to delete.
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    expect(screen.queryByRole('button', { name: 'Elimina zona' })).not.toBeInTheDocument()
+    await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '5' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Ginocchio sx' }))
+    await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '7' } })
+    // In the row of tabs, beside +, with the figure in sight: no need to open the drawer.
+    const bin = screen.getByRole('button', { name: 'Elimina zona' })
+    expect(bin.closest('.spine')).not.toBeNull()
+    expect(bin.nextElementSibling).toHaveAccessibleName('Altra zona')
+    await fireEvent.click(bin)
+    expect(document.querySelectorAll('.areas .chip')).toHaveLength(1)
+    expect(screen.getByRole('slider', { name: /^Dolore/ })).toHaveValue('5')
+    const toast = await findToast()
+    expect(toast).toHaveTextContent('Zona eliminata')
+    await fireEvent.click(within(toast).getByRole('button', { name: 'Annulla' }))
+    await waitFor(() => expect(document.querySelectorAll('.areas .chip')).toHaveLength(2))
+    expect(screen.getByRole('slider', { name: /^Dolore/ })).toHaveValue('7')
+  })
+
+  it('switching away keeps a layer with a level but no place, and Salva then points at it', async () => {
+    render(App)
+    await screen.findByRole('slider', { name: 'Dolore' })
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '5' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Altra zona' }))
+    await fireEvent.input(screen.getByRole('slider', { name: /^Dolore/ }), { target: { value: '7' } })
+    await fireEvent.click(document.querySelectorAll<HTMLElement>('.areas .chip')[0])
+    expect(document.querySelectorAll('.areas .chip')).toHaveLength(2)
+    await salva()
+    expect(await findToast()).toHaveTextContent('Dove? Tocca la figura')
+    expect(document.querySelectorAll<HTMLElement>('.areas .chip')[1]).toHaveAttribute('aria-pressed', 'true')
+    expect(await db.entries.count()).toBe(0)
+  })
+})
+
 describe('Log fast path', () => {
   it('tap region, set intensity, save', async () => {
     render(App)
@@ -1352,15 +1393,20 @@ describe('The stage', () => {
     await fireEvent.click(screen.getByRole('button', { name: '1h fa' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Corpo' }))
     expect(screen.getByRole('button', { name: 'Altro · 1h fa' })).toBeInTheDocument()
+    // The handle shows only its chevron (#115): the time is written on Salva, the button that records it.
+    expect(screen.getByRole('button', { name: 'Altro · 1h fa' })).toHaveTextContent(/^\s*$/)
+    expect(screen.getByRole('button', { name: 'Salva' })).toHaveTextContent('Salva · 1h fa')
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Adesso' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Corpo' }))
     expect(screen.getByRole('button', { name: 'Altro' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Salva' })).toHaveTextContent(/^Salva$/)
     await more()
     await fireEvent.click(screen.getByRole('button', { name: 'Episodio' }))
     await fireEvent.click(within(screen.getByRole('group', { name: 'Fine' })).getByRole('button', { name: '3h fa' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Corpo' }))
     expect(screen.getByRole('button', { name: 'Altro · Fine 3h fa' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Salva' })).toHaveTextContent('Salva · Fine 3h fa')
     await more()
     await fireEvent.click(within(screen.getByRole('group', { name: 'Inizio' })).getByRole('button', { name: 'Scegli…' }))
     await fireEvent.change(document.querySelector('input[type="datetime-local"]')!, { target: { value: '2026-09-01T12:30' } })

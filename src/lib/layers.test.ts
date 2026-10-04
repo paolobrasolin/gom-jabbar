@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   newLayer, showsCategory, allRegions, maxReadings, mergedReadings, mergedTags, prune, tapRegion, tapSet, toggleFull, addLayer, selectLayer,
-  setReading, toggleTag, pieceCount, finalize, readingsFor, hasBody, holdsMind, strandedLayer, type Layer, type LayerState,
+  setReading, toggleTag, pieceCount, finalize, readingsFor, hasBody, holdsMind, strandedLayer, removeLayer, type Layer, type LayerState,
 } from './layers'
 import { LEG_IDS, MIND } from './regions'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
@@ -79,24 +79,36 @@ describe('editing layers', () => {
 
   it('adds a layer only when the current one has regions, drops empty layers when leaving them', () => {
     const s0 = one()
-    expect(addLayer(s0, { pain: 3 })).toBe(s0)
+    expect(addLayer(s0, {})).toBe(s0)
     let s = tapRegion(s0, '110', false)
-    s = addLayer(s, { pain: 3 })
+    s = addLayer(s, {})
     expect(s.layers).toHaveLength(2)
     expect(s.cur).toBe(1)
-    expect(s.layers[1]).toEqual({ regions: [], readings: { pain: 3 }, tags: [] })
+    expect(s.layers[1]).toEqual({ regions: [], readings: {}, tags: [] })
     s = selectLayer(s, 0)
     expect(s.layers).toHaveLength(1)
     expect(s.cur).toBe(0)
-    // The emptied first layer goes when another is chosen.
-    s = addLayer(s, { pain: 3 })
-    s = tapRegion(s, '152', false)
+    expect(prune({ layers: [L([], {}), L(['110']), L([], {})], cur: 2 })).toEqual({ layers: [L(['110']), L([], {})], cur: 1 })
+  })
+
+  it('keeps a layer with no place when leaving it, if a level or a tag is set on it: Salva says so instead (#115)', () => {
+    let s = addLayer(tapRegion(one(), '110', false), {})
+    s = setReading(s, 'pain', 3)
     s = selectLayer(s, 0)
-    s = tapRegion(s, '110', false)
-    s = selectLayer(s, 1)
-    expect(s.layers).toEqual([{ regions: ['152'], readings: { pain: 3 }, tags: [] }])
+    expect(s.layers).toEqual([L(['110']), L([], { pain: 3 })])
     expect(s.cur).toBe(0)
-    expect(prune({ layers: [L([]), L(['110']), L([])], cur: 2 })).toEqual({ layers: [L(['110']), L([])], cur: 1 })
+    // A tag alone counts too; an emptied layer that kept its level stays as well.
+    expect(prune({ layers: [L([], {}, ['heat']), L(['110'])], cur: 1 }).layers).toHaveLength(2)
+    s = selectLayer(tapRegion(selectLayer(s, 0), '110', false), 1)
+    expect(s.layers).toEqual([L([], { pain: 5 }), L([], { pain: 3 })])
+  })
+
+  it('removes the current layer and selects the one before it, never the last layer (#115)', () => {
+    const s = { layers: [L(['110']), L(['152'], { pain: 2 }), L(['224'], { pain: 7 })], cur: 1 }
+    expect(removeLayer(s)).toEqual({ layers: [L(['110']), L(['224'], { pain: 7 })], cur: 0 })
+    expect(removeLayer({ ...s, cur: 0 })).toEqual({ layers: [L(['152'], { pain: 2 }), L(['224'], { pain: 7 })], cur: 0 })
+    const single = { layers: [L(['110'])], cur: 0 }
+    expect(removeLayer(single)).toBe(single)
   })
 
   it('readings and tags belong to the current layer', () => {
@@ -150,6 +162,8 @@ describe('strandedLayer (#115)', () => {
     expect(strandedLayer([L(['152']), L([], { pain: 7 })])).toBe(1)
     expect(strandedLayer([L(['152']), L([], {}, ['heat'])])).toBe(1)
     expect(strandedLayer([L([], { pain: 3 }), L(['152'])])).toBe(0)
+    // Several layers and none with a place: a save keeps only the first, so the others would be lost.
+    expect(strandedLayer([L([], { pain: 3 }), L([], { pain: 7 })])).toBe(0)
   })
 
   it('lets through what a save keeps on purpose', () => {

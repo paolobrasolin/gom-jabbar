@@ -98,6 +98,8 @@
   "common.save": "Salva",
   "common.close": "Chiudi",
   "log.addArea": "Altra zona",
+  "log.removeArea": "Elimina zona",
+  "log.areaRemoved": "Zona eliminata",
   "episode.updated": "Intensità aggiornata",
   "episode.editShort": "Modifica",
   "episode.update": "Aggiorna",

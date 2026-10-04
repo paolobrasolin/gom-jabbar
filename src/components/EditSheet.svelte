@@ -61,6 +61,8 @@
   })
 
   let form = $state<EntryForm>()
+  /** The time set past the fast path, written on Salva (#115). */
+  let when = $state('')
   /**
    * With the form's drawer pulled up it fills the sheet down to Salva: a toast (a refusal pointing at a time row) goes to
    * the top of the screen, as on the log (§6.1), and back where it was when the sheet closes.
@@ -147,11 +149,11 @@
 </script>
 
 <Sheet bind:open title={t('diary.edit')} tall>
-  <EntryForm bind:this={form} bind:draft bind:opened {symptoms} {tags} {lock}>
+  <EntryForm bind:this={form} bind:draft bind:opened bind:when {symptoms} {tags} {lock}>
     {#snippet actions()}
       <div class="row">
         <button class="btn danger" onclick={remove}>{t('diary.delete')}</button>
-        <button class="btn primary grow" onclick={save}>{t('common.save')}</button>
+        <button class="btn primary grow" onclick={save} aria-label={t('common.save')}>{when ? `${t('common.save')} · ${when}` : t('common.save')}</button>
       </div>
     {/snippet}
     {#snippet more()}

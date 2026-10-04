@@ -3,7 +3,7 @@ import { resetDb } from './db'
 import { addEntry, updateEntry, editEntry, deleteEntry, restoreEntries, endEpisode, reopenEpisode, activeEpisodes, durationMs, makeEntry, logUpdate, loadEpisode, latest, chainLayers, timeProblem, episodesOf, isHead, isUpdate, isActive, isStale } from './entries'
 import { draftFromEntry, draftToInput, emptyDraft } from './draft'
 import { DEFAULT_SYMPTOMS } from './vocabulary'
-import { selectLayer } from './layers'
+import { removeLayer } from './layers'
 
 let db: ReturnType<typeof resetDb>
 beforeEach(() => {
@@ -336,9 +336,8 @@ describe('an edit never drops a reading the entry already had', () => {
     const d = draftFromEntry(e)
     // On the arms layer the tester selects the brain, sets fog 4, deselects it: §6.1 says that reading does not survive.
     d.layers[1].readings.fog = 4
-    // Then empties the legs layer and taps the arms tab: the form prunes the empty layer (EntryForm → selectLayer).
-    d.layers[0].regions = []
-    const st = selectLayer({ layers: d.layers, cur: 0 }, 1)
+    // Then deletes the legs layer: Elimina zona (EntryForm → removeLayer, #115).
+    const st = removeLayer({ layers: d.layers, cur: 0 })
     d.layers = st.layers
     d.cur = st.cur
     expect(d.layers).toHaveLength(1)

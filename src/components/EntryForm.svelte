@@ -15,7 +15,7 @@
   import { live } from '../lib/live.svelte'
   import { frequentTags } from '../lib/vocab'
   import { LEG_IDS, ARM_IDS, HEAD_IDS, TORSO_IDS, sided, type View } from '../lib/regions'
-  import { isFull, showsCategory, readingsFor, tapRegion, tapSet, toggleFull, addLayer, selectLayer, setReading, toggleTag, pieceCount, type LayerState } from '../lib/layers'
+  import { isFull, showsCategory, readingsFor, tapRegion, tapSet, toggleFull, addLayer, selectLayer, removeLayer, setReading, toggleTag, pieceCount, type LayerState } from '../lib/layers'
   import { addStroke, undoStroke, clearStrokes, mainView, type RawStroke } from '../lib/strokes'
   import { firstEnabled, isMindSymptom } from '../lib/vocabulary'
   import { ICONS } from '../lib/icons'
@@ -45,6 +45,7 @@
     more,
     peek = $bindable(0),
     opened = $bindable(false),
+    when = $bindable(''),
   }: {
     draft: EntryDraft
     symptoms?: Symptom[]
@@ -58,6 +59,8 @@
     peek?: number
     /** Whether the drawer is pulled up: then it covers the form down to Salva, and a toast has no room above it. */
     opened?: boolean
+    /** A time set past the fast path, "1h fa", "Fine 3h fa", or empty: Salva writes it (#115), the handle being a chevron. */
+    when?: string
   } = $props()
 
   // The strip: every enabled tag, the most used first (§6.1). Expanded, the same tags by group take its place.
@@ -157,12 +160,13 @@
     const base = headSym ? tl(headSym.label) : ''
     return draft.layers.length > 1 && cur.regions.length ? `${base} · ${regionText(cur.regions, t)}` : base
   })
-  /** The handle says what the drawer holds that is not the default: a time, or an end. */
-  const handleLabel = $derived.by(() => {
-    if (open) return t('log.body')
-    const when = draft.at ? timeLabel(draft.at) : draft.endedAt && lock !== 'reading' ? `${t('time.end')} ${timeLabel(draft.endedAt, false)}` : null
-    return when ? `${t('log.more')} · ${when}` : t('log.more')
+  /** What the drawer holds that is not the default: a time, or an end. */
+  const setWhen = $derived(draft.at ? timeLabel(draft.at) : draft.endedAt && lock !== 'reading' ? `${t('time.end')} ${timeLabel(draft.endedAt, false)}` : '')
+  $effect(() => {
+    when = setWhen
   })
+  /** The handle's name, read aloud: it shows only a chevron (#115), so the name carries what the label used to say. */
+  const handleLabel = $derived(open ? t('log.body') : setWhen ? `${t('log.more')} · ${setWhen}` : t('log.more'))
   /** The quick sets of the rail (#22), a row each: with mirror on, a limb is both sides; off, its two sides share the row. */
   const quick = $derived.by(() => {
     const limbs = prefs.mirror
@@ -241,6 +245,14 @@
   function onAddLayer() {
     apply(addLayer(st(), {}))
     open = false
+  }
+
+  /** Elimina zona (#115): the current layer goes, with its places, levels, tags and paint; the toast brings it back. */
+  function onRemoveLayer() {
+    const before = $state.snapshot({ layers: draft.layers, cur: draft.cur }) as LayerState
+    apply(removeLayer(st()))
+    haptic(20)
+    showToast(t('log.areaRemoved'), { label: t('log.undo'), run: () => apply(before) })
   }
 
   /** The handle: a tap toggles the drawer, a vertical drag of a few pixels slides it the way it goes. */
@@ -345,6 +357,12 @@
             {/each}
           {/if}
         </div>
+        <!-- Beside +, out of the tabs a drag scrolls (#115): a stray tap there cannot delete. -->
+        {#if draft.layers.length > 1}
+          <button class="chip small outline plus" aria-label={t('log.removeArea')} onclick={onRemoveLayer}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{#each ICONS.clear as d, i (i)}<path {d} />{/each}</svg>
+          </button>
+        {/if}
         {#if cur.regions.length}
           <button class="chip small outline plus" aria-label={t('log.addArea')} onclick={onAddLayer}>+</button>
         {/if}
@@ -356,9 +374,9 @@
             onpointermove={hmove}
             onpointerup={hup}
             onpointercancel={hup}
-            onclick={hclick}>
-            {handleLabel}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            onclick={hclick}
+            aria-label={handleLabel}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               {#if open}<path d="M6 9l6 6 6-6" />{:else}<path d="M6 15l6-6 6 6" />{/if}
             </svg>
           </button>
@@ -461,7 +479,8 @@
   .areas { flex: 1; min-height: 44px; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -12px; padding: 2px 4px 2px 12px; }
   .areas::-webkit-scrollbar { display: none; }
   .plus { flex: none; width: 40px; padding: 0; justify-content: center; font-size: 18px; }
-  .handle { flex: none; padding-right: 8px; touch-action: none; }
+  /* A chevron, the size of + (#115): its words are its name. */
+  .handle { flex: none; width: 40px; padding: 0; justify-content: center; touch-action: none; }
   .placeholder { padding-left: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The kind switch: one pill, two halves, the pressed one filled. */
   .seg { display: inline-flex; align-self: flex-start; border: 1.5px solid var(--border); border-radius: 999px; padding: 3px; gap: 3px; }

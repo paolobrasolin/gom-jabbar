@@ -68,9 +68,15 @@ export function mergedTags(layers: { tags: string[] }[]): string[] {
   return uniq(layers.flatMap((l) => l.tags))
 }
 
-/** Drop layers without regions, except the current one, and clamp `cur`. */
+/** Something set on a layer: a level or a tag. */
+const holdsSomething = (l: Layer): boolean => Object.keys(l.readings).length > 0 || l.tags.length > 0
+
+/**
+ * Drop the empty layers, without regions and with nothing set, except the current one, and clamp `cur`. A layer with
+ * no place but a level or a tag stays (#115): Salva points at it, and Elimina zona is how a layer goes.
+ */
 export function prune({ layers, cur }: LayerState): LayerState {
-  const kept = layers.filter((l, i) => l.regions.length > 0 || i === cur)
+  const kept = layers.filter((l, i) => l.regions.length > 0 || holdsSomething(l) || i === cur)
   const next = Math.max(0, Math.min(kept.indexOf(layers[cur]), kept.length - 1))
   return { layers: kept, cur: next }
 }
@@ -130,6 +136,12 @@ export function selectLayer(state: LayerState, i: number): LayerState {
   return prune({ ...state, cur: i })
 }
 
+/** Elimina zona (#115): the current layer goes, the one before it becomes current; the last layer stays. */
+export function removeLayer(state: LayerState): LayerState {
+  if (state.layers.length < 2) return state
+  return prune({ layers: state.layers.filter((_, i) => i !== state.cur), cur: Math.max(0, state.cur - 1) })
+}
+
 export function setReading(state: LayerState, id: string, v: number): LayerState {
   const l = state.layers[state.cur]
   if (!l) return state
@@ -148,13 +160,12 @@ export function pieceCount(layers: Layer[]): number {
 }
 
 /**
- * A layer a save would drop with something set on it (#115): no place, but a level or a tag, while another layer has a
- * place (a reading with no place at all is valid, §6.1). Its index, or null. Switching away still drops it: that is how a
- * layer is deleted (§5.4), so in the form it can only be the current one.
+ * A layer a save would drop with something set on it (#115): no place, but a level or a tag, among several layers (a
+ * reading with no place at all is valid, §6.1, but a save keeps only the placed layers, or the first). Its index, or null.
  */
 export function strandedLayer(layers: Layer[]): number | null {
-  if (!layers.some((l) => l.regions.length)) return null
-  const i = layers.findIndex((l) => !l.regions.length && (Object.keys(l.readings).length > 0 || l.tags.length > 0))
+  if (layers.length < 2) return null
+  const i = layers.findIndex((l) => !l.regions.length && holdsSomething(l))
   return i < 0 ? null : i
 }
 

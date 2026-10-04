@@ -140,6 +140,8 @@
   }
 
   let form = $state<EntryForm>()
+  /** The time set past the fast path, written on Salva (#115): the drawer's handle is a bare chevron. */
+  let when = $state('')
   async function save() {
     if (saving || cooling) return
     // An end before the start is not a reading anyone had: say so and show the row, save nothing (§5.5, §10).
@@ -269,11 +271,11 @@
   {/if}
 
   <!-- The slot over the frame (#22): the form draws the figure, the frame carries the fast path and the Salva bar. -->
-  <EntryForm bind:this={form} bind:draft bind:peek bind:opened symptoms={symptoms.value} tags={tags.value}>
+  <EntryForm bind:this={form} bind:draft bind:peek bind:opened bind:when symptoms={symptoms.value} tags={tags.value}>
     {#snippet actions()}
       <div class="actions">
         <button class="btn" onclick={clear} disabled={!dirty}>{t('log.clear')}</button>
-        <button class="btn primary grow" onclick={save} disabled={saving || cooling || outdated.value}>{t('log.save')}</button>
+        <button class="btn primary grow" onclick={save} disabled={saving || cooling || outdated.value} aria-label={t('log.save')}>{when ? `${t('log.save')} · ${when}` : t('log.save')}</button>
       </div>
     {/snippet}
   </EntryForm>
