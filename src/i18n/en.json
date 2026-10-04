@@ -132,6 +132,7 @@
   "vocab.add": "Add",
   "vocab.addPlaceholder": "New…",
   "vocab.delete": "Delete {name}",
+  "vocab.rename": "Rename {name}",
   "vocab.deleted": "Deleted: {name}",
   "vocab.entries": "{n} entries",
   "vocab.entries.one": "{n} entry",

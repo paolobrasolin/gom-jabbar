@@ -57,6 +57,8 @@
   /** Elimina (§6.4): no dialog, an undo toast that puts the item back as it was. */
   async function remove(item: Symptom | Tag) {
     const name = tl(item.label)
+    // The field it was deleted from closes: undo brings the item back as a row, not mid-rename.
+    editingId = null
     const gone = await deleteItem(table, item.id)
     if (!gone) return
     haptic(20)
@@ -94,17 +96,22 @@
             {#if editingId === item.id}
               <!-- svelte-ignore a11y_autofocus -->
               <input class="grow rename" type="text" bind:value={editText} onblur={commitEdit} onkeydown={(e) => e.key === 'Enter' && commitEdit()} autofocus />
+              <!-- Deleting is rare (#115): it lives here, beside the name being edited, for an item nothing uses. Pressing it keeps the field's focus, so its blur does not close the field first. -->
+              {#if !u}
+                <button class="square" aria-label={t('vocab.delete', { name: tl(item.label) })} onpointerdown={(e) => e.preventDefault()} onclick={() => remove(item)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    {#each ICONS.clear as d, i (i)}<path {d} />{/each}
+                  </svg>
+                </button>
+              {/if}
             {:else}
-              <!-- A tap renames in place (#115): the pencil says so, where the name alone read as plain text. -->
-              <button class="grow name" onclick={() => startEdit(item)}>{tl(item.label)}<svg class="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></svg></button>
-            {/if}
-            {#if u}
-              <span class="small muted use">{usageText(u)}</span>
-            {:else}
-              <button class="del" aria-label={t('vocab.delete', { name: tl(item.label) })} onclick={() => remove(item)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  {#each ICONS.clear as d, i (i)}<path {d} />{/each}
-                </svg>
+              <div class="grow who">
+                <button class="name" onclick={() => startEdit(item)}>{tl(item.label)}</button>
+                {#if u}<span class="small muted use">{usageText(u)}</span>{/if}
+              </div>
+              <!-- Renaming says so (#115): a name alone read as plain text. -->
+              <button class="square" aria-label={t('vocab.rename', { name: tl(item.label) })} onclick={() => startEdit(item)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></svg>
               </button>
             {/if}
             <button class="arrow" aria-label="↑" onclick={() => move(table, item.id, -1)}>↑</button>
@@ -132,14 +139,16 @@
   .list { display: flex; flex-direction: column; gap: 4px; }
   .item { display: flex; align-items: center; gap: 8px; min-height: 48px; }
   .item.off .name { color: var(--ink-2); text-decoration: line-through; }
-  .name { display: flex; align-items: center; gap: 8px; text-align: left; min-height: 44px; padding: 0 6px; border-radius: 8px; }
-  .pencil { width: 14px; height: 14px; flex: none; color: var(--ink-2); }
+  /* The name, its usage under it: the row keeps its width for the buttons. */
+  .who { display: flex; flex-direction: column; justify-content: center; min-width: 0; min-height: 44px; }
+  .name { text-align: left; padding: 2px 6px; border-radius: 8px; overflow-wrap: anywhere; }
   .name:active { background: var(--surface-2); }
   .rename, .add input { min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); }
-  .use { flex: none; max-width: 30%; text-align: right; line-height: 1.2; }
-  .del { width: 44px; min-height: 44px; flex: none; border-radius: 8px; color: var(--ink-2); display: grid; place-items: center; }
-  .del svg { width: 20px; height: 20px; }
-  .del:active { background: var(--surface-2); }
+  .use { padding: 0 6px; line-height: 1.2; }
+  /* ✎ and the bin, the same squares as ↑ and ↓ (#115). */
+  .square { width: 44px; min-height: 44px; flex: none; border-radius: 8px; background: var(--surface-2); display: grid; place-items: center; }
+  .square svg { width: 20px; height: 20px; }
+  .square:active, .arrow:active { filter: brightness(0.94); }
   .arrow { width: 44px; min-height: 44px; border-radius: 8px; background: var(--surface-2); font-size: 16px; }
   .add { padding-top: 4px; }
 </style>

@@ -17,6 +17,11 @@ beforeEach(() => {
 
 const names = () => Array.from(document.querySelectorAll('.item .name')).map((b) => b.textContent)
 const itemOf = (name: string) => screen.getByRole('button', { name }).closest('.item') as HTMLElement
+/** Deleting lives in the rename field (#115): open it, then Elimina. */
+async function deleteNamed(name: string) {
+  await fireEvent.click(await screen.findByRole('button', { name: `Rinomina ${name}` }))
+  await fireEvent.click(await screen.findByRole('button', { name: `Elimina ${name}` }))
+}
 
 describe('Vocabulary editor: symptoms', () => {
   it('lists the symptoms by category in order, every one switchable, pain included', async () => {
@@ -72,11 +77,11 @@ describe('Vocabulary editor: symptoms', () => {
     await waitFor(() => expect(itemOf('Gonfiore')).not.toHaveClass('off'))
   })
 
-  it('a name looks tappable: a pencil says it renames, and the button keeps the name as its name (#115)', async () => {
+  it('a ✎ button renames, as a tap on the name does; the name keeps its own button name (#115)', async () => {
     render(VocabEditor, { table: 'symptoms' })
-    const name = await screen.findByRole('button', { name: 'Gonfiore' })
-    expect(name.querySelector('svg.pencil')).toHaveAttribute('aria-hidden', 'true')
-    expect(names()[1]).toBe('Gonfiore')
+    await fireEvent.click(await screen.findByRole('button', { name: 'Rinomina Gonfiore' }))
+    expect(screen.getByDisplayValue('Gonfiore')).toBeInTheDocument()
+    expect(names()[0]).toBe('Dolore')
   })
 
   it('renames on Enter: the typed word replaces the name, in every language', async () => {
@@ -252,10 +257,14 @@ describe('Vocabulary editor: deleting (§6.4)', () => {
     await addPreset({ name: 'P', kind: 'chronic', layers: [{ regions: ['mind'], asks: ['fog'] }] })
     render(VocabEditor, { table: 'symptoms' })
     await waitFor(() => expect(within(itemOf('Gonfiore')).getByText('2 voci')).toBeInTheDocument())
-    expect(within(itemOf('Gonfiore')).queryByRole('button', { name: 'Elimina Gonfiore' })).not.toBeInTheDocument()
     expect(within(itemOf('Nebbia mentale')).getByText('1 preset')).toBeInTheDocument()
-    expect(within(itemOf('Nebbia mentale')).queryByRole('button', { name: /Elimina/ })).not.toBeInTheDocument()
-    expect(within(itemOf('Pesantezza')).getByRole('button', { name: 'Elimina Pesantezza' })).toBeInTheDocument()
+    // Not on the row (#115): in the rename field, and only for what nothing uses.
+    expect(screen.queryByRole('button', { name: /^Elimina/ })).not.toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Rinomina Gonfiore' }))
+    expect(screen.queryByRole('button', { name: /^Elimina/ })).not.toBeInTheDocument()
+    await fireEvent.keyDown(screen.getByDisplayValue('Gonfiore'), { key: 'Enter' })
+    await fireEvent.click(screen.getByRole('button', { name: 'Rinomina Pesantezza' }))
+    expect(screen.getByRole('button', { name: 'Elimina Pesantezza' })).toBeInTheDocument()
     // Pain is used, so it stays; unused, it could go like any other.
     expect(within(itemOf('Dolore')).getByText('2 voci')).toBeInTheDocument()
   })
@@ -270,7 +279,8 @@ describe('Vocabulary editor: deleting (§6.4)', () => {
     })
     render(VocabEditor, { table: 'tags' })
     await waitFor(() => expect(within(itemOf('Riposo')).getByText('1 voce')).toBeInTheDocument())
-    expect(within(itemOf('Riposo')).queryByRole('button', { name: 'Elimina Riposo' })).not.toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'Rinomina Riposo' }))
+    expect(screen.queryByRole('button', { name: 'Elimina Riposo' })).not.toBeInTheDocument()
     expect(await deleteItem('tags', 'rest')).toBeUndefined()
     expect(await deleteItem('symptoms', 'stiffness')).toBeUndefined()
     expect(await db.tags.get('rest')).toBeDefined()
@@ -279,7 +289,7 @@ describe('Vocabulary editor: deleting (§6.4)', () => {
 
   it('deletes with an undo toast, no dialog, and undo puts the item back in its place', async () => {
     render(VocabEditor, { table: 'tags' })
-    await fireEvent.click(await screen.findByRole('button', { name: 'Elimina Stress' }))
+    await deleteNamed('Stress')
     await waitFor(() => expect(names()).not.toContain('Stress'))
     expect(await db.tags.get('stress')).toBeUndefined()
     expect(toastState.current?.message).toBe('Eliminato: Stress')
@@ -291,7 +301,7 @@ describe('Vocabulary editor: deleting (§6.4)', () => {
   it('can empty a whole group', async () => {
     render(VocabEditor, { table: 'tags' })
     for (const name of ['Ciclo', 'Stress', 'Dormito male', 'A lungo in piedi', 'A lungo a sedere', 'Clima caldo', 'Clima freddo', 'Viaggio']) {
-      await fireEvent.click(await screen.findByRole('button', { name: `Elimina ${name}` }))
+      await deleteNamed(name)
       await waitFor(() => expect(names()).not.toContain(name))
     }
     expect(await db.tags.where('group').equals('context').count()).toBe(0)
