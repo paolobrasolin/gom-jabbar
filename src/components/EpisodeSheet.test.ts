@@ -271,6 +271,49 @@ describe('a migrated episode', () => {
   })
 })
 
+describe('A symptom the episode did not start with (#111)', () => {
+  const fold = (sheet: HTMLElement) => within(sheet).getByRole('button', { name: 'Altri sintomi' })
+
+  it("the layer's other symptoms wait folded under the ones read; opened, blank, and Aggiorna records the one set", async () => {
+    const id = await seedEpisode()
+    render(App)
+    const sheet = await openEpisode()
+    expect(within(sheet).getAllByRole('slider').map((s) => s.getAttribute('aria-label'))).toEqual(['Dolore'])
+    expect(fold(sheet)).toHaveAttribute('aria-expanded', 'false')
+    await fireEvent.click(fold(sheet))
+    expect(fold(sheet)).toHaveAttribute('aria-expanded', 'true')
+    // The body's other symptoms, in vocabulary order, every one blank; the mind's are not this layer's.
+    const names = within(sheet).getAllByRole('slider').map((s) => s.getAttribute('aria-label'))
+    expect(names[0]).toBe('Dolore')
+    expect(names).toContain('Gonfiore')
+    expect(names).not.toContain('Nebbia mentale')
+    const swelling = within(sheet).getByRole('slider', { name: 'Gonfiore' })
+    expect(swelling).toHaveAttribute('aria-valuetext', 'non indicato')
+    await fireEvent.input(swelling, { target: { value: '3' } })
+    // Set, it stays where it was, under the fold.
+    expect(within(sheet).getAllByRole('slider').map((s) => s.getAttribute('aria-label'))).toEqual(names)
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Aggiorna' }))
+    await waitFor(async () => expect(await updates()).toHaveLength(2))
+    expect((await updates())[1].layers[0].readings).toEqual({ pain: 4, swelling: 3 })
+    // Read now: next time it is one of the episode's own, and the fold starts closed.
+    const again = await openEpisode()
+    expect(within(again).getAllByRole('slider').map((s) => s.getAttribute('aria-label'))).toEqual(['Dolore', 'Gonfiore'])
+    expect(fold(again)).toHaveAttribute('aria-expanded', 'false')
+    void id
+  })
+
+  it('Termina keeps a new symptom set to 0: a 0 chosen is a reading', async () => {
+    const id = await seedEpisode()
+    render(App)
+    const sheet = await openEpisode()
+    await fireEvent.click(fold(sheet))
+    await fireEvent.input(within(sheet).getByRole('slider', { name: 'Gonfiore' }), { target: { value: '0' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Termina adesso' }))
+    await waitFor(async () => expect((await db.entries.get(id))?.endedAt).not.toBeNull())
+    expect((await updates()).at(-1)?.layers[0].readings).toEqual({ pain: 4, swelling: 0 })
+  })
+})
+
 describe('A forgotten episode (#115)', () => {
   /** An episode started two days ago at 7, read last at 5 a day and a half ago: nothing since. */
   async function seedStale() {

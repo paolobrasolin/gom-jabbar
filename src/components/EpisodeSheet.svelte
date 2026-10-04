@@ -32,6 +32,12 @@
   let ep = $state.raw<Episode | null>(null)
   /** A note for this reading. */
   let note = $state('')
+  /** What each layer had read when the sheet opened: its sliders, fixed for the session, so one set from the fold stays put. */
+  let read = $state<string[][]>([])
+  /** The levels as the sheet opened: anything else is a change, a 0 chosen for a new symptom included. */
+  let initial = ''
+  /** The layer's other symptoms, unfolded (#111): closed each time the sheet opens. */
+  let others = $state(false)
 
   $effect(() => {
     if (entry) {
@@ -49,6 +55,9 @@
           if (lead && body && !(lead in lv) && !Object.keys(l.readings).length) lv[lead] = 0
           return lv
         })
+        read = levels.map((l) => Object.keys(l))
+        initial = JSON.stringify(levels)
+        others = false
         // Nothing pressed: a chip means "this, now", never "still".
         picked = from.layers.map(() => [])
         note = ''
@@ -148,7 +157,7 @@
   )
   /** Sliders of the current layer in vocabulary order; a symptom missing from the vocabulary still gets one, named by its id. */
   const tracked = $derived.by(() => {
-    const ids = Object.keys(levels[cur] ?? {})
+    const ids = [...(read[cur] ?? [])]
     const def = (id: string) => symptoms.find((s) => s.id === id)
     const order = (id: string) => def(id)?.order ?? 1e9
     const name = (id: string) => {
@@ -157,10 +166,20 @@
     }
     return ids.sort((a, b) => order(a) - order(b)).map((id) => ({ id, label: name(id) }))
   })
+  /**
+   * A symptom the episode did not start with (#111): the layer's other enabled symptoms, in vocabulary order, behind a fold
+   * under the ones read. Blank, they record nothing; set, Aggiorna or Termina records them like any other.
+   */
+  const untracked = $derived.by(() => {
+    // Read only inside the sheet's body, where the latest reading and its layer exist.
+    const layer = now!.layers[cur]
+    const have = new Set(read[cur] ?? [])
+    return [...symptoms].filter((s) => s.enabled && !have.has(s.id) && showsCategory(layer, s.category)).sort((a, b) => a.order - b.order).map((s) => ({ id: s.id, label: tl(s.label) }))
+  })
   /** Each layer as it stands in the sheet, for the chips: its regions, its edited level. */
   const edited = $derived((now?.layers ?? []).map((l, i) => ({ ...l, readings: { ...l.readings, ...levels[i] }, tags: picked[i] ?? l.tags })))
   /** Whether the sliders or the chips moved since the latest reading: Termina then records one more reading first. */
-  const changed = $derived(!!now && (!!note.trim() || picked.some((p) => p.length) || now.layers.some((l, i) => Object.entries(levels[i] ?? {}).some(([id, v]) => (l.readings[id] ?? 0) !== v))))
+  const changed = $derived(!!now && (!!note.trim() || picked.some((p) => p.length) || JSON.stringify(levels) !== initial))
 
   /** A save in flight: the second tap of a double tap does nothing. */
   let busy = false
@@ -263,6 +282,22 @@
       {#each tracked as s (s.id)}
         <IntensitySlider label={s.label} value={levels[cur][s.id]} onchange={(v) => (levels[cur][s.id] = v)} />
       {/each}
+      {#if untracked.length}
+        <!-- The chevron of "Tutti i tag" (§6.1): the common case stays short, a late symptom is a tap away (#111). -->
+        <div class="fold">
+          <button class="chip small expand" aria-expanded={others} aria-label={t('episode.otherSymptoms')} onclick={() => (others = !others)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              {#if others}<path d="M6 15l6-6 6 6" />{:else}<path d="M6 9l6 6 6-6" />{/if}
+            </svg>
+          </button>
+          <span class="fold-label" aria-hidden="true">{t('episode.otherSymptoms')}</span>
+        </div>
+        {#if others}
+          {#each untracked as s (s.id)}
+            <IntensitySlider label={s.label} value={levels[cur][s.id] ?? null} onchange={(v) => (levels[cur][s.id] = v)} />
+          {/each}
+        {/if}
+      {/if}
       {#each remedies as { g, items } (g)}
         <div>
           <p class="small muted group-title">{t(`tag.group.${g}`)}</p>
@@ -284,6 +319,9 @@
 
 <style>
   .head { display: flex; align-items: flex-start; gap: 8px; }
+  .fold { display: flex; align-items: center; gap: 10px; }
+  .fold .expand { width: 44px; padding: 0; justify-content: center; color: var(--ink-2); }
+  .fold-label { font-size: 15px; font-weight: 600; color: var(--ink-2); }
   /* The forgotten episode's question (#115), first in the sheet. */
   .stale { display: flex; flex-direction: column; gap: 8px; border: 1.5px solid var(--accent); }
   .ask { margin: 0; font-weight: 700; }
