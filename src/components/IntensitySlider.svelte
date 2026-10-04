@@ -89,7 +89,8 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="track-wrap" onpointerdown={down}>
     <!-- The track's unfilled part, with the ends in words (#112): behind the input, so the fill and the thumb cover them. -->
-    <div class="ends" aria-hidden="true"><span>{t('scale.min')}</span><span>{t('scale.max')}</span></div>
+    <!-- Each word only while the thumb is away from its end: near it, the thumb covered part of it ("1 ente"). -->
+    <div class="ends" aria-hidden="true"><span>{blank || value === 0 ? t('scale.min') : ''}</span><span>{blank || value! < 8 ? t('scale.max') : ''}</span></div>
     <input
       bind:this={input}
       type="range"

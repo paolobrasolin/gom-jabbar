@@ -59,6 +59,22 @@ describe('IntensitySlider ends', () => {
     expect(screen.getByText('massimo')).toBeTruthy()
   })
 
+  it('shows each word only while the thumb is away from it, so the thumb never leaves part of one peeking out', async () => {
+    prefs.lang = 'it'
+    const { rerender } = render(IntensitySlider, { label: 'Dolore', value: null })
+    expect(screen.getByText('assente')).toBeTruthy()
+    await rerender({ label: 'Dolore', value: 0 })
+    expect(screen.getByText('assente')).toBeTruthy()
+    await rerender({ label: 'Dolore', value: 1 })
+    expect(screen.queryByText('assente')).toBeNull()
+    expect(screen.getByText('massimo')).toBeTruthy()
+    // On a phone the thumb reaches the word at 8: it shows up to 7.
+    await rerender({ label: 'Dolore', value: 7 })
+    expect(screen.getByText('massimo')).toBeTruthy()
+    await rerender({ label: 'Dolore', value: 8 })
+    expect(screen.queryByText('massimo')).toBeNull()
+  })
+
   it('reads the word aloud at either end, and the bare number between', async () => {
     prefs.lang = 'it'
     const { rerender } = render(IntensitySlider, { label: 'Dolore', value: 0 })
