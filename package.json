@@ -14,7 +14,7 @@
     "test": "vitest run --coverage",
     "coverage": "COVERAGE_HTML=1 vitest run --coverage",
     "test:watch": "vitest",
-    "preversion": "npm run check && npm test"
+    "preversion": "npm run check && npm test && npm run build && npm run size && npm run notices"
   },
   "dependencies": {
     "dexie": "^4.0.10",
