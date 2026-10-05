@@ -94,10 +94,12 @@ const entries = (symptomIds: string[], tagIds: string[], presetIds: string[]) =>
   )
   return fc
     .array(fc.oneof(chronic, episode), { maxLength: 12 })
-    .map((groups) => groups.flat())
-    // Ids are unique across the diary: a clash between two generated groups keeps the first.
-    .map((all) => all.filter((e, i) => all.findIndex((x) => x.id === e.id) === i))
-    .map((all) => all.filter((e) => !e.episodeId || all.some((h) => h.id === e.episodeId)))
+    // Ids are unique across the diary: a clash keeps the first group whole and drops the other whole, so no update
+    // lands under another episode's start, earlier than it (the app refuses that on save).
+    .map((groups) => {
+      const seen = new Set<string>()
+      return groups.filter((g) => g.every((e) => !seen.has(e.id)) && (g.forEach((e) => seen.add(e.id)), true)).flat()
+    })
 }
 
 const preset = (pid: string, symptomIds: string[]): fc.Arbitrary<Preset> =>
