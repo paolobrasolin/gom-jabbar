@@ -5,7 +5,7 @@ import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
 import { addEntry, isUpdate } from '../lib/entries'
 import { addPreset } from '../lib/presets'
-import { dismissToast } from '../lib/toast.svelte'
+import { dismissToast, toastState } from '../lib/toast.svelte'
 import { go, openEpisode, pickPreset } from '../test/nav'
 import App from '../App.svelte'
 import VocabEditor from '../components/VocabEditor.svelte'
@@ -37,6 +37,32 @@ describe('Log Salva', () => {
     await fireEvent.click(salva())
     await waitFor(async () => expect((await db.entries.toArray()).some((e) => e.layers[0].readings.pain === 7)).toBe(true))
     expect((await db.entries.toArray()).map((e) => e.layers[0].readings.pain).sort()).toEqual([5, 7])
+  })
+
+  it('two taps in one go save once', async () => {
+    render(App)
+    await fireEvent.input(await screen.findByRole('slider', { name: 'Dolore' }), { target: { value: '5' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Coscia dx' }))
+    // Both taps before Svelte disables the button: only the guard in save() stops the second.
+    salva().click()
+    salva().click()
+    await waitFor(() => expect(toastState.current?.message).toBe('Salvato'))
+    // Once a real save after them has landed, there are two readings, not three.
+    await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '7' } })
+    await fireEvent.click(salva())
+    await waitFor(async () => expect((await db.entries.toArray()).some((e) => e.layers[0].readings.pain === 7)).toBe(true))
+    expect((await db.entries.toArray()).map((e) => e.layers[0].readings.pain).sort()).toEqual([5, 7])
+  })
+
+  it('a tap right after a save leaves its toast and undo: the fresh form is not refused', async () => {
+    render(App)
+    await fireEvent.input(await screen.findByRole('slider', { name: 'Dolore' }), { target: { value: '5' } })
+    await fireEvent.click(salva())
+    await waitFor(() => expect(toastState.current?.message).toBe('Salvato'))
+    const saved = toastState.current!.id
+    // A refusal would show at once, inside the tap.
+    salva().click()
+    expect(toastState.current?.id).toBe(saved)
   })
 
   it('the fast path is intact: setting a level after a save makes Salva ready at once', async () => {

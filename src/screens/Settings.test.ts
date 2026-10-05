@@ -479,12 +479,13 @@ describe('Settings import', () => {
     await openSettings()
     // The second tap lands while the first is in flight. Unguarded, depending on the gap, it failed on the emptied
     // preview after the replace went through ("Ripristino non riuscito", no undo), or took its undo copy after it.
-    for (const gap of [0, 1, 2, 3, 5]) {
+    // With no gap both taps come before Svelte disables the button: only the guard in doImport stops the second.
+    for (const gap of [null, 0, 1, 2, 3, 5]) {
       await pickFile(JSON.stringify(file))
       const sheet = await screen.findByRole('dialog', { name: 'Ripristina' })
       const replace = await within(sheet).findByRole('button', { name: /^Sostituisci tutto/ })
       replace.click()
-      await new Promise((r) => setTimeout(r, gap))
+      if (gap !== null) await new Promise((r) => setTimeout(r, gap))
       replace.click()
       await waitFor(() => expect(toastState.current?.message).toBe('Ripristinata 1 voce'))
       const done = toastState.current!.id
@@ -505,8 +506,8 @@ describe('Settings import', () => {
     await pickFile(JSON.stringify(file))
     const sheet = await screen.findByRole('dialog', { name: 'Ripristina' })
     const merge = within(sheet).getByRole('button', { name: 'Unisci ai dati attuali' })
+    // Both taps before Svelte disables the button: only the guard in doImport stops the second.
     merge.click()
-    await new Promise((r) => setTimeout(r, 1))
     merge.click()
     await waitFor(() => expect(toastState.current?.message).toBe('Ripristinata 1 voce'))
     const done = toastState.current!.id
