@@ -356,7 +356,7 @@ describe('Settings backup', () => {
 
     create.mockImplementation(() => { throw new TypeError('no blobs here') })
     await fireEvent.click(screen.getByRole('button', { name: 'Backup su file' }))
-    expect((await screen.findByText('Esportazione non riuscita')).closest('.toast')).toHaveClass('failure')
+    expect((await screen.findByText('Backup non riuscito')).closest('.toast')).toHaveClass('failure')
     expect(prefs.lastBackupAt).toBeNull()
   })
 

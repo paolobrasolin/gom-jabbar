@@ -83,7 +83,7 @@
       await shareOrDownload(exportFilename('html'), standaloneHtml(), 'text/html')
       showToast(t('report.shared'))
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') showFailure(t('backup.failed'))
+      if ((err as Error).name !== 'AbortError') showFailure(t('export.failed'))
     }
   }
 </script>

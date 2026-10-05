@@ -122,7 +122,7 @@
       haptic(20)
       showToast(t('copy.done'))
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') showFailure(t('backup.failed'))
+      if ((err as Error).name !== 'AbortError') showFailure(t('export.failed'))
     } finally {
       busy = false
     }
