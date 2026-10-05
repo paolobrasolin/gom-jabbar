@@ -1,4 +1,4 @@
-import { REGIONS, REGION_BY_ID, FULL_BODY, MIND, type Side } from './regions'
+import { REGIONS, FULL_BODY, MIND, type Side } from './regions'
 
 /**
  * The words for where it hurts (#33, §5.3): one vocabulary that nests. Areas (the rail's sets) hold

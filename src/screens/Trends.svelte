@@ -75,7 +75,7 @@
   const symptom = $derived(choices.find((s) => s.id === picked) ?? choices[0])
   const sid = $derived(symptom?.id ?? PAIN)
   const series = $derived(dailySeries(entries.value, from, days, sid))
-  const summary = $derived(summarize(entries.value, days, sid))
+  const summary = $derived(summarize(entries.value, sid))
   const symMeans = $derived(symptomMeans(entries.value, symptoms.value, sid))
   /** The symptom's figures only when something in range reads it: an entry without the reading is not a 0 (#36). */
   const read = $derived(summary.mean !== null)

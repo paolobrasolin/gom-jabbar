@@ -34,7 +34,7 @@
   const symptom = $derived(symptoms.find((s) => s.id === given) ?? symptomsRead(entries, symptoms)[0])
   const sid = $derived(symptom?.id ?? PAIN)
   const series = $derived(dailySeries(entries, from, days, sid))
-  const summary = $derived(summarize(entries, days, sid))
+  const summary = $derived(summarize(entries, sid))
   const counts = $derived(tagCounts(entries, tags))
   const symMeans = $derived(symptomMeans(entries, symptoms, sid))
   /** The symptom's figures only when something in range reads it (#36). */

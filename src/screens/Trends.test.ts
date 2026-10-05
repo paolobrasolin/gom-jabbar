@@ -7,7 +7,6 @@ import { addEntry, endEpisode, logUpdate, type EntryInput } from '../lib/entries
 import { intensityColor } from '../lib/color'
 import { go } from '../test/nav'
 import App from '../App.svelte'
-import { loadAppCss } from '../test/css'
 import type { GomJabbarDB } from '../lib/db'
 
 let db: GomJabbarDB

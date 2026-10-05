@@ -28,7 +28,7 @@ describe('stats', () => {
     ]
     eps[1].endedAt = at('4', 10)
     eps[0].endedAt = at('2', 13)
-    const s = summarize([...eps, e('6', 2), e('6', 4)], 7, 'pain', now)
+    const s = summarize([...eps, e('6', 2), e('6', 4)], 'pain', now)
     expect(s.entries).toBe(4)
     expect(s.daysWithEntries).toBe(3)
     // Days 8, 6 and (2 + 4) / 2.
@@ -41,7 +41,7 @@ describe('stats', () => {
     // Both ended: 3h and 2h.
     expect(s.medianEpisodeMs).toBe(2.5 * 3_600_000)
     expect(s.ongoing).toBe(0)
-    expect(summarize([], 7).mean).toBeNull()
+    expect(summarize([]).mean).toBeNull()
   })
 
   it('episode durations: the median of the ended ones; one still going on is counted apart, never as its time so far', () => {
@@ -52,29 +52,29 @@ describe('stats', () => {
       return h
     }
     // Ended 1h, 2h, 10h; one forgotten for days, and one begun minutes ago.
-    const s = summarize([ep('1', 1), ep('2', 2), ep('3', 10), ep('4', null), makeEntry({ at: new Date(now - 300_000).toISOString(), readings: { pain: 3 }, kind: 'episode' })], 30, 'pain', now)
+    const s = summarize([ep('1', 1), ep('2', 2), ep('3', 10), ep('4', null), makeEntry({ at: new Date(now - 300_000).toISOString(), readings: { pain: 3 }, kind: 'episode' })], 'pain', now)
     expect(s.episodes).toBe(5)
     expect(s.medianEpisodeMs).toBe(2 * 3_600_000)
     expect(s.ongoing).toBe(2)
     // Nothing ended yet: no median.
-    expect(summarize([ep('4', null)], 30, 'pain', now)).toMatchObject({ episodes: 1, medianEpisodeMs: null, ongoing: 1 })
+    expect(summarize([ep('4', null)], 'pain', now)).toMatchObject({ episodes: 1, medianEpisodeMs: null, ongoing: 1 })
     // An even count: the middle two averaged.
-    expect(summarize([ep('1', 1), ep('2', 3)], 30, 'pain', now).medianEpisodeMs).toBe(2 * 3_600_000)
+    expect(summarize([ep('1', 1), ep('2', 3)], 'pain', now).medianEpisodeMs).toBe(2 * 3_600_000)
   })
 
   it('counts each day once at its worst, level by level, with the median of those days (#114)', () => {
-    const s = summarize([e('1', 3), e('1', 7), e('2', 5), e('3', 0), e('4', 7)], 7)
+    const s = summarize([e('1', 3), e('1', 7), e('2', 5), e('3', 0), e('4', 7)])
     expect(s.worst).toEqual([1, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0])
     // Days at 0, 5, 7 and 7: an even count takes the middle two.
     expect(s.median).toBe(6)
-    expect(summarize([e('1', 3), e('2', 9), e('3', 4)], 7).median).toBe(4)
+    expect(summarize([e('1', 3), e('2', 9), e('3', 4)]).median).toBe(4)
   })
 
   it('averages per day, then across days: a day logged twenty times weighs as much as a day logged once', () => {
     // 29 quiet days at 3 and one migraine day: the start at 8, then twenty updates at 8.
     const quiet = Array.from({ length: 29 }, (_, i) => makeEntry({ at: new Date(2026, 2, i + 1, 12).toISOString(), readings: { pain: 3 } }))
     const migraine = Array.from({ length: 21 }, () => makeEntry({ at: new Date(2026, 2, 30, 12).toISOString(), readings: { pain: 8 } }))
-    const s = summarize([...quiet, ...migraine], 30)
+    const s = summarize([...quiet, ...migraine])
     expect(s.mean).toBeCloseTo((29 * 3 + 8) / 30)
     expect(s.max).toBe(8)
     // The other symptoms too: two readings on one day count as that day's mean.
@@ -88,7 +88,7 @@ describe('stats', () => {
     const others = symptomMeans(entries, DEFAULT_SYMPTOMS, 'pain')
     expect(others).toEqual([{ symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'swelling'), mean: (0 + 4.5) / 2, count: 2 }])
     for (const s of DEFAULT_SYMPTOMS) {
-      const picked = summarize(entries, 7, s.id).mean
+      const picked = summarize(entries, s.id).mean
       const listed = symptomMeans(entries, DEFAULT_SYMPTOMS, 'other').find((m) => m.symptom.id === s.id)?.mean ?? null
       expect(listed, s.id).toBe(picked)
     }
@@ -98,9 +98,9 @@ describe('stats', () => {
     const mind = (day: string, fog: number) => makeEntry({ at: at(day), layers: [L(['mind'], { fog })] })
     const from = new Date(2026, 2, 1)
     expect(dailySeries([e('1', 6), mind('1', 2), mind('2', 3)], from, 2).map((p) => [p.max, p.mean, p.count])).toEqual([[6, 6, 1], [null, null, 0]])
-    const s = summarize([e('1', 6), mind('1', 2), mind('2', 3)], 7)
+    const s = summarize([e('1', 6), mind('1', 2), mind('2', 3)])
     expect(s).toMatchObject({ entries: 3, daysWithEntries: 2, mean: 6, max: 6, median: 6 })
-    expect(summarize([mind('1', 2)], 7)).toMatchObject({ entries: 1, mean: null, max: null, median: null, worst: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] })
+    expect(summarize([mind('1', 2)])).toMatchObject({ entries: 1, mean: null, max: null, median: null, worst: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] })
   })
 
   it('computes region heat for one symptom, an entry counting once per region at the max over its layers', () => {
@@ -196,7 +196,7 @@ describe('stats', () => {
     const sw = (day: string, swelling: number, tags: string[] = []) => makeEntry({ at: at(day), layers: [{ regions: ['152'], readings: { pain: 1, swelling }, tags }] })
     const entries = [sw('1', 3), sw('1', 7), sw('3', 5), e('4', 9)]
     expect(dailySeries(entries, new Date(2026, 2, 1), 4, 'swelling').map((p) => p.max)).toEqual([7, null, 5, null])
-    expect(summarize(entries, 7, 'swelling')).toMatchObject({ entries: 4, daysWithEntries: 3, mean: 5, max: 7, median: 6 })
+    expect(summarize(entries, 'swelling')).toMatchObject({ entries: 4, daysWithEntries: 3, mean: 5, max: 7, median: 6 })
   })
 
   it('lists the symptoms read in range in vocabulary order, a reading of 0 included, disabled ones too', () => {

@@ -100,7 +100,7 @@ export type Summary = {
   ongoing: number
 }
 
-export function summarize(entries: Entry[], days: number, symptom = PAIN, now = Date.now()): Summary {
+export function summarize(entries: Entry[], symptom = PAIN, now = Date.now()): Summary {
   const series = new Set(entries.map((e) => dayKey(e.at)))
   const read = withLevel(entries, symptom)
   const vs = read.map((r) => r.v)
