@@ -97,7 +97,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       // Registered by src/lib/update.ts through virtual:pwa-register, so nothing is injected. Keep injectRegister on its
       // default: set to false, the plugin also drops skipWaiting and a new release waits for every tab to close.
-      includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'],
+      // The precache takes every icon from globPatterns below; the plugin's own copies would list each one twice.
+      includeManifestIcons: false,
       manifest: {
         name: 'Gom Jabbar',
         short_name: 'Gom Jabbar',
