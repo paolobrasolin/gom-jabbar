@@ -18,7 +18,8 @@
 
         packages = rec {
           # Static bundle for GitHub Pages. `nix build` also runs the type
-          # check, the tests and the bundle size gate, so it is the whole CI.
+          # check, the tests, the bundle size gate and the licence notices
+          # check, so it is the whole CI.
           gom-jabbar = pkgs.buildNpmPackage {
             pname = pkg.name;
             inherit (pkg) version;

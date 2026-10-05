@@ -25,7 +25,7 @@ jobs:
         with:
           enablement: true
       - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
-      # Runs check, tests, build and the size gate (see flake.nix).
+      # Runs check, tests, build, the size gate and the licence notices (see flake.nix).
       - run: nix build --print-build-logs
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0, its own upload-artifact pinned (v3 used a tag)
         with:

@@ -18,5 +18,5 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
-      # Runs check, tests, build and the size gate (see flake.nix).
+      # Runs check, tests, build, the size gate and the licence notices (see flake.nix).
       - run: nix build --print-build-logs
