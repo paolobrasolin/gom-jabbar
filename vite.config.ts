@@ -135,8 +135,10 @@ export default defineConfig(({ mode }) => ({
       reporter: process.env.COVERAGE_HTML ? ['text', 'html'] : ['text-summary'],
       // Ratchet: raise these when coverage grows, never lower them, except in a commit that only deletes code with its
       // tests (CLAUDE.md). `npm test` fails below.
+      // The property tests (#91) draw new inputs each run, so branch coverage moves by about 0.1: branch thresholds keep
+      // that margin below the lowest run.
       thresholds: {
-        'src/lib/**': { lines: 99.8, statements: 99.7, functions: 99.4, branches: 96.6 },
+        'src/lib/**': { lines: 99.9, statements: 99.7, functions: 99.5, branches: 97.2 },
         lines: 99.5,
         statements: 99.1,
         functions: 98.5,
