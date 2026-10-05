@@ -8,17 +8,17 @@ import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from '../lib/vocabulary'
 import { EXPORT_VERSION, type ExportFile } from '../lib/backup'
 import type { Entry, Preset, Symptom, Tag, TagGroup, Stroke } from '../lib/types'
 
-const REGION_IDS = REGIONS.map((r) => r.id)
+export const REGION_IDS = REGIONS.map((r) => r.id)
 const T0 = Date.UTC(2020, 0, 1)
 const T1 = Date.UTC(2030, 0, 1)
 
 /** An instant as the app stores one, to the millisecond. */
 export const iso = (min = T0, max = T1) => fc.integer({ min, max }).map((t) => new Date(t).toISOString())
 /** Any text a person might type: every unicode plane, empty included. */
-const text = fc.string({ unit: 'grapheme', maxLength: 40 })
-const id = fc.stringMatching(/^[A-Za-z0-9_-]{1,12}$/)
+export const text = fc.string({ unit: 'grapheme', maxLength: 40 })
+export const id = fc.stringMatching(/^[A-Za-z0-9_-]{1,12}$/)
 /** Up to `max` of `xs`, each once, in their order. */
-const some = <T,>(xs: T[], max: number) => fc.subarray([...new Set(xs)], { maxLength: Math.min(max, new Set(xs).size) })
+export const some = <T,>(xs: T[], max: number) => fc.subarray([...new Set(xs)], { maxLength: Math.min(max, new Set(xs).size) })
 
 const symptom = (sid: string): fc.Arbitrary<Symptom> =>
   fc.record({
@@ -46,7 +46,7 @@ const regions: fc.Arbitrary<string[]> = fc.oneof(
   { weight: 6, arbitrary: some([...REGION_IDS, MIND], 6).map((r) => [...r].sort()) },
 )
 /** A piece of paint (§5.3): points rounded to a tenth, as the brush stores them. */
-const stroke: fc.Arbitrary<Stroke> = fc.record({
+export const stroke: fc.Arbitrary<Stroke> = fc.record({
   region: fc.constantFrom(...REGION_IDS),
   fig: fc.constantFrom('female' as const, 'male' as const),
   view: fc.constantFrom('front' as const, 'back' as const),

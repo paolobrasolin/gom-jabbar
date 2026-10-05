@@ -222,15 +222,17 @@ export function splitEpisode(row: EntryV7): Entry[] {
     updatedAt: p.at,
   }))
   if (startsAtHead && !sameReadings(row.layers, points[points.length - 1].layers)) {
+    // A row without updatedAt (no version wrote one) is dated at its start, as the importer's defaults do (#91).
+    const ts = row.updatedAt ?? row.at
     updates.push({
       id: `${row.id}:${later.length + 1}`,
       kind: 'episode',
       episodeId: row.id,
-      at: row.updatedAt,
+      at: ts,
       layers: row.layers.map((l) => ({ ...l, readings: { ...l.readings }, tags: [] })),
       note: '',
-      createdAt: row.updatedAt,
-      updatedAt: row.updatedAt,
+      createdAt: ts,
+      updatedAt: ts,
     })
   }
   return [head, ...updates]

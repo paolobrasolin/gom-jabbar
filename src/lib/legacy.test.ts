@@ -80,6 +80,23 @@ describe('version 7 rows become chains (§8, 7 → 8)', () => {
     expect(c).not.toHaveProperty('preset')
   })
 
+  it('an old episode without updatedAt still dates the reading it was left at, as the importer does (#91)', () => {
+    // No version wrote such a row, but the Dexie 8 upgrade passed it raw and stored an update with no time at all.
+    const rows = splitEpisode({
+      id: 'e',
+      at: '2026-09-02T20:00:00.000Z',
+      endedAt: null,
+      ongoing: true,
+      layers: [L(['152'], { pain: 2 })],
+      history: [{ at: '2026-09-02T20:00:00.000Z', layers: [{ pain: 7 }] }],
+    } as unknown as Parameters<typeof splitEpisode>[0])
+    expect(rows.map((r) => [r.id, r.at])).toEqual([
+      ['e', '2026-09-02T20:00:00.000Z'],
+      ['e:1', '2026-09-02T20:00:00.000Z'],
+    ])
+    expect(rows[1]).toMatchObject({ createdAt: '2026-09-02T20:00:00.000Z', updatedAt: '2026-09-02T20:00:00.000Z' })
+  })
+
   it('an episode with a history from its start: the head takes the first point, each later point is an update', () => {
     const strokes = [{ region: '152', fig: 'female' as const, view: 'front' as const, points: [[1, 2]] as [number, number][], w: 8 }]
     const rows = splitEpisode({

@@ -40,7 +40,7 @@ function layersOf(areas: AreaRow[], readings: Readings, tags: string[], ctx: Ctx
 }
 
 /** The seed's Italian names up to version 9, per table: a seed row still carrying its own became a dictionary key in 10. */
-const SEED_IT_V9: Record<'symptoms' | 'tags', Record<string, string>> = {
+export const SEED_IT_V9: Record<'symptoms' | 'tags', Record<string, string>> = {
   symptoms: { pain: 'Dolore', swelling: 'Gonfiore', heaviness: 'Pesantezza', fatigue: 'Stanchezza', fog: 'Nebbia mentale', tenderness: 'Dolorabilità al tatto', stiffness: 'Rigidità', anxiety: 'Ansia', depression: 'Depressione' },
   tags: {
     compression: 'Compressione', mld: 'Linfodrenaggio', exercise: 'Movimento', rest: 'Riposo', heat: 'Calore', cold: 'Freddo', stretching: 'Stretching', meditation: 'Meditazione',
@@ -91,7 +91,8 @@ export const UPGRADES: Record<number, Partial<Record<Table, (r: Row, ctx: Ctx) =
   // `kind: 'episode'`, its own id as `episodeId`, `endedAt` as it was (null while active). Each history point is an
   // update, `<id>:<n>`, at the point's time with the head's regions and paint, no tags and no note. When the first
   // point sits at the start the head takes its readings and the point is not repeated; the row's own readings were
-  // the latest, so when they differ from the last point's they are one more update at `updatedAt`. Any other row is
+  // the latest, so when they differ from the last point's they are one more update at `updatedAt` (the start when
+  // a row has none, #91). Any other row is
   // `kind: 'chronic'`. `preset` becomes `presetId`. `ongoing`, `history` and `preset` go, replaced. Presets: `ongoing` becomes `kind`.
   7: {
     entries: ({ ongoing, history, preset, endedAt, ...e }) => {
@@ -108,7 +109,7 @@ export const UPGRADES: Record<number, Partial<Record<Table, (r: Row, ctx: Ctx) =
       })
       const out = [head, ...later.map((p, i) => update(i + 1, p.at, p.layers))]
       const last = points[points.length - 1]
-      if (fromStart && JSON.stringify(layers.map((l) => l.readings)) !== JSON.stringify(last.layers)) out.push(update(later.length + 1, e.updatedAt as string, layers.map((l) => l.readings)))
+      if (fromStart && JSON.stringify(layers.map((l) => l.readings)) !== JSON.stringify(last.layers)) out.push(update(later.length + 1, (e.updatedAt ?? e.at) as string, layers.map((l) => l.readings)))
       return out
     },
     presets: ({ ongoing, ...p }) => ({ ...p, kind: ongoing ? 'episode' : 'chronic' }),
