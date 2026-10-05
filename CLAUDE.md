@@ -19,7 +19,7 @@ Installable pain diary PWA (Svelte 5, Vite, Dexie), Italian first, for one Andro
 - Under jsdom, Testing Library's `fireEvent.click` on a disabled button still runs its Svelte handler; `element.click()`, like a real tap, does not. To check a button is off, assert `toBeDisabled()`; to tap it as a person would, use `element.click()`.
 
 ## Verifying UI
-Screenshot in Pixel 7 emulation with `playwright-core` using the installed Chrome (`chromium.launch({ channel: 'chrome' })`) against `npm run preview`. Block service workers in the context. Seed data through the app's own Settings → Ripristina da file with the output of `node scripts/seed.mjs`. Do not use Chrome's `--screenshot` flag: it hangs and its minimum window width fakes overflow bugs. Playwright download paths have no extension; `saveAs` before opening a downloaded file.
+Screenshot in Pixel 7 emulation with `playwright-core` (a devDependency: no browsers of its own) using the installed Chrome (`chromium.launch({ channel: 'chrome' })`) against `npm run preview`. Block service workers in the context. Seed data through the app's own Settings → Ripristina da file with the output of `node scripts/seed.mjs`; the browser runs in English unless the context sets `locale: 'it-IT'`. Do not use Chrome's `--screenshot` flag: it hangs and its minimum window width fakes overflow bugs. Playwright download paths have no extension; `saveAs` before opening a downloaded file.
 
 ## Tests come first
 - Write the failing test before the code: every change in `lib/`, every user-visible behaviour in a screen or component, and every bug fix starts with a test that reproduces it. Red, green, then tidy.
