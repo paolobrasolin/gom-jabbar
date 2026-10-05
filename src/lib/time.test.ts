@@ -36,6 +36,12 @@ describe('time', () => {
     expect(formatDuration(48 * 3_600_000, u)).toBe('2g')
   })
 
+  it("prints a duration below zero as 0m: a clock set back, or a phone that was ahead, never shows \"da -1m\" (#91)", () => {
+    const u = { d: 'g', h: 'h', m: 'm' }
+    expect(formatDuration(-30_001, u)).toBe('0m')
+    expect(formatDuration(-3 * 3_600_000, u)).toBe('0m')
+  })
+
   it('has the quick time choices', () => {
     const now = new Date(2026, 8, 15, 14, 30)
     expect(thisMorning(now).getHours()).toBe(8)

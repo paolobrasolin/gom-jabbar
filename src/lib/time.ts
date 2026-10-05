@@ -36,9 +36,9 @@ export function formatDay(iso: string, locale: string, labels: { today: string; 
   return new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) }).format(d)
 }
 
-/** "45m", "3h", "2g 3h" (unit labels passed in). */
+/** "45m", "3h", "2g 3h" (unit labels passed in). Below zero, a clock set back or a phone that was ahead, it is "0m". */
 export function formatDuration(ms: number, u: { d: string; h: string; m: string }): string {
-  const mins = Math.round(ms / 60000)
+  const mins = Math.max(0, Math.round(ms / 60000))
   if (mins < 60) return `${mins}${u.m}`
   const hours = Math.floor(mins / 60)
   if (hours < 24) return `${hours}${u.h}`
