@@ -313,6 +313,69 @@
         "updatedAt": "2026-09-19T20:00:00.000Z"
       },
       {
+        "id": "v6-knee-fog",
+        "at": "2026-09-16T10:00:00.000Z",
+        "endedAt": null,
+        "ongoing": false,
+        "readings": {
+          "pain": 5,
+          "fog": 6
+        },
+        "areas": [
+          {
+            "regions": [
+              "154",
+              "155"
+            ],
+            "intensity": 5
+          }
+        ],
+        "tags": [
+          "badsleep"
+        ],
+        "note": "ginocchia e nebbia",
+        "createdAt": "2026-09-16T10:00:00.000Z",
+        "updatedAt": "2026-09-16T10:00:00.000Z"
+      },
+      {
+        "id": "v6-knee-fog-episode",
+        "at": "2026-09-17T07:00:00.000Z",
+        "endedAt": "2026-09-17T15:00:00.000Z",
+        "ongoing": false,
+        "readings": {
+          "pain": 3,
+          "fog": 2
+        },
+        "areas": [
+          {
+            "regions": [
+              "154"
+            ],
+            "intensity": 3
+          }
+        ],
+        "history": [
+          {
+            "at": "2026-09-17T07:00:00.000Z",
+            "readings": {
+              "pain": 6,
+              "fog": 5
+            }
+          },
+          {
+            "at": "2026-09-17T11:00:00.000Z",
+            "readings": {
+              "pain": 3,
+              "fog": 2
+            }
+          }
+        ],
+        "tags": [],
+        "note": "",
+        "createdAt": "2026-09-17T07:00:00.000Z",
+        "updatedAt": "2026-09-17T15:00:00.000Z"
+      },
+      {
         "id": "v6-strokes",
         "at": "2026-09-18T18:00:00.000Z",
         "endedAt": null,
