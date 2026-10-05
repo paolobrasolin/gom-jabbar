@@ -9,6 +9,7 @@ import fc from 'fast-check'
 import { resetDb } from './db'
 import { parseImport, applyImport, buildExport } from './backup'
 import { diary } from '../test/arbitraries'
+import { runs } from '../test/runs'
 
 // Hundreds of diaries through the database: well past the default 5 s under coverage and a loaded machine.
 vi.setConfig({ testTimeout: 30_000 })
@@ -62,7 +63,7 @@ describe('a damaged backup (#91)', () => {
         const out = await buildExport()
         expect(parseImport(JSON.stringify(out))).toEqual(JSON.parse(JSON.stringify(out)))
       }),
-      { numRuns: 150 },
+      { numRuns: runs(150) },
     )
   })
 })

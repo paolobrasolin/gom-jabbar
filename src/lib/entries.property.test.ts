@@ -6,6 +6,7 @@ import { episodesOf, latest, shownReading, endEpisode, reopenEpisode, deleteEntr
 import { entryHeadline } from './summary'
 import { diary, iso } from '../test/arbitraries'
 import type { Entry } from './types'
+import { runs } from '../test/runs'
 
 // Hundreds of diaries through the database: well past the default 5 s under coverage and a loaded machine.
 vi.setConfig({ testTimeout: 30_000 })
@@ -32,7 +33,7 @@ describe('episode chains, for any diary (#91)', () => {
         // The same rows in another order give the same episodes.
         expect(episodesOf([...entries].reverse())).toEqual(eps)
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -51,7 +52,7 @@ describe('episode chains, for any diary (#91)', () => {
           }
         }
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -72,7 +73,7 @@ describe('episode chains, for any diary (#91)', () => {
           expect(after).toEqual(before)
         },
       ),
-      { numRuns: 40 },
+      { numRuns: runs(40) },
     )
   })
 
@@ -91,7 +92,7 @@ describe('episode chains, for any diary (#91)', () => {
           expect(byId(await db.entries.toArray())).toEqual(byId(file.entries))
         },
       ),
-      { numRuns: 40 },
+      { numRuns: runs(40) },
     )
   })
 
@@ -104,7 +105,7 @@ describe('episode chains, for any diary (#91)', () => {
         // The very minute is never a problem.
         expect(timeProblem({ at, endedAt: at }, { notBefore: at, notAfter: at })).toBeNull()
       }),
-      { numRuns: 1000 },
+      { numRuns: runs(1000) },
     )
   })
 })

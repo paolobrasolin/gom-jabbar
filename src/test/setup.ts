@@ -2,6 +2,11 @@ import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
 import { configure } from '@testing-library/svelte'
 import { closeToast } from '../lib/toast.svelte'
+import fc from 'fast-check'
+import { runs } from './runs'
+
+// Properties that do not name their count try the default 100, scaled like the rest (src/test/runs.ts).
+fc.configureGlobal({ numRuns: runs(100) })
 
 // findBy*/waitFor default to 1s. A save fans out to every live query on the entries table, and on
 // CI (two cores, every test file in its own worker, inside the nix sandbox) that can take longer:

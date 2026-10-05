@@ -10,6 +10,7 @@ import { mergedReadings, mergedTags } from './layers'
 import { leadSymptom } from './vocabulary'
 import { diary } from '../test/arbitraries'
 import type { Entry } from './types'
+import { runs } from '../test/runs'
 
 let zone: string | undefined
 beforeAll(() => {
@@ -61,7 +62,7 @@ describe('Trends figures, for any diary (#91)', () => {
         const back = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (n - 1))
         expect(from.getTime()).toBe(back.getTime())
       }),
-      { numRuns: 500 },
+      { numRuns: runs(500) },
     )
   })
 
@@ -84,7 +85,7 @@ describe('Trends figures, for any diary (#91)', () => {
           expect(points.reduce((t, p) => t + p.count, 0)).toBe(inRange.length)
         },
       ),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -112,7 +113,7 @@ describe('Trends figures, for any diary (#91)', () => {
           })
         },
       ),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -126,7 +127,7 @@ describe('Trends figures, for any diary (#91)', () => {
         }
         expect(got.every((x) => x.days > 0)).toBe(true)
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -149,7 +150,7 @@ describe('Trends figures, for any diary (#91)', () => {
           expect([...got].sort((a, b) => a.at - b.at || a.value - b.value)).toEqual([...want].sort((a, b) => a.at - b.at || a.value - b.value))
         }
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 })

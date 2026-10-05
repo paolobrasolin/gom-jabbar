@@ -11,6 +11,7 @@ import { prefs } from './prefs.svelte'
 import { diary } from '../test/arbitraries'
 import type { ExportFile } from './backup'
 import type { Symptom, Tag } from './types'
+import { runs } from '../test/runs'
 
 // Hundreds of diaries through the database: well past the default 5 s under coverage and a loaded machine.
 vi.setConfig({ testTimeout: 30_000 })
@@ -28,7 +29,7 @@ describe('search, for any diary and any typing (#91)', () => {
         expect(fold(fold(s))).toBe(fold(s))
         expect(words(fold(s))).toEqual(words(s))
       }),
-      { numRuns: 2000 },
+      { numRuns: runs(2000) },
     )
   })
 
@@ -41,7 +42,7 @@ describe('search, for any diary and any typing (#91)', () => {
         expect(fold(w.toUpperCase())).toBe(fold(w))
         expect(fold(w)).toBe(cs.map(bare).join(''))
       }),
-      { numRuns: 1000 },
+      { numRuns: runs(1000) },
     )
   })
 
@@ -59,7 +60,7 @@ describe('search, for any diary and any typing (#91)', () => {
           expect(found.every((e, i) => i === 0 || found[i - 1].at >= e.at)).toBe(true)
         },
       ),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -68,7 +69,7 @@ describe('search, for any diary and any typing (#91)', () => {
       fc.property(diary, fc.constantFrom('', ' ', '  ,. '), (file, q) => {
         expect(new Set(search(file.entries, q, ctxOf(file)))).toEqual(new Set(file.entries))
       }),
-      { numRuns: 100 },
+      { numRuns: runs(100) },
     )
   })
 })
@@ -106,7 +107,7 @@ describe('the vocabulary editor, for any vocabulary and moves (#91)', () => {
           expect((await listed(db, table)).map((x) => x.id)).toEqual(order)
         },
       ),
-      { numRuns: 60 },
+      { numRuns: runs(60) },
     )
   })
 
@@ -118,7 +119,7 @@ describe('the vocabulary editor, for any vocabulary and moves (#91)', () => {
         const count = (id: string) => file.entries.filter((e) => mergedTags(e.layers).includes(id)).length
         expect(strip).toEqual(tags.filter((x) => x.enabled).map((x, i) => ({ x, i })).sort((a, b) => count(b.x.id) - count(a.x.id) || a.i - b.i).map(({ x }) => x))
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -133,7 +134,7 @@ describe('the vocabulary editor, for any vocabulary and moves (#91)', () => {
           expect(u.get(id) ?? { entries: 0, presets: 0 }, id).toEqual({ entries, presets })
         }
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -158,7 +159,7 @@ describe('the vocabulary editor, for any vocabulary and moves (#91)', () => {
           expect(await db[table].toArray()).toEqual(before)
         },
       ),
-      { numRuns: 60 },
+      { numRuns: runs(60) },
     )
   })
 })

@@ -34,6 +34,9 @@
             # The commit's day, YYYY-MM-DD, next to the version in Settings.
             GIT_DATE = let d = self.lastModifiedDate or "19700101000000"; in "${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}";
 
+            # A quarter of each property test's cases (src/test/runs.ts): CI's cores are slower and shared.
+            PROPERTY_SCALE = "0.25";
+
             doCheck = true;
             checkPhase = ''
               runHook preCheck

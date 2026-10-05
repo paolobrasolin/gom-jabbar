@@ -9,6 +9,7 @@ import fc from 'fast-check'
 import { resetDb } from './db'
 import { parseImport, applyImport, buildExport, type ExportFile } from './backup'
 import { diary } from '../test/arbitraries'
+import { runs } from '../test/runs'
 
 // Hundreds of diaries through the database: well past the default 5 s under coverage and a loaded machine.
 vi.setConfig({ testTimeout: 30_000 })
@@ -31,7 +32,7 @@ describe('backup, for any diary (#91)', () => {
       fc.property(diary, (file) => {
         expect(parseImport(JSON.stringify(file))).toEqual(json(file))
       }),
-      { numRuns: 200 },
+      { numRuns: runs(200) },
     )
   })
 
@@ -45,7 +46,7 @@ describe('backup, for any diary (#91)', () => {
         expect(rows(out)).toEqual(rows(parsed))
         expect(parseImport(JSON.stringify(out))).toEqual(json(out))
       }),
-      { numRuns: 60 },
+      { numRuns: runs(60) },
     )
   })
 
@@ -74,7 +75,7 @@ describe('backup, for any diary (#91)', () => {
         await applyImport(parsed, 'replace')
         expect(rows(await buildExport())).toEqual(rows(json(file)))
       }),
-      { numRuns: 60 },
+      { numRuns: runs(60) },
     )
   })
 })

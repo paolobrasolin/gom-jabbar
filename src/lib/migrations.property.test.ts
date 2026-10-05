@@ -15,6 +15,7 @@ import db1 from '../test/fixtures/db-v1.json'
 import db4 from '../test/fixtures/db-v4.json'
 import db8 from '../test/fixtures/db-v8.json'
 import db11 from '../test/fixtures/db-v11.json'
+import { runs } from '../test/runs'
 
 // Each run upgrades a whole database: well past the default 5 s under coverage and a loaded machine.
 vi.setConfig({ testTimeout: 60_000 })
@@ -35,7 +36,7 @@ describe.each(PAST)('a backup of version %i, any one (#91)', (version) => {
         expect(byId(json(parsed.presets) as Row[])).toEqual(byId(json(want(file.presets ?? [], 'presets'))))
         expect(byId(json(parsed.entries) as Row[])).toEqual(byId(json(want(file.entries, 'entries').map(withDefaults))))
       }),
-      { numRuns: 60 },
+      { numRuns: runs(60) },
     )
   })
 })
@@ -68,7 +69,7 @@ describe.each(Object.keys(STORES).map(Number))('a database of version %i, any on
         }
         now.close()
       }),
-      { numRuns: 12 },
+      { numRuns: runs(12) },
     )
   })
 })

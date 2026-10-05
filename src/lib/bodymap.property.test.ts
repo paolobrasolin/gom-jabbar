@@ -5,6 +5,7 @@ import { REGIONS, REGION_BY_ID, LEGACY_REGIONS, MIND, FULL_BODY, mirrorId, flipI
 import { tapRegion, tapSet, toggleFull, toggleTag, mergedReadings, mergedTags, type LayerState, type Layer } from './layers'
 import { addStroke, undoStroke, partition, simplify } from './strokes'
 import { diary } from '../test/arbitraries'
+import { runs } from '../test/runs'
 
 const IDS = REGIONS.map((r) => r.id)
 const region = fc.constantFrom(...IDS)
@@ -87,7 +88,7 @@ describe("the form's layers, for any taps (#91)", () => {
         if (l.regions.includes(FULL_BODY) || counterparts(id, b).some((x) => l.regions.includes(x))) return
         expect(tapRegion(once, id, b).layers[s.cur].regions).toEqual(l.regions)
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -98,7 +99,7 @@ describe("the form's layers, for any taps (#91)", () => {
         if (l.regions.includes(FULL_BODY) || set.some((x) => l.regions.includes(x))) return
         expect(tapSet(tapSet(s, set), set).layers[s.cur].regions).toEqual(l.regions)
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -116,7 +117,7 @@ describe("the form's layers, for any taps (#91)", () => {
         expect(on.strokes).toEqual(l.strokes)
         expect(toggleFull(toggleFull(s)).layers[s.cur].regions).toEqual(mind)
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -125,7 +126,7 @@ describe("the form's layers, for any taps (#91)", () => {
       fc.property(state, fc.constantFrom('rest', 'stress', 't_x', 'period'), (s, tag) => {
         expect(new Set(toggleTag(toggleTag(s, tag), tag).layers[s.cur].tags)).toEqual(new Set(s.layers[s.cur].tags))
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 
@@ -136,7 +137,7 @@ describe("the form's layers, for any taps (#91)", () => {
         expect(mergedReadings(layers)).toEqual(Object.fromEntries([...keys].map((k) => [k, Math.max(...layers.flatMap((l) => (k in l.readings ? [l.readings[k]] : [])))])))
         expect(mergedTags(layers)).toEqual([...new Set(layers.flatMap((l) => l.tags))])
       }),
-      { numRuns: 300 },
+      { numRuns: runs(300) },
     )
   })
 })
@@ -150,7 +151,7 @@ describe('paint, for any gesture (#91)', () => {
         const view = new Set(regionsFor(r.view).map((x) => x.id))
         expect(pieces.every((p) => view.has(p.region) && p.fig === r.fig && p.view === r.view && p.w === r.w && p.points.length > 0)).toBe(true)
       }),
-      { numRuns: 100 },
+      { numRuns: runs(100) },
     )
   })
 
@@ -167,7 +168,7 @@ describe('paint, for any gesture (#91)', () => {
         expect(undone.strokes ?? []).toEqual(l.strokes ?? [])
         expect(l.regions.every((x) => undone.regions.includes(x))).toBe(true)
       }),
-      { numRuns: 100 },
+      { numRuns: runs(100) },
     )
   })
 
@@ -190,7 +191,7 @@ describe('paint, for any gesture (#91)', () => {
           if (j + 1 < out.length) expect(dist(pts[i], out[j], out[j + 1])).toBeLessThanOrEqual(0.8 + 1e-9)
         }
       }),
-      { numRuns: 500 },
+      { numRuns: runs(500) },
     )
   })
 })

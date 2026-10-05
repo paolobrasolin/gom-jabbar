@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import fc from 'fast-check'
 import { toLocalInput, fromLocalInput, dayKey, isSameDay, formatDuration, thisMorning, lastNight, hoursAgo } from './time'
+import { runs } from '../test/runs'
 
 let zone: string | undefined
 beforeAll(() => {
@@ -47,7 +48,7 @@ describe('time helpers, for any instant (#91)', () => {
         const repeated = new Date(t).getTimezoneOffset() === -60 && new Date(t - HOUR).getTimezoneOffset() === -120
         expect(back).toBe(repeated ? minute - HOUR : minute)
       }),
-      { numRuns: 1000 },
+      { numRuns: runs(1000) },
     )
   })
 
@@ -62,7 +63,7 @@ describe('time helpers, for any instant (#91)', () => {
       fc.property(pair, ([a, b]) => {
         expect(dayKey(new Date(a).toISOString()) === dayKey(new Date(b).toISOString())).toBe(isSameDay(new Date(a), new Date(b)))
       }),
-      { numRuns: 1000 },
+      { numRuns: runs(1000) },
     )
   })
 
@@ -81,7 +82,7 @@ describe('time helpers, for any instant (#91)', () => {
         expect([night.getHours(), night.getMinutes()]).toEqual([22, 0])
         expect(night.getTime()).toBeLessThan(t)
       }),
-      { numRuns: 1000 },
+      { numRuns: runs(1000) },
     )
   })
 
@@ -91,7 +92,7 @@ describe('time helpers, for any instant (#91)', () => {
         const back = hoursAgo(n, new Date(t))
         expect(t - back.getTime()).toBe(n * HOUR)
       }),
-      { numRuns: 1000 },
+      { numRuns: runs(1000) },
     )
   })
 
@@ -100,7 +101,7 @@ describe('time helpers, for any instant (#91)', () => {
       fc.property(fc.integer({ min: -30 * 86_400_000, max: 400 * 86_400_000 }), (ms) => {
         expect(formatDuration(ms, units)).toMatch(/^(\d+m|\d+h|\d+g( \d+h)?)$/)
       }),
-      { numRuns: 1000 },
+      { numRuns: runs(1000) },
     )
   })
 })

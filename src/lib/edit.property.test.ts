@@ -11,6 +11,7 @@ import { updateEntry } from './entries'
 import { keptLayers } from './layers'
 import { diary } from '../test/arbitraries'
 import type { Entry } from './types'
+import { runs } from '../test/runs'
 
 // Each run writes to the database: well past the default 5 s under coverage and a loaded machine.
 vi.setConfig({ testTimeout: 30_000 })
@@ -41,7 +42,7 @@ describe('the edit sheet, for any stored entry (#91)', () => {
         expect(after.at).toBe(entry.at)
         expect(after.note).toBe(entry.note.trim())
       }),
-      { numRuns: 100 },
+      { numRuns: runs(100) },
     )
   })
 
@@ -58,7 +59,7 @@ describe('the edit sheet, for any stored entry (#91)', () => {
         const { updatedAt: _b, ...twice } = (await db.entries.get(entry.id))!
         expect(twice).toStrictEqual(once)
       }),
-      { numRuns: 100 },
+      { numRuns: runs(100) },
     )
   })
 })
