@@ -5,6 +5,7 @@ import { prefs } from '../lib/prefs.svelte'
 import { install } from '../lib/install.svelte'
 import { addEntry } from '../lib/entries'
 import { dismissToast } from '../lib/toast.svelte'
+import { fileBackup } from '../lib/fileBackup'
 import { fakeGoogle } from '../test/fakeDrive'
 import App from '../App.svelte'
 
@@ -77,10 +78,11 @@ describe('Backup banner without Drive', () => {
     await fireEvent.click(button)
     await fireEvent.click(button)
     await waitFor(() => expect(shares).toBeGreaterThan(0))
-    await new Promise((r) => setTimeout(r, 50))
     release()
     expect(await screen.findByText('Backup su file fatto')).toBeInTheDocument()
-    expect(shares).toBe(1)
+    // A second share from the double tap would have come before the one of a backup started now.
+    await fileBackup()
+    expect(shares).toBe(2)
   })
 
   it('stays quiet for 13 days, and for 7 more after Più tardi', async () => {
@@ -157,17 +159,19 @@ describe('One banner at a time (#37)', () => {
     prefs.installedAt = null
     await diarySince(15)
     render(App, { props: { cloud: g.provider } })
-    const install = screen.getByText(/Aggiungi alla schermata Home per/).closest('.msg')!
+    const first = screen.getByText(/Aggiungi alla schermata Home per/).closest('.msg')!
     // A standing message (#94): the page's colours, the icon of a message that needs you.
-    expect(install).toHaveClass('standing')
-    expect(install.querySelector('svg.icon')).toHaveAttribute('data-icon', 'needs')
-    // Give the live query time to find the old diary: the backup banner still does not show.
-    await waitFor(() => expect(document.querySelectorAll('.nudge')).toHaveLength(1))
-    await new Promise((r) => setTimeout(r, 50))
-    expect(screen.queryByText("È da un po' che non fai un backup.")).not.toBeInTheDocument()
+    expect(first).toHaveClass('standing')
+    expect(first.querySelector('svg.icon')).toHaveAttribute('data-icon', 'needs')
+    expect(document.querySelectorAll('.nudge')).toHaveLength(1)
     await fireEvent.click(screen.getByRole('button', { name: 'Non ora' }))
     const backup = (await screen.findByText("È da un po' che non fai un backup.")).closest('.msg')!
     expect(backup).toHaveClass('standing')
     expect(backup.querySelector('svg.icon')).toHaveAttribute('data-icon', 'needs')
+    // With the old diary known for sure, the install nudge back in front hides the backup banner.
+    install.dismissed = false
+    expect(await screen.findByText(/Aggiungi alla schermata Home per/)).toBeInTheDocument()
+    expect(screen.queryByText("È da un po' che non fai un backup.")).not.toBeInTheDocument()
+    expect(document.querySelectorAll('.nudge')).toHaveLength(1)
   })
 })

@@ -61,9 +61,10 @@ describe('Vocabulary editor: symptoms', () => {
     await waitFor(() => expect(names().slice(-3)).toEqual(['Irritabilità', 'Ansia', 'Umore basso']))
     await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
     await waitFor(() => expect(names().slice(-4)).toEqual(['Irritabilità', 'Nebbia mentale', 'Ansia', 'Umore basso']))
+    // At the top of its group ↑ does nothing; the move after it lands only once that one has.
     await fireEvent.click(within(itemOf('Irritabilità')).getByRole('button', { name: '↑' }))
-    await new Promise((res) => setTimeout(res, 20))
-    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Male al tocco', 'Rigidità', 'Irritabilità', 'Nebbia mentale', 'Ansia', 'Umore basso'])
+    await fireEvent.click(within(itemOf('Ansia')).getByRole('button', { name: '↓' }))
+    await waitFor(() => expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Male al tocco', 'Rigidità', 'Irritabilità', 'Nebbia mentale', 'Umore basso', 'Ansia']))
   })
 
   it('switches a symptom off and on', async () => {
@@ -137,10 +138,11 @@ describe('Vocabulary editor: symptoms', () => {
     await waitFor(() => expect(names().slice(0, 3)).toEqual(['Dolore', 'Pesantezza', 'Gonfiore']))
     await fireEvent.click(within(itemOf('Gonfiore')).getByRole('button', { name: '↑' }))
     await waitFor(() => expect(names().slice(0, 3)).toEqual(['Dolore', 'Gonfiore', 'Pesantezza']))
+    // At the ends nothing moves; the move after them lands only once they have.
     await fireEvent.click(within(itemOf('Dolore')).getByRole('button', { name: '↑' }))
     await fireEvent.click(within(itemOf('Rigidità')).getByRole('button', { name: '↓' }))
-    await new Promise((res) => setTimeout(res, 20))
-    expect(names()).toEqual(['Dolore', 'Gonfiore', 'Pesantezza', 'Stanchezza', 'Male al tocco', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Umore basso'])
+    await fireEvent.click(within(itemOf('Gonfiore')).getByRole('button', { name: '↓' }))
+    await waitFor(() => expect(names()).toEqual(['Dolore', 'Pesantezza', 'Gonfiore', 'Stanchezza', 'Male al tocco', 'Rigidità', 'Nebbia mentale', 'Ansia', 'Umore basso']))
   })
 
   it('adds a symptom from the field, by button or Enter, ignoring blanks', async () => {
@@ -150,12 +152,12 @@ describe('Vocabulary editor: symptoms', () => {
     await fireEvent.click(addButton())
     await fireEvent.input(field, { target: { value: '  ' } })
     await fireEvent.keyDown(field, { key: 'Enter' })
-    await new Promise((res) => setTimeout(res, 20))
-    expect(await db.symptoms.count()).toBe(9)
 
+    // The blanks added nothing: once the add after them has landed, there is one symptom more, not three.
     await fireEvent.input(field, { target: { value: 'Formicolio' } })
     await fireEvent.click(addButton())
-    await waitFor(() => expect(names()).toHaveLength(10))
+    await waitFor(() => expect(names()).toContain('Formicolio'))
+    expect(await db.symptoms.count()).toBe(10)
     expect(names()[6]).toBe('Formicolio')
     await waitFor(() => expect(field).toHaveValue(''))
     const added = (await db.symptoms.orderBy('order').last())!
@@ -236,10 +238,10 @@ describe('Vocabulary editor: tags', () => {
     await screen.findByRole('button', { name: 'Stress' })
     await fireEvent.click(within(itemOf('Stress')).getByRole('button', { name: '↑' }))
     await waitFor(() => expect(names().slice(8, 10)).toEqual(['Stress', 'Ciclo']))
+    // Last of its group, Meditazione stays; the move after it lands only once that one has.
     await fireEvent.click(within(itemOf('Meditazione')).getByRole('button', { name: '↓' }))
-    await new Promise((res) => setTimeout(res, 20))
-    expect(names()[7]).toBe('Meditazione')
-    expect(names()[8]).toBe('Stress')
+    await fireEvent.click(within(itemOf('Stress')).getByRole('button', { name: '↓' }))
+    await waitFor(() => expect(names().slice(7, 10)).toEqual(['Meditazione', 'Ciclo', 'Stress']))
   })
 
   it('switches a tag off', async () => {

@@ -32,8 +32,11 @@ describe('Log Salva', () => {
     await fireEvent.click(salva())
     await wait(150)
     await fireEvent.click(salva())
-    await wait(50)
-    expect(await db.entries.count()).toBe(1)
+    // Those taps stored nothing: once a real save after them has landed, there are two readings, not three or four.
+    await fireEvent.input(screen.getByRole('slider', { name: 'Dolore' }), { target: { value: '7' } })
+    await fireEvent.click(salva())
+    await waitFor(async () => expect((await db.entries.toArray()).some((e) => e.layers[0].readings.pain === 7)).toBe(true))
+    expect((await db.entries.toArray()).map((e) => e.layers[0].readings.pain).sort()).toEqual([5, 7])
   })
 
   it('the fast path is intact: setting a level after a save makes Salva ready at once', async () => {
@@ -61,8 +64,13 @@ describe('sheet buttons', () => {
     b.click()
     b.click()
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    await wait(50)
-    expect((await db.entries.toArray()).filter(isUpdate)).toHaveLength(1)
+    // Once an Aggiorna after them has landed, there are two updates, not three.
+    const again = await openEpisode()
+    await fireEvent.input(within(again).getByRole('slider', { name: 'Dolore' }), { target: { value: '9' } })
+    await fireEvent.click(within(again).getByRole('button', { name: 'Aggiorna' }))
+    const updates = async () => (await db.entries.toArray()).filter(isUpdate)
+    await waitFor(async () => expect((await updates()).some((e) => e.layers[0].readings.pain === 9)).toBe(true))
+    expect(await updates()).toHaveLength(2)
   })
 
   it('a preset sheet Salva tapped twice logs one reading', async () => {
@@ -75,8 +83,13 @@ describe('sheet buttons', () => {
     b.click()
     b.click()
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    await wait(50)
-    expect(await db.entries.count()).toBe(1)
+    // Once a reading after them has landed, there are two, not three.
+    await pickPreset(/Schiena/)
+    const again = await screen.findByRole('dialog', { name: 'Schiena' })
+    await fireEvent.input(within(again).getByRole('slider', { name: 'Dolore' }), { target: { value: '8' } })
+    await fireEvent.click(within(again).getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect((await db.entries.toArray()).some((e) => e.layers[0].readings.pain === 8)).toBe(true))
+    expect((await db.entries.toArray()).map((e) => e.layers[0].readings.pain).sort()).toEqual([3, 8])
   })
 
   it('the edit sheet Salva tapped twice saves once and shows one toast', async () => {
@@ -108,8 +121,7 @@ describe('forms that create', () => {
     b.click()
     b.click()
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuovo preset' })).not.toBeInTheDocument())
-    await wait(50)
-    expect(await db.presets.count()).toBe(1)
+    // The undo lands after any second preset would have: with one made, it leaves none.
     await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
     await waitFor(async () => expect(await db.presets.count()).toBe(0))
   })
@@ -121,11 +133,13 @@ describe('forms that create', () => {
     const add = fields[2].closest('.item')!.querySelector('button')!
     add.click()
     add.click()
-    const added = async () => (await db.tags.toArray()).filter((x) => x.label === 'Ibuprofene')
-    // However slow the write, wait for it, then a moment more for a second one that must not come.
-    await waitFor(async () => expect(await added()).toHaveLength(1))
-    await wait(50)
-    expect(await added()).toHaveLength(1)
+    const named = async (label: string) => (await db.tags.toArray()).filter((x) => x.label === label)
+    await waitFor(async () => expect(await named('Ibuprofene')).toHaveLength(1))
     expect(fields[2]).toHaveValue('')
+    // Once an add after them has landed, a second Ibuprofene would have too.
+    await fireEvent.input(fields[2], { target: { value: 'Paracetamolo' } })
+    add.click()
+    await waitFor(async () => expect(await named('Paracetamolo')).toHaveLength(1))
+    expect(await named('Ibuprofene')).toHaveLength(1)
   })
 })

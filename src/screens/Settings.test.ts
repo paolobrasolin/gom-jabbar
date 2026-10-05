@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { tick } from 'svelte'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/svelte'
 import { resetDb } from '../lib/db'
 import { prefs } from '../lib/prefs.svelte'
@@ -6,6 +7,7 @@ import { LEG_IDS, REGION_BY_ID, pathFor, shapeOf } from '../lib/regions'
 import { addPreset } from '../lib/presets'
 import { addEntry } from '../lib/entries'
 import { buildExport } from '../lib/backup'
+import { toastState } from '../lib/toast.svelte'
 import { go, back } from '../test/nav'
 import App from '../App.svelte'
 
@@ -104,23 +106,34 @@ describe('Settings storage (#115)', () => {
     expect(await within(card).findByText(NOTE)).toBeInTheDocument()
   })
 
+  /** The browser's answer, given once asked: the card took it before this test does, then Svelte renders. */
+  function answering(answer: Promise<boolean>) {
+    answer.catch(() => {})
+    const persisted = vi.fn(() => answer)
+    stub(persisted)
+    return async () => {
+      await waitFor(() => expect(persisted).toHaveBeenCalled())
+      await answer.catch(() => {})
+      await tick()
+    }
+  }
+
   it('says nothing when it agreed, or cannot tell', async () => {
-    stub(async () => true)
+    let answered = answering(Promise.resolve(true))
     await openSettings()
-    await screen.findByRole('region', { name: 'Backup' })
-    await new Promise((r) => setTimeout(r, 20))
-    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+    await answered()
+    expect(screen.getByRole('region', { name: 'Backup' })).not.toHaveTextContent(NOTE)
+    // Without the question there is nothing to wait for.
     await back()
     stub(undefined)
     await go('Impostazioni')
-    await new Promise((r) => setTimeout(r, 20))
-    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Backup' })).not.toHaveTextContent(NOTE)
     // A browser that fails to answer says nothing either.
     await back()
-    stub(async () => Promise.reject(new Error('no')))
+    answered = answering(Promise.reject(new Error('no')))
     await go('Impostazioni')
-    await new Promise((r) => setTimeout(r, 20))
-    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+    await answered()
+    expect(screen.getByRole('region', { name: 'Backup' })).not.toHaveTextContent(NOTE)
   })
 })
 
@@ -445,6 +458,19 @@ describe('Settings import', () => {
     await waitFor(async () => expect(await db.presets.toArray()).toEqual([mine]))
   })
 
+  /**
+   * A restore of two new entries, started now through the same sheet: whatever a tap before it set off has shown its
+   * toast by the time this one says "Ripristinate 2 voci", which no second tap can say. Returns that toast's id.
+   */
+  async function restoreTwo(button: string) {
+    const file = await buildExport()
+    const two = ['fence-1', 'fence-2'].map((id) => ({ ...file.entries[0], id }))
+    await pickFile(JSON.stringify({ ...file, entries: two }))
+    await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: new RegExp(`^${button}`) }))
+    await waitFor(() => expect(toastState.current?.message).toBe('Ripristinate 2 voci'))
+    return toastState.current!.id
+  }
+
   it('a double tap on Sostituisci tutto replaces once and keeps the undo', async () => {
     const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }] })
     const file = await buildExport()
@@ -460,8 +486,12 @@ describe('Settings import', () => {
       replace.click()
       await new Promise((r) => setTimeout(r, gap))
       replace.click()
-      await new Promise((r) => setTimeout(r, 150))
-      expect(screen.getByRole('status')).toHaveTextContent('Ripristinata 1 voce')
+      await waitFor(() => expect(toastState.current?.message).toBe('Ripristinata 1 voce'))
+      const done = toastState.current!.id
+      await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+      await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.id)).toEqual([mine.id]))
+      // The toast right after that one is the next restore's: the second tap showed none.
+      expect(await restoreTwo('Sostituisci tutto')).toBe(done + 1)
       await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
       await waitFor(async () => expect((await db.entries.toArray()).map((e) => e.id)).toEqual([mine.id]))
     }
@@ -478,10 +508,11 @@ describe('Settings import', () => {
     merge.click()
     await new Promise((r) => setTimeout(r, 1))
     merge.click()
-    await new Promise((r) => setTimeout(r, 200))
-    // Not "Ripristinate 0 voci" from a second merge of the same file.
-    expect(screen.getByRole('status')).toHaveTextContent('Ripristinata 1 voce')
+    await waitFor(() => expect(toastState.current?.message).toBe('Ripristinata 1 voce'))
+    const done = toastState.current!.id
     expect(await db.entries.count()).toBe(1)
+    // The toast right after that one is the next restore's: no "Ripristinate 0 voci" from a second merge of the same file.
+    expect(await restoreTwo('Unisci ai dati attuali')).toBe(done + 1)
   })
 
   it('does nothing when the picker is cancelled', async () => {

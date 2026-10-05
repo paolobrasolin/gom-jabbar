@@ -15,7 +15,6 @@ beforeEach(() => {
   history.replaceState(null, '', '/')
   dismissToast()
 })
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 describe('a blank slider', () => {
   it('the log opens with the headline slider blank, and Salva with nothing measured asks for it', async () => {
@@ -61,11 +60,10 @@ describe('a blank slider', () => {
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
     await waitFor(() => expect(toastState.current?.message).toBe('Quanto? Sposta la barra'))
     expect(toastState.current?.kind).toBe('refusal')
-    await wait(20)
-    expect(await db.entries.count()).toBe(0)
+    // The refused Salva stored nothing: once the next one has landed, its reading is the only one.
     await fireEvent.input(within(sheet).getByRole('slider', { name: 'Gonfiore' }), { target: { value: '6' } })
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Salva' }))
-    await waitFor(async () => expect(await db.entries.count()).toBe(1))
-    expect((await db.entries.toArray())[0].layers[0].readings).toEqual({ swelling: 6 })
+    await waitFor(async () => expect((await db.entries.toArray()).some((e) => e.layers[0].readings.swelling === 6)).toBe(true))
+    expect((await db.entries.toArray()).map((e) => e.layers[0].readings)).toEqual([{ swelling: 6 }])
   })
 })

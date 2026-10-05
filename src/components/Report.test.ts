@@ -4,7 +4,7 @@ import { prefs } from '../lib/prefs.svelte'
 import { makeEntry } from '../lib/entries'
 import { rangeStart } from '../lib/stats'
 import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from '../lib/vocabulary'
-import { toastState, dismissToast } from '../lib/toast.svelte'
+import { toastState, dismissToast, showToast } from '../lib/toast.svelte'
 import type { Entry } from '../lib/types'
 import Report from './Report.svelte'
 
@@ -169,9 +169,14 @@ describe('Report page', () => {
   it('says nothing when the share sheet is dismissed, complains when sharing fails', async () => {
     vi.stubGlobal('navigator', { ...navigator, canShare: () => true, share: async () => { throw new DOMException('cancelled', 'AbortError') } })
     const r = open()
+    showToast('prima')
+    const first = toastState.current!.id
     await fireEvent.click(screen.getByRole('button', { name: 'Condividi file' }))
-    await new Promise((res) => setTimeout(res, 10))
-    expect(toastState.current).toBeNull()
+    // The toast after the dismissed share is the next share's: the dismissed one showed none.
+    vi.stubGlobal('navigator', { ...navigator, canShare: () => true, share: async () => {} })
+    await fireEvent.click(screen.getByRole('button', { name: 'Condividi file' }))
+    await waitFor(() => expect(toastState.current?.message).toBe('Report condiviso'))
+    expect(toastState.current!.id).toBe(first + 1)
     r.unmount()
 
     vi.stubGlobal('navigator', { ...navigator, canShare: () => true, share: async () => { throw new Error('boom') } })
