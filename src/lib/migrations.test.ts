@@ -123,7 +123,7 @@ describe.each(Object.entries(DB_FIXTURES).map(([v, f]) => [Number(v), f] as cons
       const to = EXPORT_OF_DATABASE[now.verno]
       for (let v = version + 1; v <= now.verno; v++) added.push(...(ADDED[v]?.[table as Table]?.([...rows, ...added]) ?? []).flatMap((r) => today(r, EXPORT_OF_DATABASE[v], to, table as Table, ctx)))
       const want = byId([...rows.flatMap((r) => today(r, EXPORT_OF_DATABASE[version], to, table as Table, ctx)), ...added])
-      expect(got, table).toEqual(want)
+      expect(got, table).toStrictEqual(want)
     }
   })
 })
