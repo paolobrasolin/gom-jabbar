@@ -367,6 +367,15 @@ describe('list and get', () => {
     expect(res.ok && res.value.length).toBe(1)
     expect(await fresh.get('head')).toEqual({ ok: true, value: 'the diary' })
   })
+  it('on a new device, of two files with the name it takes the one written last', async () => {
+    // Two phones each made one before either knew of the other: the older is in Drive first.
+    drive.create('gom-jabbar.json', 'older')
+    now += MIN
+    drive.create('gom-jabbar.json', 'newer')
+    const p = make()
+    signIn(p)
+    expect(await p.get('head')).toEqual({ ok: true, value: 'newer' })
+  })
   it('maps failures to reasons', async () => {
     const p = make()
     expect(await p.list()).toEqual({ ok: false, reason: 'no-token' })

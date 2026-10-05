@@ -21,6 +21,12 @@ export class FakeDrive {
   write(id: string, content: string) {
     this.files.get(id)!.revs.push({ id: `r${++this.seq}`, modifiedTime: new Date(this.clock()).toISOString(), keepForever: false, content })
   }
+  /** Another device made a file of this name, holding `content`. */
+  create(name: string, content: string) {
+    const f: DFile = { id: `f${++this.seq}`, name, trashed: false, revs: [] }
+    this.files.set(f.id, f)
+    this.write(f.id, content)
+  }
   only(): DFile {
     expect(this.files.size).toBe(1)
     return [...this.files.values()][0]
@@ -58,9 +64,14 @@ export class FakeDrive {
       const q = url.searchParams.get('q')!
       const name = q.match(/name = '([^']+)'/)![1]
       expect(q).toContain('trashed = false')
+      // Unsorted unless asked, as Drive promises no order: oldest first here, so a lost orderBy picks the wrong file.
       const found = [...this.files.values()].filter((f) => f.name === name && !f.trashed).map((f) => this.meta(f))
-      found.sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime))
-      return json({ files: found })
+      const orderBy = url.searchParams.get('orderBy')
+      if (orderBy) {
+        expect(orderBy).toBe('modifiedTime desc')
+        found.sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime))
+      }
+      return json({ files: found.slice(0, Number(url.searchParams.get('pageSize') ?? 100)) })
     }
     if (path === '/drive/v3/files' && method === 'POST') {
       const body = JSON.parse(String(init.body)) as Partial<DFile>
