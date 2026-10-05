@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
-import { dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, rangeStart, rangeEnd, inRange, tagCounts, ringWidth, ringStyle } from './stats'
+import { dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, rangeStart, rangeEnd, tagCounts, ringWidth, ringStyle } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
 import { presetSeries } from './stats'
 import type { Preset } from './types'
@@ -206,10 +206,9 @@ describe('stats', () => {
     expect(symptomsRead([], symptoms)).toEqual([])
   })
 
-  it('range helpers', () => {
+  it('rangeStart is midnight of the first of the last n days', () => {
     const now = new Date(2026, 2, 10, 15)
     expect(rangeStart(7, now).getTime()).toBe(new Date(2026, 2, 4).getTime())
-    expect(inRange([e('3'.toString(), 1), e('5', 1)], rangeStart(7, now))).toHaveLength(1)
   })
 })
 

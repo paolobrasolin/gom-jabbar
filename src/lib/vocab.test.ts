@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { frequentTags } from './vocab'
 import { makeEntry } from './entries'
-import { DEFAULT_TAGS, DEFAULT_SYMPTOMS, defaultCategory, isMindSymptom, mindMax, firstEnabled } from './vocabulary'
+import { DEFAULT_TAGS, DEFAULT_SYMPTOMS, defaultCategory, isMindSymptom, firstEnabled } from './vocabulary'
 
 describe('symptom categories', () => {
   it('fog is a mind symptom by default, the rest body; a row without a category reads as its default', () => {
@@ -23,13 +23,6 @@ describe('symptom categories', () => {
     expect(firstEnabled(DEFAULT_SYMPTOMS.filter(isMindSymptom), 'body')).toBeUndefined()
     // A row from before version 6 has no category: fog reads as mind.
     expect(firstEnabled([{ ...DEFAULT_SYMPTOMS[4], category: undefined as never }], 'mind')?.id).toBe('fog')
-  })
-  it('mindMax is the highest mental reading, 0 when none', () => {
-    const symptoms = [...DEFAULT_SYMPTOMS, { id: 'irritability', label: 'Irritabilità', category: 'mind' as const, enabled: false, order: 9 }]
-    expect(mindMax({ pain: 9, fog: 4, irritability: 7 }, symptoms)).toBe(7)
-    expect(mindMax({ anxiety: 3, depression: 5 }, symptoms)).toBe(5)
-    expect(mindMax({ pain: 9, swelling: 8 }, symptoms)).toBe(0)
-    expect(mindMax({}, [])).toBe(0)
   })
 })
 

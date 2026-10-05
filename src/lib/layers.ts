@@ -48,11 +48,6 @@ export function showsCategory(l: { regions: string[] }, category: SymptomCategor
   return category === 'body' ? body : mind
 }
 
-/** Every region of every layer, once, sorted. */
-export function allRegions(layers: { regions: string[] }[]): string[] {
-  return sortU(layers.flatMap((l) => l.regions))
-}
-
 /** Several records of readings as one: the max per symptom. */
 export function maxReadings(records: Record<string, number>[]): Record<string, number> {
   const out: Record<string, number> = {}

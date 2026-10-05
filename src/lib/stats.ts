@@ -32,15 +32,6 @@ export function rangeEnd(from: Date, days: number): Date {
   return d
 }
 
-export function inRange(entries: Entry[], from: Date, to: Date = new Date(8.64e15)): Entry[] {
-  const a = from.getTime()
-  const b = to.getTime()
-  return entries.filter((e) => {
-    const t = Date.parse(e.at)
-    return t >= a && t < b
-  })
-}
-
 export type DayPoint = { day: string; date: Date; max: number | null; mean: number | null; count: number }
 
 /** One point per calendar day in [from, from + days), over the entries reading the symptom. Days without any have null values. */

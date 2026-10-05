@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  newLayer, showsCategory, allRegions, maxReadings, mergedReadings, mergedTags, prune, tapRegion, tapSet, toggleFull, addLayer, selectLayer,
+  newLayer, showsCategory, maxReadings, mergedReadings, mergedTags, prune, tapRegion, tapSet, toggleFull, addLayer, selectLayer,
   setReading, toggleTag, pieceCount, finalize, readingsFor, hasBody, holdsMind, strandedLayer, removeLayer, type Layer, type LayerState,
 } from './layers'
 import { LEG_IDS, MIND } from './regions'
@@ -25,7 +25,6 @@ describe('layer kinds and derived views', () => {
 
   it('merges regions, readings (max per symptom) and tags (union, first appearance)', () => {
     const layers = [L(['153', '152'], { pain: 8, swelling: 2 }, ['rest', 'heat']), L(['152', MIND], { pain: 3, fog: 6 }, ['heat', 'stress'])]
-    expect(allRegions(layers)).toEqual(['152', '153', MIND])
     expect(mergedReadings(layers)).toEqual({ pain: 8, swelling: 2, fog: 6 })
     expect(maxReadings([{ pain: 1 }, { pain: 4, fog: 0 }])).toEqual({ pain: 4, fog: 0 })
     expect(mergedTags(layers)).toEqual(['rest', 'heat', 'stress'])

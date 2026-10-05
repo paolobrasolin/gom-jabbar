@@ -1,4 +1,4 @@
-import { REGION_BY_ID, regionsFor, shapeOf, shapeArea, shapeCenter, shapeContains, figureBox, isFullBody, type FigureId, type Shape, type View } from './regions'
+import { REGION_BY_ID, regionsFor, shapeOf, shapeArea, shapeContains, isFullBody, type FigureId, type Shape, type View } from './regions'
 import { type Layer, type LayerState, type Stroke } from './layers'
 import { PAIN } from './types'
 
@@ -177,23 +177,6 @@ export function strokePath(stroke: { points: [number, number][] }): string {
   if (!first) return ''
   if (!rest.length) return `M ${first[0]} ${first[1]} l 0.01 0`
   return `M ${first[0]} ${first[1]} ` + rest.map(([x, y]) => `L ${x} ${y}`).join(' ')
-}
-
-export type ZoomView = { k: number; tx: number; ty: number }
-type Rect = { left: number; top: number }
-
-/** Figure coordinates of a client point on a zoomed svg whose viewBox is its pixel size and whose figure is drawn under `translate(tx ty) scale(k)`. */
-export function clientToFigure(rect: Rect, { k, tx, ty }: ZoomView, cx: number, cy: number): [number, number] {
-  return [(cx - rect.left - tx) / k, (cy - rect.top - ty) / k]
-}
-
-/** Where to look first: the centroid of these regions on the view, or the middle of the figure. */
-export function figureCenter(fig: FigureId, regions: string[], view: View): { x: number; y: number } {
-  const own = regions.map((id) => REGION_BY_ID[id]).filter((r) => r?.view === view)
-  const box = figureBox(fig)
-  if (!own.length) return { x: box.w / 2, y: box.h / 2 }
-  const cs = own.map((r) => shapeCenter(shapeOf(fig, r)))
-  return { x: cs.reduce((t, c) => t + c[0], 0) / cs.length, y: cs.reduce((t, c) => t + c[1], 0) / cs.length }
 }
 
 /** The view holding most of these regions; front on a tie. */

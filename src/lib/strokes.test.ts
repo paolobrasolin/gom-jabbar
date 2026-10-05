@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { regionAt, regionNear, partition, simplify, addStroke, undoStroke, clearStrokes, allStrokes, strokePath, clientToFigure, figureCenter, mainView, BRUSH, type RawStroke } from './strokes'
+import { regionAt, regionNear, partition, simplify, addStroke, undoStroke, clearStrokes, allStrokes, strokePath, mainView, BRUSH, type RawStroke } from './strokes'
 import { finalize, tapRegion, tapSet, toggleFull, newLayer, pieceCount, type Stroke } from './layers'
 import { REGION_BY_ID, shapeOf, shapeCenter, figureBox, type FigureId } from './regions'
 
@@ -210,18 +210,6 @@ describe('allStrokes and strokePath', () => {
 })
 
 describe('zoom helpers', () => {
-  it('clientToFigure inverts the pan and zoom of a pixel-sized viewBox', () => {
-    expect(clientToFigure({ left: 10, top: 20 }, { k: 2, tx: -50, ty: -100 }, 160, 220)).toEqual([100, 150])
-  })
-
-  it('figureCenter is the centroid of the current regions on that view, else the middle of the figure', () => {
-    const [x, y] = centre('152')
-    expect(figureCenter(F, ['152', '261'], 'front')).toEqual({ x, y })
-    const box = figureBox(F)
-    expect(figureCenter(F, ['152'], 'back')).toEqual({ x: box.w / 2, y: box.h / 2 })
-    expect(figureCenter(F, ['*'], 'front')).toEqual({ x: box.w / 2, y: box.h / 2 })
-  })
-
   it('mainView is the view holding most of the regions, front on a tie or with none', () => {
     expect(mainView(['260', '261', '152'])).toBe('back')
     expect(mainView(['260', '152'])).toBe('front')

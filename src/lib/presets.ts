@@ -112,7 +112,3 @@ export async function presetEntries(): Promise<Entry[]> {
   return [...own, ...updates.filter((u) => !seen.has(u.id))]
 }
 
-/** The most recent reading logged from a preset. */
-export async function lastForPreset(id: string): Promise<Entry | undefined> {
-  return lastByPreset(await presetEntries())[id]
-}

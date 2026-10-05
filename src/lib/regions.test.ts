@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  REGIONS, REGION_BY_ID, regionsFor, shapeOf, figureBox, shapeCenter, pathFor, shapeArea, mirrorId, flipId, counterparts, toggleRegion, toggleSet, toggleFullBody,
-  upgradeRegions, LEGACY_REGIONS, LEG_IDS, ARM_IDS, HEAD_IDS, TORSO_IDS, sided, viewBox, FULL_BODY, MIND, MIND_SHAPE, isMind, onFigure,
+  REGIONS, REGION_BY_ID, regionsFor, shapeOf, figureBox, shapeCenter, pathFor, shapeArea, mirrorId, flipId, counterparts,
+  upgradeRegions, LEGACY_REGIONS, LEG_IDS, ARM_IDS, HEAD_IDS, TORSO_IDS, sided, viewBox, MIND, MIND_SHAPE, onFigure,
 } from './regions'
 
 describe('region codes', () => {
@@ -60,18 +60,6 @@ describe('region codes', () => {
     expect(mirrorId('nope')).toBeNull()
   })
 
-  it('toggles with and without mirror', () => {
-    expect(toggleRegion([], '152', true)).toEqual(['152', '153'])
-    expect(toggleRegion([], '152', false)).toEqual(['152'])
-    expect(toggleRegion(['152', '153'], '152', true)).toEqual([])
-    expect(toggleRegion([FULL_BODY], '152', true)).toEqual([FULL_BODY])
-    expect(toggleSet([], ['152', '153'])).toEqual(['152', '153'])
-    expect(toggleSet(['152', '153'], ['152', '153'])).toEqual([])
-    expect(toggleSet([FULL_BODY], ['152'])).toEqual([FULL_BODY])
-    expect(toggleFullBody([])).toEqual([FULL_BODY])
-    expect(toggleFullBody([FULL_BODY])).toEqual([])
-  })
-
   it('limb shortcuts: legs are families 5 and 6 with the hips, arms 3 and 4 with the hands, both views and sides', () => {
     expect(LEG_IDS).toHaveLength(24)
     expect(LEG_IDS).toEqual(expect.arrayContaining(['150', '151', '164', '250', '265']))
@@ -82,8 +70,6 @@ describe('region codes', () => {
 
 
   it('the mind is a region of its own, not a CHOIR segment: no side, no mirror, no limb, its own shape', () => {
-    expect(isMind(MIND)).toBe(true)
-    expect(isMind('152')).toBe(false)
     expect(REGION_BY_ID[MIND]).toBeUndefined()
     expect(mirrorId(MIND)).toBeNull()
     expect(LEG_IDS).not.toContain(MIND)

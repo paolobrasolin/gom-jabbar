@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { resetDb } from './db'
-import { addEntry, makeEntry, logUpdate } from './entries'
+import { makeEntry, logUpdate } from './entries'
 import { emptyDraft } from './draft'
 import { LEG_IDS } from './regions'
 import { finalize } from './layers'
 import { DEFAULT_SYMPTOMS, isMindSymptom } from './vocabulary'
-import { presetFromDraft, defaultAsks, liveAsks, addPreset, updatePreset, deletePreset, restorePreset, logPreset, lastForPreset, lastByPreset, presetEntries } from './presets'
+import { presetFromDraft, defaultAsks, liveAsks, addPreset, updatePreset, deletePreset, restorePreset, logPreset, lastByPreset, presetEntries } from './presets'
 
 let db: ReturnType<typeof resetDb>
 beforeEach(() => {
@@ -88,10 +88,9 @@ describe('presets', () => {
     expect(await db.presets.count()).toBe(2)
   })
 
-  it('logs a chronic snapshot from a preset, each layer taking its own levels, and finds the last one', async () => {
+  it('logs a chronic snapshot from a preset, each layer taking its own levels', async () => {
     const strokes = [{ region: '160', fig: 'female' as const, view: 'front' as const, points: [[1, 2]] as [number, number][], w: 8 }]
     const p = await addPreset({ name: 'Gambe', layers: [{ ...P(LEG_IDS, ['pain', 'swelling']), strokes }, P(['mind'], ['fog'])], kind: 'chronic' })
-    expect(await lastForPreset(p.id)).toBeUndefined()
     const e1 = await logPreset(p, [{ pain: 4, swelling: 6 }, { fog: 2 }], '2026-09-01T10:00:00.000Z')
     expect(e1).toMatchObject({ presetId: p.id, kind: 'chronic', note: '' })
     expect(e1).not.toHaveProperty('endedAt')
@@ -99,8 +98,6 @@ describe('presets', () => {
     // A slider left blank records nothing, not a 0 (§6.1 item 7); a level for a symptom not asked is ignored.
     const e2 = await logPreset(p, [{ pain: 2, stiffness: 9 }, {}], '2026-09-03T10:00:00.000Z')
     expect(e2.layers.map((l) => l.readings)).toEqual([{ pain: 2 }, {}])
-    await addEntry({ readings: { pain: 9 }, at: '2026-09-05T10:00:00.000Z' })
-    expect((await lastForPreset(p.id))?.id).toBe(e2.id)
   })
 
   it('an episode preset opens an episode, and its updates count as its samples', async () => {
@@ -110,7 +107,6 @@ describe('presets', () => {
     const u = await logUpdate(head.id, [{ pain: 2 }], '2026-09-01T12:00:00.000Z')
     expect(u).not.toHaveProperty('presetId')
     expect((await presetEntries()).map((e) => e.id).sort()).toEqual([head.id, u!.id].sort())
-    expect((await lastForPreset(p.id))?.id).toBe(u!.id)
   })
 })
 

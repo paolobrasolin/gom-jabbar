@@ -7,7 +7,6 @@ export const FULL_BODY = '*'
  * mind symptoms live. Not a CHOIR segment, no side, no view; it shares an area with the body (§5.4).
  */
 export const MIND = 'mind'
-export const isMind = (id: string): boolean => id === MIND
 /** The mind figure, a brain seen from above with lobed edges and a central fissure: the outline and the seams drawn over it, in a 120×100 box. */
 export const MIND_SHAPE = {
   w: 120,
@@ -102,7 +101,6 @@ function expand(pairs: Pair[], view: View): RegionDef[] {
 
 export const REGIONS: RegionDef[] = [...expand(FRONT, 'front'), ...expand(BACK, 'back')]
 export const REGION_BY_ID: Record<string, RegionDef> = Object.fromEntries(REGIONS.map((r) => [r.id, r]))
-export const ALL_REGION_IDS = REGIONS.map((r) => r.id)
 
 export function regionsFor(view: View): RegionDef[] {
   return REGIONS.filter((r) => r.view === view)
@@ -228,31 +226,6 @@ export const sided = (ids: string[], side: Side): string[] => ids.filter((id) =>
 
 export function isFullBody(regions: string[]): boolean {
   return regions.includes(FULL_BODY)
-}
-
-/** Toggle a region, honouring the mirror setting. Returns a new array. */
-export function toggleRegion(selected: string[], id: string, mirror: boolean): string[] {
-  if (isFullBody(selected)) return selected
-  const ids = [id]
-  const m = mirror ? mirrorId(id) : null
-  if (m) ids.push(m)
-  const set = new Set(selected)
-  const on = set.has(id)
-  for (const x of ids) on ? set.delete(x) : set.add(x)
-  return [...set].sort()
-}
-
-/** Toggle a whole set (legs, arms). If all present, remove them; else add them all. */
-export function toggleSet(selected: string[], ids: string[]): string[] {
-  if (isFullBody(selected)) return selected
-  const set = new Set(selected)
-  const all = ids.every((x) => set.has(x))
-  for (const x of ids) all ? set.delete(x) : set.add(x)
-  return [...set].sort()
-}
-
-export function toggleFullBody(selected: string[]): string[] {
-  return isFullBody(selected) ? [] : [FULL_BODY]
 }
 
 /**
