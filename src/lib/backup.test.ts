@@ -182,7 +182,22 @@ describe('backup', () => {
   it('rejects garbage', () => {
     expect(() => parseImport('nope')).toThrow('invalid-json')
     expect(() => parseImport('{"app":"other","entries":[]}')).toThrow('invalid-file')
-    expect(() => parseImport('{"app":"gom-jabbar","entries":[{"id":1}]}')).toThrow('invalid-entry')
+    expect(() => parseImport('{"app":"gom-jabbar","version":10,"entries":[{"id":1}]}')).toThrow('invalid-entry')
+  })
+
+  it('refuses at the preview what Sostituisci tutto could not store, or would store as something else (#91)', () => {
+    const at = '2026-01-01T00:00:00.000Z'
+    const entry = { id: 'a', at, layers: [{ regions: ['152'], readings: { pain: 7 }, tags: [] }] }
+    const file = (patch: object) => JSON.stringify({ app: 'gom-jabbar', version: EXPORT_VERSION, entries: [entry], ...patch })
+    // Every file ever written has a numeric version (the seed's said 2): without one, read as version 1, every entry lost its layers.
+    for (const version of [undefined, '10', null, 0, 2.5]) expect(() => parseImport(file({ version })), String(version)).toThrow('invalid-file')
+    // A row that is not an object, or has no string id, cannot be stored: it failed only on Sostituisci tutto, after the preview.
+    for (const bad of [null, 3, 'x', [], {}, { id: 5 }, { label: 'X' }]) {
+      expect(() => parseImport(file({ vocabulary: { symptoms: [bad], tags: [] } })), JSON.stringify(bad)).toThrow('invalid-file')
+      expect(() => parseImport(file({ vocabulary: { symptoms: [], tags: [bad] } })), JSON.stringify(bad)).toThrow('invalid-file')
+      expect(() => parseImport(file({ presets: [bad] })), JSON.stringify(bad)).toThrow('invalid-preset')
+    }
+    for (const bad of [null, 3, 'x', []]) expect(() => parseImport(file({ entries: [bad] })), JSON.stringify(bad)).toThrow('invalid-entry')
   })
 
   it('reminds 14 days after the last backup when Drive is not in use, snoozing 7', () => {

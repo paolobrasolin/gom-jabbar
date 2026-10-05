@@ -76,23 +76,28 @@ export function parseImport(text: string): ExportFile {
   if (!raw || typeof raw !== 'object') throw new Error('invalid-file')
   const o = raw as Record<string, unknown>
   if (o.app !== 'gom-jabbar' || !Array.isArray(o.entries)) throw new Error('invalid-file')
-  const version = typeof o.version === 'number' ? o.version : 1
+  // Every file ever written says its version, the first export's and the seed's included: without one, a damaged file
+  // read as version 1 lost every entry's layers (#91).
+  if (typeof o.version !== 'number' || !Number.isInteger(o.version) || o.version < 1) throw new Error('invalid-file')
+  const version = o.version
   // A file from a newer app (a rollback): its shape is unknown here, so nothing of it is read.
   if (version > EXPORT_VERSION) throw new Error('newer-version')
   const vocab = (o.vocabulary ?? {}) as Partial<ExportFile['vocabulary']>
   // A file without a vocabulary (no version ever wrote one) reads as carrying the seed as of version 10, frozen (#113);
   // an empty one stays empty (§8).
-  const symptoms = Array.isArray(vocab.symptoms) ? vocab.symptoms.map((s) => normalizeSymptom(s, version)) : seedSymptomsV10()
-  const tags = Array.isArray(vocab.tags) ? vocab.tags.map((x) => normalizeTag(x, version)) : seedTagsV10()
+  // A row the database cannot key failed only on Sostituisci tutto, after the preview had shown the file (#91).
+  const keyed = <T,>(rows: unknown[], reason: string) => rows.map((r) => (isObject(r) && typeof r.id === 'string' ? (r as T) : fail(reason)))
+  const symptoms = Array.isArray(vocab.symptoms) ? keyed<Symptom>(vocab.symptoms, 'invalid-file').map((s) => normalizeSymptom(s, version)) : seedSymptomsV10()
+  const tags = Array.isArray(vocab.tags) ? keyed<Tag>(vocab.tags, 'invalid-file').map((x) => normalizeTag(x, version)) : seedTagsV10()
   const categoryOf = categoryLookup(symptoms)
-  const entries = (o.entries as Row[]).flatMap((e) => normalizeEntry(e, version, categoryOf))
+  const entries = (o.entries as unknown[]).flatMap((e) => (isObject(e) ? normalizeEntry(e, version, categoryOf) : fail('invalid-entry')))
   return {
     app: 'gom-jabbar',
     version: EXPORT_VERSION,
     exportedAt: typeof o.exportedAt === 'string' ? o.exportedAt : new Date().toISOString(),
     vocabulary: { symptoms, tags },
     entries,
-    presets: Array.isArray(o.presets) ? (o.presets as Row[]).map((p) => normalizePreset(p, version, categoryOf)) : [],
+    presets: Array.isArray(o.presets) ? keyed<Row>(o.presets, 'invalid-preset').map((p) => normalizePreset(p, version, categoryOf)) : [],
   }
 }
 
@@ -115,6 +120,10 @@ function normalizePreset(p: Row, version: number, categoryOf: CategoryOf): Prese
 }
 
 type Row = Record<string, unknown>
+
+const fail = (reason: string): never => {
+  throw new Error(reason)
+}
 
 const isObject = (x: unknown): x is Row => !!x && typeof x === 'object' && !Array.isArray(x)
 const isStrings = (x: unknown): boolean => Array.isArray(x) && x.every((v) => typeof v === 'string')
