@@ -5,6 +5,12 @@ on:
     branches-ignore: [main]
   pull_request:
 
+# A push cancels the runs still going on the same branch: only the newest commit's result matters, and commits are
+# made once `npm test` and `npm run check` pass locally. Saves runners when GitHub is short of them.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 # Actions are pinned by commit, the release in the comment, as in deploy.yml (the repo refuses unpinned ones).
 jobs:
   build:
