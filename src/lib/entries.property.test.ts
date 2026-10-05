@@ -1,11 +1,14 @@
 /** Episode chains for any diary (#91): grouping, the reading shown, and the undoable changes to a chain. */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import fc from 'fast-check'
 import { resetDb } from './db'
 import { episodesOf, latest, shownReading, endEpisode, reopenEpisode, deleteEntry, restoreEntries, timeProblem, isHead, isUpdate } from './entries'
 import { entryHeadline } from './summary'
 import { diary, iso } from '../test/arbitraries'
 import type { Entry } from './types'
+
+// Hundreds of diaries through the database: well past the default 5 s under coverage and a loaded machine.
+vi.setConfig({ testTimeout: 30_000 })
 
 const byId = (rows: Entry[]) => [...rows].sort((a, b) => a.id.localeCompare(b.id))
 /** A diary's entries in any order, as a database or a merge may hand them over. */

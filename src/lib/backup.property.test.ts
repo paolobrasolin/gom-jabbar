@@ -4,11 +4,14 @@
  * (`fc.assert(..., { seed, path })`). The frozen fixtures of `migrations.test.ts` stay: they record what past versions
  * actually wrote, which no generator can know.
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import fc from 'fast-check'
 import { resetDb } from './db'
 import { parseImport, applyImport, buildExport, type ExportFile } from './backup'
 import { diary } from '../test/arbitraries'
+
+// Hundreds of diaries through the database: well past the default 5 s under coverage and a loaded machine.
+vi.setConfig({ testTimeout: 30_000 })
 
 type Row = Record<string, unknown>
 /** What a value is once written to a file: the comparison every property makes. */

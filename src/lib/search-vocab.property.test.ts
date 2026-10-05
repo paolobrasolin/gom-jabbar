@@ -1,5 +1,5 @@
 /** Search and the vocabulary editor for any diary and any typing (#91): search.ts, vocab.ts. */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import fc from 'fast-check'
 import { fold, words, search, type SearchContext } from './search'
 import { resetDb } from './db'
@@ -11,6 +11,9 @@ import { prefs } from './prefs.svelte'
 import { diary } from '../test/arbitraries'
 import type { ExportFile } from './backup'
 import type { Symptom, Tag } from './types'
+
+// Hundreds of diaries through the database: well past the default 5 s under coverage and a loaded machine.
+vi.setConfig({ testTimeout: 30_000 })
 
 beforeEach(() => {
   prefs.lang = 'it'
