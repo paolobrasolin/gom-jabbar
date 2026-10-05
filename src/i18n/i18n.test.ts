@@ -9,6 +9,19 @@ describe('i18n', () => {
   it('has the same keys in every language', () => {
     expect(Object.keys(en).sort()).toEqual(Object.keys(it_).sort())
   })
+  it('has the same placeholders for a key in every language, but a singular may spell the count out ("once")', () => {
+    const holes = (k: string, s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((h) => !(k.endsWith('.one') && h === 'n')).sort()
+    for (const [k, v] of Object.entries(it_)) expect(holes(k, (en as Record<string, string>)[k] ?? ''), k).toEqual(holes(k, v))
+  })
+  it('has every key the code names: t() would show a missing one bare', () => {
+    const sources = import.meta.glob(['/src/**/*.{ts,svelte}', '!/src/**/*.test.ts', '!/src/test/**'], { query: '?raw', import: 'default', eager: true })
+    const keys = new Set(Object.values(sources).flatMap((src) => [...(src as string).matchAll(/\btn?\(\s*(['"])([\w.]+)\1/g)].map((m) => m[2])))
+    expect(keys.size).toBeGreaterThan(150)
+    for (const k of keys) {
+      expect(it_, k).toHaveProperty([k])
+      expect(en, k).toHaveProperty([k])
+    }
+  })
   it('has no empty messages', () => {
     for (const m of [it_, en]) for (const [k, v] of Object.entries(m)) expect(v, k).not.toBe('')
   })
