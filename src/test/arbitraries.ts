@@ -82,7 +82,8 @@ const entries = (symptomIds: string[], tagIds: string[], presetIds: string[]) =>
       .tuple(
         base(eid, new Date(t).toISOString()),
         fc.option(iso(t, T1), { nil: null }),
-        fc.uniqueArray(fc.integer({ min: t + 1, max: t + 86_400_000 }), { maxLength: 4 }),
+        // Times may repeat, as in histories split from version 7 (§8), and ids run past :9, so ties and :10 are tried.
+        fc.array(fc.oneof(fc.integer({ min: t + 1, max: t + 86_400_000 }), fc.constant(t + 3_600_000)), { maxLength: 11 }),
       )
       .chain(([head, endedAt, times]) =>
         fc.tuple(...times.map((u, i) => base(`${eid}:${i + 1}`, new Date(u).toISOString()))).map((updates): Entry[] => [
