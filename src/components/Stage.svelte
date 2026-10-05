@@ -86,7 +86,9 @@
     void inner
     fitAll()
   })
-  const zoom = (f: number) => (gesture.camera = zoomAt(size, box, gesture.camera, f, kRange))
+  const zoom = (f: number) => {
+    gesture.camera = zoomAt(size, box, gesture.camera, f, kRange)
+  }
   /** Zoomed past the fit: Adatta has something to do. */
   const zoomed = $derived(gesture.camera.k > fit * 1.001)
   /** A new draft looks at the whole figure again. */
