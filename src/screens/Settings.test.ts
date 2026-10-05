@@ -431,6 +431,20 @@ describe('Settings import', () => {
     expect(await db.symptoms.count()).toBe(9)
   })
 
+  it('Sostituisci tutto replaces the presets too, and its undo brings back the ones only this phone had', async () => {
+    const theirs = await addPreset({ name: 'Schiena', layers: [{ regions: [], asks: ['pain'] }], kind: 'chronic' })
+    const file = await buildExport()
+    await db.presets.delete(theirs.id)
+    const mine = await addPreset({ name: 'Gambe', layers: [{ regions: ['152'], asks: ['pain'] }], kind: 'chronic' })
+    await openSettings()
+    await pickFile(JSON.stringify(file))
+    await fireEvent.click(within(await screen.findByRole('dialog', { name: 'Ripristina' })).getByRole('button', { name: /^Sostituisci tutto/ }))
+    expect(await screen.findByText('Ripristinate 0 voci')).toBeInTheDocument()
+    expect(await db.presets.toArray()).toEqual([theirs])
+    await fireEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+    await waitFor(async () => expect(await db.presets.toArray()).toEqual([mine]))
+  })
+
   it('a double tap on Sostituisci tutto replaces once and keeps the undo', async () => {
     const other = await addEntry({ at: '2026-09-02T10:00:00.000Z', layers: [{ regions: ['153'], readings: { pain: 6 } }] })
     const file = await buildExport()
