@@ -130,7 +130,8 @@ export default defineConfig(({ mode }) => ({
       include: ['src/**/*.{ts,svelte}'],
       exclude: ['src/**/*.test.ts', 'src/test/**', 'src/main.ts', 'src/vite-env.d.ts'],
       reporter: process.env.COVERAGE_HTML ? ['text', 'html'] : ['text-summary'],
-      // Ratchet: raise these when coverage grows, never lower them. `npm test` fails below.
+      // Ratchet: raise these when coverage grows, never lower them, except in a commit that only deletes code with its
+      // tests (CLAUDE.md). `npm test` fails below.
       thresholds: {
         'src/lib/**': { lines: 99.8, statements: 99.7, functions: 99.4, branches: 96.6 },
         lines: 99.5,

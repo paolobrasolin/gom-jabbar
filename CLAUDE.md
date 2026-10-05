@@ -22,7 +22,7 @@ Screenshot in Pixel 7 emulation with `playwright-core` using the installed Chrom
 
 ## Tests come first
 - Write the failing test before the code: every change in `lib/`, every user-visible behaviour in a screen or component, and every bug fix starts with a test that reproduces it. Red, green, then tidy.
-- `npm test` runs with coverage and fails below the thresholds in `vite.config.ts`. They are a ratchet: raise them when coverage grows, never lower them, and raise them in the same commit that grows coverage. `npm run coverage` writes an HTML report to `coverage/`.
+- `npm test` runs with coverage and fails below the thresholds in `vite.config.ts`. They are a ratchet: raise them when coverage grows, and raise them in the same commit that grows coverage. Never lower them, with one exception: a commit that only deletes code together with its tests may lower them to what remains, since fewer covered lines can mean a smaller percentage (#118). `npm run coverage` writes an HTML report to `coverage/`.
 - Component tests use Testing Library against the real Dexie on `fake-indexeddb`, not mocks of `lib/`. Screens with no test are debt, not a choice.
 
 ## User data is never lost
