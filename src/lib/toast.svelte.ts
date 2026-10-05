@@ -12,7 +12,7 @@ export type Toast = { id: number; kind: ToastKind; message: string; action?: { l
 export const TOAST_MS = { done: 3000, undo: 10_000, refusal: 7000 } as const
 
 /**
- * `lift`: where the log's drawer ends, in px above the tab bar, so the toast sits over the stage and not over the slider
+ * `lift`: where the log's drawer ends, in px above the bottom of the screen, so the toast sits over the stage and not over the slider
  * (#23); null elsewhere. `top`: the log's drawer is pulled up, so the toast shows at the top of the screen instead.
  * `held`: a finger is on the toast, so its time stands still.
  */
