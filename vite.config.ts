@@ -10,23 +10,25 @@ import { csp } from './src/build/csp.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 
-// Short commit hash as semver build metadata, so Settings identifies the exact build.
-// Nix sets GIT_REV (no git in the sandbox); locally we ask git; otherwise "local".
+// Short commit hash as semver build metadata, so Settings identifies the exact build, "-dirty" with uncommitted changes
+// as the flake's dirtyShortRev says. Nix sets GIT_REV (no git in the sandbox); locally we ask git, tags left out so it
+// is the hash and not "v0.12.0-3-g…"; otherwise "local".
 function gitRev(): string {
   if (process.env.GIT_REV) return process.env.GIT_REV
   try {
-    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    return execSync("git describe --always --dirty --abbrev=7 --exclude='*'", { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
   } catch {
     return 'local'
   }
 }
 
-// The day of the commit being built, YYYY-MM-DD, shown next to the version in Settings: the same commit always shows the
-// same date. Nix sets GIT_DATE from the flake; locally we ask git; otherwise today.
+// The day of the commit being built, YYYY-MM-DD in UTC, shown next to the version in Settings: the same commit always
+// shows the same date, here and in the deployed build. Nix sets GIT_DATE from the flake (UTC); locally we ask git, in
+// UTC too; otherwise today.
 function gitDate(): string {
   if (process.env.GIT_DATE) return process.env.GIT_DATE
   try {
-    return execSync('git log -1 --format=%cs', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    return execSync('git log -1 --format=%cd --date=format-local:%Y-%m-%d', { stdio: ['ignore', 'pipe', 'ignore'], env: { ...process.env, TZ: 'UTC' } }).toString().trim()
   } catch {
     return new Date().toISOString().slice(0, 10)
   }
