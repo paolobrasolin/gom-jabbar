@@ -27,6 +27,19 @@ export function noticeOf(name: string, read: (file: string) => string | null, fi
   return { name, version: pkg.version ?? '?', license, text: notice ? `${text}\n\nNOTICE\n\n${notice}` : text }
 }
 
+/**
+ * The body map's entry (#35, #121). Its outlines are the CHOIR body map's own segment regions, devised at Stanford, as
+ * shipped in the MIT-licensed CHOIRBM package, whose metadata names Stanford as copyright holder: credit the map, its
+ * authors and both papers, say the app is not affiliated, then the package's licence (`mit`, from scripts/choir).
+ */
+export function choirNotice(mit: string): Notice {
+  const credit = [
+    'The CHOIR Body Map (Collaborative Health Outcomes Information Registry), Stanford University Division of Pain Medicine; the original body map was devised by Ming-Chih J. Kao and Sean Mackey. Gom Jabbar draws its segment outlines, recoloured and renumbered, as shipped in the CHOIRBM R package by Eric Cramer, under the MIT licence below; the package\'s metadata names Stanford University School of Medicine as copyright holder. Gom Jabbar is not affiliated with or endorsed by Stanford University or CHOIR.',
+    'References: Scherrer KH et al., "Development and validation of the Collaborative Health Outcomes Information Registry body map", PAIN Reports 2021;6(1):e880, doi:10.1097/PR9.0000000000000880. Cramer E et al., "CHOIRBM: An R package for exploratory data analysis and interactive visualization of pain patient body map data", PLOS Computational Biology 2022, doi:10.1371/journal.pcbi.1010496.',
+  ].join('\n\n')
+  return { name: 'CHOIRBM', version: '(body map outlines, scripts/choir)', license: 'MIT', text: `${credit}\n\n${mit.trim()}` }
+}
+
 const escape = (t: string) => t.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 const anchor = (name: string) => name.replace(/^@/, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()
 

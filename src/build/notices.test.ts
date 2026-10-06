@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { packageOf, noticeOf, renderNotices, type Notice } from './notices'
+import { packageOf, noticeOf, renderNotices, choirNotice, type Notice } from './notices'
 
 describe('packageOf', () => {
   it('names the package a bundled module comes from', () => {
@@ -82,5 +82,27 @@ describe('renderNotices', () => {
     const out = renderNotices([{ name: '@scope/pkg', version: '1.0.0', license: 'MIT', text: 'See <https://x.test/?a=1&b=2> "quoted"' }])
     expect(out).toContain('<h2 id="scope-pkg">@scope/pkg 1.0.0 — MIT</h2>')
     expect(out).toContain('<pre>See &lt;https://x.test/?a=1&amp;b=2&gt; "quoted"</pre>')
+  })
+})
+
+describe('choirNotice', () => {
+  // #121: the outlines are the CHOIR body map's own regions, devised at Stanford; CHOIRBM's metadata names Stanford as
+  // copyright holder. The entry credits them and the papers, says the app is not affiliated, then the MIT text.
+  const n = choirNotice('MIT License\n\nCopyright (c) 2021 Eric Cramer\n')
+
+  it('credits the CHOIR body map, its authors and Stanford, then the package licence', () => {
+    expect(n).toMatchObject({ name: 'CHOIRBM', license: 'MIT' })
+    expect(n.text).toContain('The CHOIR Body Map (Collaborative Health Outcomes Information Registry), Stanford University Division of Pain Medicine')
+    expect(n.text).toContain('devised by Ming-Chih J. Kao and Sean Mackey')
+    expect(n.text).toContain('the CHOIRBM R package by Eric Cramer')
+    expect(n.text).toContain('names Stanford University School of Medicine as copyright holder')
+    expect(n.text).toContain('not affiliated with or endorsed by Stanford University or CHOIR')
+    expect(n.text).toContain('doi:10.1097/PR9.0000000000000880')
+    expect(n.text).toContain('doi:10.1371/journal.pcbi.1010496')
+    expect(n.text.endsWith('Copyright (c) 2021 Eric Cramer')).toBe(true)
+  })
+
+  it('names no licence for the map but the package one: the paper is CC BY-NC-ND, the outlines are not', () => {
+    expect(n.text).not.toContain('CC BY-NC-ND')
   })
 })

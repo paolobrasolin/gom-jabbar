@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 import { execSync } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
-import { packageOf, noticeOf, renderNotices } from './src/build/notices.ts'
+import { packageOf, noticeOf, renderNotices, choirNotice } from './src/build/notices.ts'
 import { csp } from './src/build/csp.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
@@ -71,12 +71,7 @@ function notices(): Plugin {
           if (name && !dirs.has(name)) dirs.set(name, `${path.slice(0, path.lastIndexOf('node_modules'))}node_modules/${name}`)
         }
       }
-      const choir = {
-        name: 'CHOIRBM',
-        version: '(body map polygons, scripts/choir)',
-        license: 'MIT',
-        text: `${readFileSync('scripts/choir/LICENSE.md', 'utf8').trim()}\n\nThe CHOIR body map itself: Scherrer KH et al., "Development and validation of the Collaborative Health Outcomes Information Registry body map", PAIN Reports 2021;6(1):e880, open access under CC BY-NC-ND 4.0.`,
-      }
+      const choir = choirNotice(readFileSync('scripts/choir/LICENSE.md', 'utf8'))
       const source = renderNotices([...[...dirs].map(([n, d]) => notice(n, d)), choir])
       this.emitFile({ type: 'asset', fileName: 'open-source-licences.html', source })
     },
