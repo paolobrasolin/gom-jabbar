@@ -57,16 +57,33 @@ describe('the terms page', () => {
 })
 
 describe('the privacy page', () => {
-  it('in English: who is responsible for what, the warning first, then legal basis, retention, rights and the authority', () => {
+  it('in English: who is responsible for what, the warning first, then legal basis, recipients, retention, rights and the authority', () => {
     const t = text(en)
     expect(t).toContain('Who is responsible for what')
     expect(t).toContain('purely personal use')
     // The warning first, then the legal minimum for what is sent anyway.
     expect(t.indexOf("Don't send personal data.")).toBeLessThan(t.indexOf('Art. 6(1)(f)'))
     expect(t).toContain('no health details, no screenshots, no backups')
-    expect(t).toMatch(/kept no longer than that/)
-    expect(t).toMatch(/Arts\. 15–21/)
     expect(en).toContain('https://www.garanteprivacy.it')
+    // #121: what the browser keeps (technical storage is disclosed, not consented to), where a Drive backup goes
+    // away, who else holds what is sent, for how long, and the right to object on its own (GDPR Art. 21(4)).
+    expect(t).toContain('no cookies and no trackers')
+    expect(t).toContain('a copy of the app so it opens offline')
+    expect(t).toContain('empty the trash')
+    expect(t).not.toContain('no one but you')
+    expect(t).toContain("the publisher's Gmail account (Google)")
+    expect(t).toContain('issues are public on GitHub')
+    expect(t).toContain('EU-US Data Privacy Framework')
+    // Promises cover the publisher's own mailbox and issues; Google and GitHub keep copies on their own terms.
+    expect(t).toContain('deleted within 12 months of the last message')
+    expect(t).toContain('issues are public on GitHub and stay as long as the repository does')
+    expect(t).toContain('None of it leaves the phone unless you send it')
+    expect(t).toContain('Emails, issues and comments containing health details are deleted immediately')
+    expect(t).not.toContain('Art. 9(2)(a)')
+    expect(t).toContain('Google and GitHub delete their own copies on their own schedule')
+    expect(t).not.toContain('kept no longer than that')
+    expect(t).toMatch(/You can object at any time to this use of your data \(Art\. 21\)/)
+    expect(t).toMatch(/Arts\. 15–18/)
   })
 
   it('in Italian, titled Informativa sulla privacy, with the same items', () => {
@@ -76,8 +93,22 @@ describe('the privacy page', () => {
     expect(t).toContain('uso esclusivamente personale')
     expect(t.indexOf('Non mandare dati personali.')).toBeLessThan(t.indexOf('art. 6, par. 1, lett. f'))
     expect(t).toContain('niente dati sulla salute, niente schermate, niente backup')
-    expect(t).toMatch(/e non resta oltre/)
-    expect(t).toMatch(/artt\. 15–21/)
     expect(it_).toContain('https://www.garanteprivacy.it')
+    expect(t).toContain('non usa cookie né strumenti di tracciamento')
+    expect(t).toContain("una copia dell'app per aprirsi offline")
+    expect(t).toContain('svuota il cestino')
+    expect(t).not.toContain('nessun altro li tratta')
+    expect(t).toContain("nell'account Gmail di chi pubblica l'app (Google)")
+    expect(t).toContain('le issue sono pubbliche su GitHub')
+    expect(t).toContain('EU-US Data Privacy Framework')
+    expect(t).toContain("vengono cancellate entro 12 mesi dall'ultimo messaggio")
+    expect(t).toContain('le issue sono pubbliche su GitHub e restano finché esiste il repository')
+    expect(t).toContain('Niente di questo lascia il telefono, se non sei tu a mandarlo')
+    expect(t).toContain('Email, issue e commenti che contengono dati sulla salute vengono cancellati immediatamente')
+    expect(t).not.toContain('art. 9, par. 2, lett. a')
+    expect(t).toContain('Google e GitHub cancellano le loro copie con i loro tempi')
+    expect(t).not.toContain('e non resta oltre')
+    expect(t).toMatch(/Puoi opporti in qualsiasi momento a questo uso dei tuoi dati \(art\. 21\)/)
+    expect(t).toMatch(/artt\. 15–18/)
   })
 })
