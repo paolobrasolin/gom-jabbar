@@ -1,0 +1,30 @@
+name: Suggestion
+description: An idea to make the app better
+labels: [enhancement]
+assignees: [paolobrasolin]
+
+body:
+- type: markdown
+  attributes:
+    value: |
+      **Issues are public.** Don't include health details, screenshots or backups of your diary: issues and comments containing health details are deleted immediately.
+
+      **Le issue sono pubbliche.** Non includere dati sulla salute, schermate o backup del diario: issue e commenti che contengono dati sulla salute vengono cancellati immediatamente.
+- type: checkboxes
+  attributes:
+    label: Before you write
+    options:
+    - label: I have searched the existing issues
+      required: true
+    - label: I have left out health details, screenshots and backups of my diary
+      required: true
+- type: textarea
+  attributes:
+    label: What gets in the way
+    description: What is hard or missing today?
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Your idea
+    description: What would you like the app to do?

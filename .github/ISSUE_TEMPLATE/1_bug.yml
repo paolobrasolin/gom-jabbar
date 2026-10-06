@@ -1,0 +1,41 @@
+name: Bug report
+description: Something in the app does not work as expected
+labels: [bug]
+assignees: [paolobrasolin]
+
+body:
+- type: markdown
+  attributes:
+    value: |
+      **Issues are public.** Don't include health details, screenshots or backups of your diary: issues and comments containing health details are deleted immediately. Describe what happened instead.
+
+      **Le issue sono pubbliche.** Non includere dati sulla salute, schermate o backup del diario: issue e commenti che contengono dati sulla salute vengono cancellati immediatamente. Racconta invece cosa è successo.
+- type: checkboxes
+  attributes:
+    label: Before you write
+    options:
+    - label: I have searched the existing issues
+      required: true
+    - label: I have left out health details, screenshots and backups of my diary
+      required: true
+- type: textarea
+  attributes:
+    label: What happened
+    description: What you did and what the app did.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: What you expected
+- type: textarea
+  attributes:
+    label: Steps to reproduce
+    placeholder: |
+      1. Open …
+      2. Tap …
+      3. See …
+- type: input
+  attributes:
+    label: Phone, browser and app version
+    description: The app version is at the bottom of Settings.
+    placeholder: Pixel 7, Chrome, Gom Jabbar 0.12.1
