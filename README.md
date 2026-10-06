@@ -16,10 +16,10 @@ npm run check      # svelte-check + tsc
 npm run build      # static bundle in dist/
 ```
 
-`node scripts/seed.mjs` writes a demo export you can load from Settings → Ripristina da file to see Trends and the report with data.
+`node scripts/seed.mjs` writes a demo export you can load from Settings → Ripristina da file to see Trends and the diary summary with data.
 
-Work happens on `development`, where CI runs `nix build` (`.github/workflows/ci.yml`). Merging into `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`, same build plus the upload). Releases are cut with `npm version minor` or `patch`, see [CHECKLIST.md](CHECKLIST.md). Settings shows the version plus the short commit hash it was built from. Enable Pages with source "GitHub Actions" in the repo settings once.
+Work happens on `development`, where CI runs `nix build` (`.github/workflows/ci.yml`). Fast-forwarding `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`, same build plus the upload); a ruleset keeps `main` linear and refuses force-pushes and its deletion. Releases are cut with `npm version minor` or `patch`, see [CHECKLIST.md](CHECKLIST.md). Settings shows the version plus the short commit hash it was built from. Enable Pages with source "GitHub Actions" in the repo settings once.
 
 ## Licence
 
-Copyright © 2026 Paolo Brasolin. Licensed under the [European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), available in every official EU language at <https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12>. It comes with no warranty and, as far as the law allows, no liability (articles 7 and 8). Third-party code and data shipped in the app keep their own licences, listed in `open-source-licences.html` next to the app.
+Copyright © 2026 Paolo Brasolin. Licensed under the [European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), available in every official EU language at <https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12>. It has its own rules on warranty and liability (articles 7 and 8). Third-party code and data shipped in the app keep their own licences, listed in `open-source-licences.html` next to the app. The body map is Stanford's CHOIR body map, from the CHOIRBM package (see `scripts/choir/README.md`).
