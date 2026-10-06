@@ -40,7 +40,7 @@ describe('Trends summary', () => {
     expect(await screen.findByText('Nessuna voce in questo periodo.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '30 giorni' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: '7 giorni' })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.queryByRole('button', { name: 'Report per il medico' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Riepilogo del diario' })).not.toBeInTheDocument()
   })
 
   it('fills the tiles from the entries in range', async () => {
@@ -95,7 +95,7 @@ describe('Trends summary', () => {
     const chip = screen.getByRole('button', { name: `Dal ${new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' }).format(day)}` })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: '30 giorni' })).toHaveAttribute('aria-pressed', 'false')
-    await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const fmt = (d: Date) => new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }).format(d)
     expect(screen.getByText(new RegExp(`^Dal ${fmt(day)} al ${fmt(daysAgo(0))}`))).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }))
@@ -122,7 +122,7 @@ describe('Trends summary', () => {
   it('the report button sits under the ranges, before the figures (#114)', async () => {
     await addEntry({ at: at(0), ...legs(4) })
     await openTrends()
-    const button = await screen.findByRole('button', { name: 'Report per il medico' })
+    const button = await screen.findByRole('button', { name: 'Riepilogo del diario' })
     await waitFor(() => expect(tile('Voci')).toBeInTheDocument())
     expect(button.compareDocumentPosition(tile('Voci')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByRole('button', { name: '7 giorni' }).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -192,7 +192,7 @@ describe('Trends by any symptom (#38)', () => {
     await swollen(0, 6, 2)
     await openTrends()
     await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
     expect(within(report).getByText('Sintomo: Gonfiore')).toBeInTheDocument()
     expect(within(report).getByText('Media giornaliera').parentElement!).toHaveTextContent('6')
@@ -226,7 +226,7 @@ describe('Trends heatmap and chart', () => {
     await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
     expect(document.querySelector('[data-region="110"]')).not.toHaveClass('on')
     expect(screen.getByText('Tutto il corpo: 2 volte, media 3,5')).toBeInTheDocument()
-    await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
     expect(within(report).getByText('Tutto il corpo: 2 volte, media 3,5')).toBeInTheDocument()
   })
@@ -236,7 +236,7 @@ describe('Trends heatmap and chart', () => {
     await openTrends()
     const map = (await screen.findByText('Dove')).closest('.card') as HTMLElement
     expect(within(map).getByRole('img', { name: 'Scala dei colori: da 0 assente a 10 massimo' })).toBeInTheDocument()
-    await fireEvent.click(screen.getByRole('button', { name: 'Report per il medico' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
     expect(within(report).getByRole('img', { name: 'Scala dei colori: da 0 assente a 10 massimo' })).toBeInTheDocument()
     expect(within(report).getByText('Colore: intensità media. Bordo: frequenza.')).toBeInTheDocument()
@@ -358,7 +358,7 @@ describe('Trends report', () => {
   it('opens the report and closes it again', async () => {
     await addEntry({ at: at(0), ...legs(5) })
     await openTrends()
-    await fireEvent.click(await screen.findByRole('button', { name: 'Report per il medico' }))
+    await fireEvent.click(await screen.findByRole('button', { name: 'Riepilogo del diario' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Diario dei sintomi' })).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }))
     expect(screen.queryByRole('heading', { level: 1, name: 'Diario dei sintomi' })).not.toBeInTheDocument()

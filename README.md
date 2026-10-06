@@ -4,7 +4,7 @@
 [![Version](https://img.shields.io/github/v/tag/paolobrasolin/gom-jabbar?label=version&sort=semver)](https://github.com/paolobrasolin/gom-jabbar/tags)
 [![Licence](https://img.shields.io/github/license/paolobrasolin/gom-jabbar)](LICENSE)
 
-Chronic pain diary. Installable web app, no backend: the data stays on the phone, with an optional backup to the person's own Google Drive. See [SPEC.md](SPEC.md). Deployed at https://gom-jabbar.618.ovh/ (install to the home screen from there).
+Personal diary of pain and other symptoms. Installable web app, no backend: the data stays on the phone, with an optional backup to the person's own Google Drive. See [SPEC.md](SPEC.md). Deployed at https://gom-jabbar.618.ovh/ (install to the home screen from there).
 
 With [Nix](https://nixos.org) and [direnv](https://direnv.net), `direnv allow` once and the shell gets the pinned Node; `nix build` runs the whole CI (check, tests, build, size gate, licence notices) and leaves the Pages bundle in `result/`. Without Nix, Node 22.18 or later, 23 and 25 excepted (`engines` in `package.json`: Vitest wants 22.12, the seed script's TypeScript imports 22.18).
 

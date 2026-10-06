@@ -12,6 +12,20 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 const terms = readFileSync('public/terms-of-service.html', 'utf8')
 const [termsEn, termsIt] = terms.split('<div lang="it" id="it">')
 
+describe('what the app is, on both pages', () => {
+  // The pages state the intended purpose, which decides whether software is a medical device (MDR Art. 2(12), #121):
+  // what it is for, said first, then what it does not do.
+  it.each([
+    ['privacy', en, it_],
+    ['terms', termsEn, termsIt],
+  ])('the %s page: a diary that shows what was written without interpreting it, in both languages', (_, english, italian) => {
+    expect(text(english)).toContain('without interpreting it')
+    expect(text(english)).toMatch(/does not diagnose, assess treatments or medicines, or give advice/i)
+    expect(text(italian)).toContain('senza interpretarlo')
+    expect(text(italian)).toMatch(/non fa diagnosi, non valuta cure o farmaci, non dà consigli/i)
+  })
+})
+
 describe('the terms page', () => {
   it('in English: what is given, what no clause limits, backups, nothing paid, changes forward, the law of where you live', () => {
     const t = text(termsEn)
