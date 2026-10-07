@@ -7,6 +7,7 @@ import { DEFAULT_SYMPTOMS, DEFAULT_TAGS } from '../lib/vocabulary'
 import { toastState, dismissToast, showToast } from '../lib/toast.svelte'
 import type { Entry } from '../lib/types'
 import Report from './Report.svelte'
+import { readFileSync } from 'node:fs'
 
 beforeEach(() => {
   prefs.lang = 'it'
@@ -78,6 +79,23 @@ describe('Report tags', () => {
 })
 
 describe('Report page', () => {
+  it('prints whole: the rules that hide the app around the report in print hide nothing inside it (#120)', () => {
+    // Until #120 the header's `.bar` hid the bars of Quanto too, which share the class: on paper the chart was empty.
+    // The stylesheet from disk: Vitest stubs CSS imports. Comments out, so a selector is a selector.
+    const css = readFileSync('src/app.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const print = css.slice(css.indexOf('@media print'))
+    const hiding = [...print.matchAll(/([^{}]+)\{[^}]*display:\s*none/g)].flatMap((m) => m[1].split(',').map((sel) => sel.trim()))
+    expect(hiding.length).toBeGreaterThan(0)
+    document.body.classList.add('printing')
+    try {
+      open()
+      const report = document.querySelector('.report')!
+      for (const sel of hiding) expect([...document.querySelectorAll(sel)].filter((el) => report.contains(el)), sel).toEqual([])
+    } finally {
+      document.body.classList.remove('printing')
+    }
+  })
+
   it('has the title, the range and the headline numbers', () => {
     const { from } = open()
     expect(screen.getByRole('heading', { level: 1, name: 'Diario dei sintomi' })).toBeInTheDocument()
