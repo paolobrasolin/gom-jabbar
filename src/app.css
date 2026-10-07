@@ -247,7 +247,8 @@ textarea { resize: vertical; }
 }
 
 @media print {
-  @page { size: A4; margin: 14mm; }
+  /* Room at the foot of each page for the report's disclaimer, a margin box there (#120). */
+  @page { size: A4; margin: 14mm 14mm 18mm; }
   /* The report lives inside the current screen: hide everything around it, unclip the containers. */
   /* The header by its place, not by its class alone: `.bar` is also the class of Quanto's bars, which went blank on paper (#120). */
   body.printing .app > .bar, body.printing .toast, body.printing .screen > :not(.report) { display: none !important; }

@@ -71,10 +71,42 @@ describe('Report tags', () => {
       ...Array.from({ length: 5 }, (_, i) => makeEntry({ at: at(i + 6), layers: [{ regions: ['152'], readings: { pain: 3 }, tags: [] }] })),
     ]
     render(Report, { days: 30, from: rangeStart(30), entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
-    const table = screen.getByRole('columnheader', { name: 'Tag' }).closest('table')!
-    expect([...table.querySelectorAll('th')].map((th) => th.textContent)).toEqual(['Tag', 'Giorni'])
-    expect([...within(table).getByText('Riposo').closest('tr')!.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['Riposo', '6'])
+    const table = screen.getByRole('heading', { level: 2, name: 'Rimedi' }).nextElementSibling as HTMLElement
+    expect([...within(table).getByText('Riposo').closest('tr')!.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['Riposo', '6 gg'])
     expect(screen.queryByText(/descrittivo/)).toBeNull()
+  })
+
+  it('groups the tags, Farmaci, Rimedi, Contesto, each under its own heading, no Tag heading over them (#120)', () => {
+    const tagged = (n: number, tags: string[]) => makeEntry({ at: at(n), layers: [{ regions: ['152'], readings: { pain: 4 }, tags }] })
+    const tags = [...DEFAULT_TAGS, { id: 'ibu', label: 'Ibuprofene', group: 'medication' as const, enabled: true, order: 99 }]
+    render(Report, { days: 30, from: rangeStart(30), entries: [tagged(0, ['stress', 'ibu']), tagged(1, ['rest', 'ibu']), tagged(2, ['stress'])], tags, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
+    const group = (name: string) => [...(screen.getByRole('heading', { level: 2, name }).nextElementSibling as HTMLElement).querySelectorAll('tr')].map((tr) => tr.textContent)
+    // Days as "gg" in the report's narrow tables (#120).
+    expect(group('Farmaci')).toEqual(['Ibuprofene2 gg'])
+    expect(group('Rimedi')).toEqual(['Riposo1 gg'])
+    expect(group('Contesto')).toEqual(['Stress2 gg'])
+    expect(screen.queryByRole('heading', { name: 'Tag' })).toBeNull()
+    // In that order, after Altri sintomi, before the diary.
+    const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    expect(names.slice(names.indexOf('Farmaci'), names.indexOf('Contesto') + 1)).toEqual(['Farmaci', 'Rimedi', 'Contesto'])
+    // A group with nothing used has no heading.
+    render(Report, { days: 30, from: rangeStart(30), entries: [tagged(0, ['rest'])], tags, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
+    expect(screen.getAllByRole('heading', { level: 2, name: 'Rimedi' })).toHaveLength(2)
+    expect(screen.getAllByRole('heading', { level: 2, name: 'Farmaci' })).toHaveLength(1)
+  })
+
+  it('repeats its disclaimer at the foot of every printed page, and keeps it at the end (#120)', () => {
+    render(Report, { days: 7, ...fixture(), tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
+    const article = document.querySelector('article.page')!
+    // A page margin box, inside the article so the shared file carries it too: a doctor may read only the first page.
+    const rule = [...article.querySelectorAll('style')].map((s) => s.textContent).join('')
+    expect(rule).toMatch(/@page\s*\{\s*@bottom-left\s*\{[^}]*content:\s*"Diario personale: dati inseriti dalla persona/)
+    expect(article.querySelector('footer.disclaimer')).toHaveTextContent('Gom Jabbar non è un dispositivo medico.')
+  })
+
+  it('starts the diary on a page of its own when printed (#120)', () => {
+    render(Report, { days: 7, ...fixture(), tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
+    expect(screen.getByRole('heading', { level: 2, name: 'Episodi e note' }).parentElement).toHaveClass('diary')
   })
 })
 
@@ -122,18 +154,17 @@ describe('Report page', () => {
   it('has the sections a doctor reads: map, chart, symptoms, tags, episodes and notes', () => {
     open()
     const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(names).toEqual(['Quanto (Dolore)', 'Dove (Dolore)', 'Quando', 'Altri sintomi', 'Tag', 'Episodi e note'])
+    expect(names).toEqual(['Quanto (Dolore)', 'Dove (Dolore)', 'Quando', 'Altri sintomi', 'Rimedi', 'Episodi e note'])
     expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
     // The chart is static on paper: no tap targets.
     expect(screen.queryAllByRole('button', { name: /\d/ })).toHaveLength(0)
     const sym = screen.getByRole('heading', { name: 'Altri sintomi' }).nextElementSibling!
     expect(sym).toHaveTextContent('Gonfiore')
     expect(sym).toHaveTextContent('5')
-    expect(sym).toHaveTextContent('1 giorno')
-    const tags = screen.getByRole('heading', { name: 'Tag' }).nextElementSibling!
+    expect(sym).toHaveTextContent('1 gg')
+    const tags = screen.getByRole('heading', { name: 'Rimedi' }).nextElementSibling!
     // Days a tag was used on, not entries.
-    expect(within(tags as HTMLElement).getByRole('columnheader', { name: 'Giorni' })).toBeInTheDocument()
-    expect(within(tags as HTMLElement).getByRole('row', { name: /Riposo/ })).toHaveTextContent(/^Riposo\s*1$/)
+    expect(within(tags as HTMLElement).getByRole('row', { name: /Riposo/ })).toHaveTextContent(/^Riposo\s*1 gg$/)
     const notable = screen.getByRole('heading', { name: 'Episodi e note' }).nextElementSibling!
     const rows = within(notable as HTMLElement).getAllByRole('row')
     expect(rows).toHaveLength(2)

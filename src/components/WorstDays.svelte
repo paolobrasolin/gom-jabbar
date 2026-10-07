@@ -47,4 +47,12 @@
   .bar { display: block; min-height: 1px; border-radius: 2px 2px 0 0; align-self: end; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .lv { font-size: 11px; line-height: 16px; color: var(--ink-2); border-top: 1px solid var(--border); }
   .line { margin: 6px 0 0; font-size: 15px; color: var(--ink-2); }
+  /* On paper, tighter, so the report's summary fits its first page (#120). */
+  @media print {
+    .figs { margin-bottom: 6px; }
+    .figs b { font-size: 18px; }
+    .k, .line { font-size: 11px; }
+    .of { font-size: 12px; }
+    .hist { height: 60px; }
+  }
 </style>

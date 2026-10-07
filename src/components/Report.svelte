@@ -10,7 +10,7 @@
   import { durationMs, episodesOf, isHead, isUpdate, isActive, shownReading, chainLayers } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
-  import { PAIN, type Entry, type Symptom, type Tag } from '../lib/types'
+  import { PAIN, type Entry, type Symptom, type Tag, type TagGroup } from '../lib/types'
   import { entryHeadline, symptomName, trail, isRead } from '../lib/summary'
   import { leadSymptom } from '../lib/vocabulary'
   import { intensityColor, intensityInk } from '../lib/color'
@@ -49,6 +49,8 @@
    * length yet; the log lists them, so the tile no longer says how many (#120).
    */
   const episodeLine = (s: Summary) => (s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '')
+  /** The tag tables in the order the tags are listed everywhere (§6.3): medications, remedies, context. */
+  const TAG_GROUPS: TagGroup[] = ['medication', 'intervention', 'context']
   /** Compact chronological list: episodes and entries with notes; an update is read through its episode. */
   const episodes = $derived(episodesOf(entries))
   const notable = $derived(entries.filter((e) => !isUpdate(e) && (isHead(e) || e.note)).sort((a, b) => a.at.localeCompare(b.at)))
@@ -129,33 +131,43 @@
           <h2>{t('trends.overTime')}</h2>
           <DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} name={tl(symptom.label)} height={150} interactive={false} />
         {/if}
-        {#if others.length}
-          <h2>{t('trends.symptoms')}</h2>
-          <table>
-            <tbody>
-              {#each others as s (s.symptom.id)}<tr><td>{tl(s.symptom.label)}</td><td class="num">{fmt1(s.median)}</td><td class="num muted">{tn('diary.days', s.count)}</td></tr>{/each}
-            </tbody>
-          </table>
-        {/if}
       </div>
     </section>
 
-    {#if counts.length}
+    <!--
+      The other symptoms and the tags: one below the other on screen; one row on paper, Altri sintomi beside the tags'
+      groups, as tall as the longest column rather than all stacked, so the summary fits its first page in most cases (#120).
+    -->
+    <div class="rest">
+    {#if others.length}
       <section>
-        <h2>{t('trends.tags')}</h2>
+        <h2>{t('trends.symptoms')}</h2>
         <table>
-          <thead><tr><th>{t('report.tag')}</th><th class="num">{t('report.days')}</th></tr></thead>
           <tbody>
-            {#each counts as c (c.tag.id)}
-              <tr><td>{tl(c.tag.label)}</td><td class="num">{c.days}</td></tr>
-            {/each}
+            {#each others as s (s.symptom.id)}<tr><td>{tl(s.symptom.label)}</td><td class="num">{fmt1(s.median)}</td><td class="num muted">{t('report.dayCount', { n: s.count })}</td></tr>{/each}
           </tbody>
         </table>
       </section>
     {/if}
+    <!-- A group of tags each under its own heading, in the order they are listed everywhere (#120). -->
+    {#each TAG_GROUPS as g (g)}
+      {@const rows = counts.filter((c) => c.tag.group === g)}
+      {#if rows.length}
+        <section>
+          <h2>{t(`tag.group.${g}`)}</h2>
+          <table>
+            <tbody>
+              {#each rows as c (c.tag.id)}<tr><td>{tl(c.tag.label)}</td><td class="num muted">{t('report.dayCount', { n: c.days })}</td></tr>{/each}
+            </tbody>
+          </table>
+        </section>
+      {/if}
+    {/each}
+    </div>
 
+    <!-- On paper the diary starts a page of its own, the summary whole on the first (#120). -->
     {#if notable.length}
-      <section>
+      <section class="diary">
         <h2>{t('report.notable')}</h2>
         <table class="list">
           <tbody>
@@ -178,6 +190,11 @@
     {/if}
     <!-- The one page a clinician sees, however it reached them: it says what it is (#35). -->
     <footer class="disclaimer muted">{t('report.disclaimer')}</footer>
+    <!--
+      And at the foot of every printed page, a page margin box (#120): a doctor may read only the first page. Inside the
+      article, so the shared file carries it; where margin boxes are not printed, the line above still ends the report.
+    -->
+    {@html `<style>@page { @bottom-left { content: ${JSON.stringify(t('report.disclaimer'))}; font: 8pt system-ui, sans-serif; color: #5c5c64; } }</style>`}
   </article>
 </div>
 
@@ -199,12 +216,12 @@
   .two { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; }
   .map { height: 260px; }
   table { width: 100%; border-collapse: collapse; }
-  td, th { padding: 4px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-  th { font-weight: 600; color: var(--ink-2); font-size: 13px; }
+  td { padding: 4px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .when { white-space: nowrap; color: var(--ink-2); }
   .pill { min-width: 26px; height: 22px; font-size: 12px; }
   .note { color: var(--ink-2); font-style: italic; }
+  .rest { display: grid; gap: 18px; }
   @media (max-width: 520px) {
     .two { grid-template-columns: 1fr; }
   }
@@ -213,9 +230,14 @@
     .no-print { display: none; }
     /* Sizes for A4 paper; the screen gets larger ones, since the shared file is also read on a phone (#23). */
     .page { max-width: none; padding: 0; font-size: 13px; }
-    .k, th { font-size: 11px; }
+    .k { font-size: 11px; }
     .two { grid-template-columns: 1fr 1.3fr; }
     section { break-inside: avoid; }
+    .rest { grid-auto-flow: column; grid-template-columns: 1.3fr; grid-auto-columns: 1fr; gap: 14px; align-items: start; }
+    .diary { break-before: page; }
+    /* A shorter map on paper, so the tags fit the first page in most cases (#120). */
+    .map { height: 200px; }
+    td { padding: 2px 6px; }
   }
   .disclaimer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 12px; }
 </style>
