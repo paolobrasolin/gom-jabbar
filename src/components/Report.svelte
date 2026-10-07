@@ -44,11 +44,11 @@
   const strokes = $derived(allStrokes(entries, sid))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
-  /** Under the chronic days: the range and the chronic entries (#120). */
-  const chronicLine = (s: Summary) => `${tn('trends.ofDays', s.chronicDays, { d: days })} · ${tn('trends.entryCount', s.chronicEntries)}`
-  /** Under the episode count: the median length of the ended ones, and how many are still going on (§6.3). */
-  const episodeLine = (s: Summary) =>
-    [s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '', s.ongoing ? tn('episode.count', s.ongoing) : ''].filter(Boolean).join(' · ')
+  /**
+   * Under the episode count, the median length of the ended ones (§6.3). Those still going on are counted but have no
+   * length yet; the log lists them, so the tile no longer says how many (#120).
+   */
+  const episodeLine = (s: Summary) => (s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '')
   /** Compact chronological list: episodes and entries with notes; an update is read through its episode. */
   const episodes = $derived(episodesOf(entries))
   const notable = $derived(entries.filter((e) => !isUpdate(e) && (isHead(e) || e.note)).sort((a, b) => a.at.localeCompare(b.at)))
@@ -105,8 +105,8 @@
 
     <!-- The whole diary first, then the symptom picked under its own heading, as on Trends (#120). -->
     <section class="figures">
-      <div><span class="k">{t('trends.chronic')}</span><b>{summary.chronicDays}</b><span class="k">{chronicLine(summary)}</span></div>
-      <div><span class="k">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="k">{episodeLine(summary)}</span></div>
+      <div><span class="k">{t('trends.chronic')}</span><b>{summary.chronicDays} <span class="of">{t('trends.ofDays', { d: days })}</span></b><span class="k">{tn('trends.entriesTotal', summary.chronicEntries)}</span></div>
+      <div><span class="k">{t('trends.episodes')}</span><b>{summary.episodes} <span class="of">{t('trends.inDays', { d: days })}</span></b><span class="k">{episodeLine(summary)}</span></div>
     </section>
 
     {#if read && symptom}
@@ -195,6 +195,7 @@
   .figures { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .figures > div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
   .figures b { font-size: 22px; display: block; line-height: 1.2; }
+  .figures .of { font-size: 14px; font-weight: 400; color: var(--ink-2); }
   .two { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; }
   .map { height: 260px; }
   table { width: 100%; border-collapse: collapse; }

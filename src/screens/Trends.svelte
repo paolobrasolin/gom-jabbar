@@ -99,11 +99,11 @@
   const strokes = $derived(allStrokes(entries.value, sid))
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
-  /** Under the chronic days: the range and the chronic entries (#120). */
-  const chronicLine = (s: Summary) => `${tn('trends.ofDays', s.chronicDays, { d: days })} · ${tn('trends.entryCount', s.chronicEntries)}`
-  /** Under the episode count: the median length of the ended ones, and how many are still going on (§6.3). */
-  const episodeLine = (s: Summary) =>
-    [s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '', s.ongoing ? tn('episode.count', s.ongoing) : ''].filter(Boolean).join(' · ')
+  /**
+   * Under the episode count, the median length of the ended ones (§6.3). Those still going on are counted but have no
+   * length yet; the log lists them, so the tile no longer says how many (#120).
+   */
+  const episodeLine = (s: Summary) => (s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '')
 </script>
 
 <div class="screen">
@@ -128,8 +128,9 @@
 
     <!-- The whole diary, above the picker: the two kinds of the log form, whatever symptom is picked (#120). -->
     <div class="tiles">
-      <div class="card tile"><span class="small muted">{t('trends.chronic')}</span><b>{summary.chronicDays}</b><span class="small muted">{chronicLine(summary)}</span></div>
-      <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="small muted">{episodeLine(summary)}</span></div>
+      <!-- The period beside the number, quiet, as Quanto's "/30" (#120). -->
+      <div class="card tile"><span class="small muted">{t('trends.chronic')}</span><b>{summary.chronicDays} <span class="of">{t('trends.ofDays', { d: days })}</span></b><span class="small muted">{tn('trends.entriesTotal', summary.chronicEntries)}</span></div>
+      <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes} <span class="of">{t('trends.inDays', { d: days })}</span></b><span class="small muted">{episodeLine(summary)}</span></div>
     </div>
 
     {#if choices.length}
@@ -202,6 +203,7 @@
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .tile { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
   .tile b { font-size: 28px; line-height: 1.1; }
+  .tile .of { font-size: 17px; font-weight: 400; color: var(--ink-2); }
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   /* The theme's own ground: a cream panel in the dark theme glared in a dark room, and with every region with data edged the ramp reads on either (#23). */
   .map {

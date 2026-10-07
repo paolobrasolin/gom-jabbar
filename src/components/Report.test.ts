@@ -103,11 +103,11 @@ describe('Report page', () => {
     expect(screen.getByText(`Dal ${fmt(from)} al ${fmt(to)} · generato il ${fmt(new Date())}`)).toBeInTheDocument()
     const box = (k: string) => screen.getByText(k).parentElement!
     // The two kinds of the log form (#120): the chronic readings in days, the episode apart.
-    expect(box('Cronico').querySelector('b')).toHaveTextContent(/^2$/)
-    expect(box('Cronico')).toHaveTextContent('giorni su 7 · 2 voci')
+    expect(box('Cronico').querySelector('b')).toHaveTextContent(/^2 gg su 7$/)
+    expect(box('Cronico')).toHaveTextContent(/2 voci totali$/)
     // Each day at its highest, 8, 6 and 2 (#120): the lowest, the median, the highest, the days read.
-    const figure = (k: string) => screen.getByText(k).nextElementSibling!
-    expect([figure('Minimo'), figure('Mediana'), figure('Massimo'), figure('Giorni letti')].map((f) => f.textContent)).toEqual(['2', '6', '8', '3/7'])
+    const figure = (k: string) => within(document.querySelector('.figs') as HTMLElement).getByText(k).nextElementSibling!
+    expect([figure('Minimo'), figure('Mediana'), figure('Massimo'), figure('Giorni')].map((f) => f.textContent)).toEqual(['2', '6', '8', '3/7'])
     expect(screen.queryByText('Media giornaliera')).toBeNull()
     // The symptom's part under its own heading, after the whole diary's figures (#120); every reading counts, the episode's update too.
     const heading = screen.getByRole('heading', { level: 2, name: 'Quanto (Dolore)' })
@@ -115,8 +115,8 @@ describe('Report page', () => {
     expect(heading.compareDocumentPosition(figure('Mediana')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     const days = screen.getByRole('list', { name: 'Numero di giorni per livello massimo' })
     expect(within(days).getAllByRole('listitem').filter((b) => !b.getAttribute('aria-label')!.endsWith(': 0 giorni')).map((b) => b.getAttribute('aria-label'))).toEqual(['2: 1 giorno', '6: 1 giorno', '8: 1 giorno'])
-    expect(box('Episodi')).toHaveTextContent('1')
-    expect(box('Episodi')).toHaveTextContent('mediana 2h')
+    expect(box('Episodi').querySelector('b')).toHaveTextContent(/^1 in 7 gg$/)
+    expect(box('Episodi')).toHaveTextContent(/durata mediana 2h$/)
   })
 
   it('has the sections a doctor reads: map, chart, symptoms, tags, episodes and notes', () => {

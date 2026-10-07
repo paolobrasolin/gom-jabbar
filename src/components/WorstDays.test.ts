@@ -26,7 +26,7 @@ describe('WorstDays', () => {
     expect(figure('Minimo')).toHaveTextContent(/^2$/)
     expect(figure('Mediana')).toHaveTextContent(/^4$/)
     expect(figure('Massimo')).toHaveTextContent(/^4$/)
-    expect(figure('Giorni letti')).toHaveTextContent(/^3\/7$/)
+    expect(figure('Giorni')).toHaveTextContent(/^3\/7$/)
     // Above the bars, in the tiles' layout; no mean anywhere.
     const list = screen.getByRole('list', { name: 'Numero di giorni per livello massimo' })
     expect(figure('Minimo').compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

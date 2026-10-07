@@ -61,23 +61,25 @@ describe('Trends summary', () => {
     await endEpisode(ep.id, at(1, 11))
     await openTrends()
     // The two kinds of the log form (#120): the chronic readings in days, their entries in the small print, the episode apart.
-    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('giorno su 30 · 2 voci'))
-    expect(tile('Cronico').querySelector('b')).toHaveTextContent(/^1$/)
+    // The period beside the number, quiet (#120): "1 gg su 30", then the entries in all.
+    await waitFor(() => expect(tile('Cronico').querySelector('b')).toHaveTextContent(/^1 gg su 30$/))
+    expect(tile('Cronico')).toHaveTextContent(/2 voci totali$/)
     expect(screen.queryByText('Voci')).toBeNull()
     // Each day at its highest, 8 today and 6 yesterday: no mean (#120).
     await waitFor(() => expect(figure('Mediana')).toHaveTextContent(/^7$/))
-    expect([figure('Minimo'), figure('Massimo'), figure('Giorni letti')].map((f) => f.textContent)).toEqual(['6', '8', '2/30'])
+    expect([figure('Minimo'), figure('Massimo'), figure('Giorni')].map((f) => f.textContent)).toEqual(['6', '8', '2/30'])
     expect(screen.queryByText('Media giornaliera')).toBeNull()
     // Each day at its worst (#114): 8 today, 6 yesterday.
     const days = screen.getByRole('list', { name: 'Numero di giorni per livello massimo' })
     expect(within(days).getAllByRole('listitem').map((b) => b.getAttribute('aria-label'))).toEqual(['0: 0 giorni', '1: 0 giorni', '2: 0 giorni', '3: 0 giorni', '4: 0 giorni', '5: 0 giorni', '6: 1 giorno', '7: 0 giorni', '8: 1 giorno', '9: 0 giorni', '10: 0 giorni'])
     expect(screen.queryByText('Giorni ≥ 5')).toBeNull()
-    expect(tile('Episodi')).toHaveTextContent('1')
-    expect(tile('Episodi')).toHaveTextContent('mediana 2h')
+    expect(tile('Episodi').querySelector('b')).toHaveTextContent(/^1 in 30 gg$/)
+    expect(tile('Episodi')).toHaveTextContent(/durata mediana 2h$/)
     // One begun and not ended: counted apart, not as a length.
     await addEntry({ at: at(0, 8), kind: 'episode', ...legs(5) })
-    await waitFor(() => expect(tile('Episodi')).toHaveTextContent(/^Episodi2mediana 2h · 1 in corso$/))
-    expect(tile('Episodi')).toHaveTextContent('2')
+    // One going on: counted, its length left out of the median, and no "in corso" here (#120: the log lists those).
+    await waitFor(() => expect(tile('Episodi').querySelector('b')).toHaveTextContent(/^2 in 30 gg$/))
+    expect(tile('Episodi')).toHaveTextContent(/durata mediana 2h$/)
   })
 
   it('an entry dated after today is not in any range, as on the chart (#114)', async () => {
