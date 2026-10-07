@@ -30,6 +30,13 @@
   function onInput(e: Event) {
     set(Number((e.target as HTMLInputElement).value))
   }
+  /** Blank, the native control sits at 0: the keys towards 0 would move nothing and fire no input, so 0 could not be set (#34). */
+  const TOWARDS_ZERO = new Set(['Home', 'ArrowLeft', 'ArrowDown', 'PageDown'])
+  function onKeydown(e: KeyboardEvent) {
+    if (!blank || !TOWARDS_ZERO.has(e.key) || e.altKey || e.ctrlKey || e.metaKey) return
+    e.preventDefault()
+    set(0)
+  }
 
   /*
    * Touch goes through the wrapper, not the native input: Chrome's range input moves the thumb on
@@ -100,7 +107,8 @@
       value={value ?? 0}
       aria-label={label || 'intensity'}
       aria-valuetext={valueText}
-      oninput={onInput} />
+      oninput={onInput}
+      onkeydown={onKeydown} />
     <span class="bubble" aria-hidden="true">{blank ? '–' : value}</span>
   </div>
 </div>

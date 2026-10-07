@@ -51,6 +51,15 @@ describe('a blank slider', () => {
     expect((await db.entries.toArray())[0].layers[0].readings).toEqual({ pain: 0 })
   })
 
+  it('Home on a blank slider records 0, from the keyboard as by touch (#34)', async () => {
+    render(App)
+    const slider = await screen.findByRole('slider', { name: 'Dolore' })
+    await fireEvent.keyDown(slider, { key: 'Home' })
+    await fireEvent.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(async () => expect(await db.entries.count()).toBe(1))
+    expect((await db.entries.toArray())[0].layers[0].readings).toEqual({ pain: 0 })
+  })
+
   it('a preset sheet records only the sliders moved, and asks when none was', async () => {
     await addPreset({ name: 'Gambe', layers: [{ regions: ['152'], asks: ['pain', 'swelling'] }], kind: 'chronic' })
     render(App)

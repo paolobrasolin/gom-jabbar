@@ -48,6 +48,30 @@ describe('IntensitySlider gestures', () => {
     await fireEvent.input(input, { target: { value: '7' } })
     expect(onchange).toHaveBeenCalledWith(7)
   })
+
+  /** Blank, the native control sits at 0, so the keys towards 0 move nothing and fire no input (#34). */
+  it.each(['Home', 'ArrowLeft', 'ArrowDown', 'PageDown'])('%s on a blank slider sets 0', async (key) => {
+    prefs.lang = 'it'
+    const onchange = vi.fn()
+    render(IntensitySlider, { label: 'Dolore', value: null, onchange })
+    const input = screen.getByRole('slider', { name: 'Dolore' })
+    await fireEvent.keyDown(input, { key })
+    expect(onchange).toHaveBeenCalledExactlyOnceWith(0)
+    expect(input).toHaveAttribute('aria-valuetext', '0 assente')
+  })
+
+  it('other keys leave a blank slider blank, and the keys towards 0 change nothing once it has a value', async () => {
+    prefs.lang = 'it'
+    const onchange = vi.fn()
+    const { rerender } = render(IntensitySlider, { label: 'Dolore', value: null, onchange })
+    const input = screen.getByRole('slider', { name: 'Dolore' })
+    await fireEvent.keyDown(input, { key: 'Tab' })
+    await fireEvent.keyDown(input, { key: 'Home', altKey: true })
+    expect(input).toHaveAttribute('aria-valuetext', 'non indicato')
+    await rerender({ label: 'Dolore', value: 3, onchange })
+    await fireEvent.keyDown(input, { key: 'Home' })
+    expect(onchange).not.toHaveBeenCalled()
+  })
 })
 
 /** The scale names its ends (#112), in words that fit any symptom whatever its gender, inside the track so they take no room. */
