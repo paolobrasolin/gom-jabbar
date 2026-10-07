@@ -68,6 +68,9 @@ describe('the demo seed (scripts/seed.mjs)', () => {
     expect(heads.filter((h) => h.endedAt === null)).toHaveLength(1)
     expect(updatesOf(heads.find((h) => h.endedAt === null)!).length).toBeGreaterThanOrEqual(1)
     expect(heads.some((h) => h.presetId)).toBe(true)
+    // Some last days, read each day until they settle, so Trends shows an episode over more than one day (#120).
+    const day = (iso: string) => new Date(iso).toDateString()
+    expect(heads.filter((h) => h.endedAt && Date.parse(h.endedAt) - Date.parse(h.at) > 24 * 3600_000 && new Set(updatesOf(h).map((u) => day(u.at))).size >= 2).length).toBeGreaterThanOrEqual(2)
     // Presets of both kinds, each used.
     expect(new Set(presets.map((p) => p.kind))).toEqual(new Set(['chronic', 'episode']))
     for (const p of presets) expect(entries.some((e) => e.presetId === p.id)).toBe(true)

@@ -135,19 +135,27 @@ export function buildSeed({ now, figures, symptoms: baseSymptoms, tags: baseTags
       }
     }
 
-    // A flare of the legs every ten days or so, logged by hand: swelling and pain through the evening.
+    // A flare of the legs every ten days or so, logged by hand: swelling and pain through the evening. One in three lasts
+    // into the day after next, read each morning until it settles, so Trends has episodes over more than one day (#120).
     if (d % 10 === 6) {
       const start = at(int(17, 19))
       const pain = int(5, 8)
       const strokes = rnd() < 0.5 ? [stroke('152', 'female')] : undefined
+      const long = Math.floor(d / 10) % 3 === 1
       episode(
         start,
         [layer(LEGS, { pain, swelling: int(5, 8), heaviness: int(4, 7) }, ['standing', ...(rnd() < 0.5 ? ['hot_weather'] : [])], strokes)],
         [
           { after: int(60, 90) * MIN, readings: [{ pain: pain - 1, swelling: int(4, 6) }], tags: [['compression']] },
           { after: int(3, 4) * HOUR, readings: [{ pain: level(pain - 3), swelling: int(2, 4), heaviness: int(2, 4) }], tags: [['mld']] },
+          ...(long
+            ? [
+                { after: 15 * HOUR, readings: [{ pain: level(pain - 1), swelling: 6, heaviness: 5 }], tags: [['compression']] },
+                { after: 39 * HOUR, readings: [{ pain: level(pain - 4), swelling: 3, heaviness: 2 }], tags: [['mld']] },
+              ]
+            : []),
         ],
-        int(4, 5) * HOUR + 30 * MIN,
+        long ? 43 * HOUR : int(4, 5) * HOUR + 30 * MIN,
       )
     }
 
