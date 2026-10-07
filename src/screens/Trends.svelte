@@ -92,14 +92,13 @@
   const series = $derived(dailySeries(entries.value, from, days, sid))
   const summary = $derived(summarize(entries.value, sid))
   /** The symptom's figures only when something in range reads it: an entry without the reading is not a 0 (#36). */
-  const read = $derived(summary.mean !== null)
+  const read = $derived(summary.median !== null)
   const heat = $derived(regionHeat(entries.value, sid))
   /** Full body is no region of the map: it is said beside it (#114). */
   const whole = $derived(fullBody(entries.value, sid))
   const strokes = $derived(allStrokes(entries.value, sid))
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
-  const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
   /** Under the chronic days: the range and the chronic entries (#120). */
   const chronicLine = (s: Summary) => `${tn('trends.ofDays', s.chronicDays, { d: days })} · ${tn('trends.entryCount', s.chronicEntries)}`
   /** Under the episode count: the median length of the ended ones, and how many are still going on (§6.3). */
@@ -145,8 +144,6 @@
     {#if read && symptom}
       <div class="card">
         <p class="small muted label">{t('trends.howMuch', { name: tl(symptom.label) })}</p>
-        <p class="mean"><span>{t('trends.mean')}</span> <b>{fmt1(summary.mean)}</b> <span>· {t('trends.maxPain', { n: summary.max ?? '–' })}</span></p>
-        <p class="small muted">{t('trends.worst')}</p>
         <WorstDays worst={summary.worst} median={summary.median} {days} />
       </div>
     {/if}
@@ -205,8 +202,6 @@
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .tile { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
   .tile b { font-size: 28px; line-height: 1.1; }
-  .mean { margin-bottom: 12px; }
-  .mean b { font-size: 22px; }
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   /* The theme's own ground: a cream panel in the dark theme glared in a dark room, and with every region with data edged the ramp reads on either (#23). */
   .map {

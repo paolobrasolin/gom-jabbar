@@ -87,15 +87,16 @@ describe('Report page', () => {
     // The two kinds of the log form (#120): the chronic readings in days, the episode apart.
     expect(box('Cronico').querySelector('b')).toHaveTextContent(/^2$/)
     expect(box('Cronico')).toHaveTextContent('giorni su 7 · 2 voci')
-    expect(box('Media giornaliera')).toHaveTextContent('4,8')
-    expect(box('Media giornaliera')).toHaveTextContent('max 8')
+    // Each day at its highest, 8, 6 and 2 (#120): the lowest, the median, the highest, the days read.
+    const figure = (k: string) => screen.getByText(k).nextElementSibling!
+    expect([figure('Minimo'), figure('Mediana'), figure('Massimo'), figure('Giorni letti')].map((f) => f.textContent)).toEqual(['2', '6', '8', '3/7'])
+    expect(screen.queryByText('Media giornaliera')).toBeNull()
     // The symptom's part under its own heading, after the whole diary's figures (#120); every reading counts, the episode's update too.
     const heading = screen.getByRole('heading', { level: 2, name: 'Quanto (Dolore)' })
     expect(box('Episodi').compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(heading.compareDocumentPosition(box('Media giornaliera')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    const days = screen.getByRole('list', { name: 'Giorni per livello peggiore' })
+    expect(heading.compareDocumentPosition(figure('Mediana')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const days = screen.getByRole('list', { name: 'Numero di giorni per livello massimo' })
     expect(within(days).getAllByRole('listitem').filter((b) => !b.getAttribute('aria-label')!.endsWith(': 0 giorni')).map((b) => b.getAttribute('aria-label'))).toEqual(['2: 1 giorno', '6: 1 giorno', '8: 1 giorno'])
-    expect(days.parentElement).toHaveTextContent('mediana 6 · 3 giorni letti su 7')
     expect(box('Episodi')).toHaveTextContent('1')
     expect(box('Episodi')).toHaveTextContent('mediana 2h')
   })
@@ -198,8 +199,7 @@ describe('Report for another symptom (#38)', () => {
     expect(screen.getByText('Quanto (Gonfiore)')).toBeInTheDocument()
     expect(screen.getByText('Dove (Gonfiore)')).toBeInTheDocument()
     const box = (k: string) => screen.getByText(k).parentElement!
-    expect(box('Media giornaliera')).toHaveTextContent('5')
-    expect(screen.getByRole('list', { name: 'Giorni per livello peggiore' }).parentElement).toHaveTextContent('mediana 5')
+    expect(screen.getByText('Mediana').nextElementSibling).toHaveTextContent(/^5$/)
     expect(screen.getByRole('img', { name: 'Gonfiore per giorno' })).toBeInTheDocument()
     // Swelling was read without a place: the map stays empty.
     expect(document.querySelector('[data-region="152"]')).not.toHaveClass('on')
@@ -212,8 +212,8 @@ describe('Report for another symptom (#38)', () => {
     const from = rangeStart(7)
     const entries = [makeEntry({ at: at(0), layers: [{ regions: ['152'], readings: {}, tags: [] }] })]
     render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
-    expect(screen.queryByText('Media giornaliera')).not.toBeInTheDocument()
-    expect(screen.queryByRole('list', { name: 'Giorni per livello peggiore' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Mediana')).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Numero di giorni per livello massimo' })).not.toBeInTheDocument()
     expect(screen.queryByText(/^Quanto/)).not.toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toContain('Dove')
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).not.toContain('Quando')

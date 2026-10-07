@@ -75,18 +75,6 @@ function daySeries(readings: { at: string; value: number }[], from: Date, days: 
   return out
 }
 
-/**
- * The mean of `vals` per day, then across days (§6.3): a day logged twenty times (a migraine and its updates) weighs as
- * much as a day logged once, so the figure is the typical day, not the typical entry.
- */
-function dailyMean(vals: { at: string; v: number }[]): { mean: number; days: number } | null {
-  const byDay = new Map<string, number[]>()
-  for (const { at, v } of vals) byDay.set(dayKey(at), [...(byDay.get(dayKey(at)) ?? []), v])
-  if (!byDay.size) return null
-  const means = [...byDay.values()].map((vs) => vs.reduce((a, b) => a + b, 0) / vs.length)
-  return { mean: means.reduce((a, b) => a + b, 0) / means.length, days: means.length }
-}
-
 const median = (vs: number[]): number | null => {
   if (!vs.length) return null
   const s = [...vs].sort((a, b) => a - b)
@@ -99,8 +87,7 @@ export type Summary = {
   /** The chronic readings and the days they were on, apart from episodes, as the log form's Tipo has them (#120). */
   chronicEntries: number
   chronicDays: number
-  /** The symptom's mean per day, then across days, and its max, over the entries reading it; null when none does. */
-  mean: number | null
+  /** The symptom's highest reading, over the entries reading it; null when none does. */
   max: number | null
   /**
    * Each day reading the symptom counted once at its worst, level by level: `worst[4]` is how many days were at worst
@@ -131,7 +118,6 @@ export function summarize(entries: Entry[], symptom = PAIN, now = Date.now()): S
     entries: entries.length,
     chronicEntries: chronic.length,
     chronicDays: new Set(chronic.map((e) => dayKey(e.at))).size,
-    mean: dailyMean(read.map(({ e, v }) => ({ at: e.at, v })))?.mean ?? null,
     max: vs.length ? Math.max(...vs) : null,
     worst: [...dayMax.values()].reduce((n, v) => (n[Math.min(10, Math.max(0, Math.round(v)))]++, n), Array<number>(11).fill(0)),
     median: median([...dayMax.values()]),

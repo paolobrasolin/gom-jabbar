@@ -39,8 +39,8 @@ async function since(n: number) {
   await fireEvent.click(screen.getByRole('button', { name: /^Dal/ }))
   await fireEvent.change(screen.getByLabelText('Dal giorno'), { target: { value: ymd(daysAgo(n)) } })
 }
-/** The symptom card's first line, "Media giornaliera 3,9 · max 9" (#120). */
-const meanLine = () => screen.getByText('Media giornaliera').parentElement!
+/** A figure of Quanto by its label, "Mediana" → "4" (#120). */
+const figure = (k: string) => screen.getByText(k).nextElementSibling!
 
 describe('Trends summary', () => {
   it('says so when the range is empty, with the 30-day range selected', async () => {
@@ -64,11 +64,13 @@ describe('Trends summary', () => {
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('giorno su 30 · 2 voci'))
     expect(tile('Cronico').querySelector('b')).toHaveTextContent(/^1$/)
     expect(screen.queryByText('Voci')).toBeNull()
-    await waitFor(() => expect(meanLine()).toHaveTextContent('Media giornaliera 6 · max 8'))
+    // Each day at its highest, 8 today and 6 yesterday: no mean (#120).
+    await waitFor(() => expect(figure('Mediana')).toHaveTextContent(/^7$/))
+    expect([figure('Minimo'), figure('Massimo'), figure('Giorni letti')].map((f) => f.textContent)).toEqual(['6', '8', '2/30'])
+    expect(screen.queryByText('Media giornaliera')).toBeNull()
     // Each day at its worst (#114): 8 today, 6 yesterday.
-    const days = screen.getByRole('list', { name: 'Giorni per livello peggiore' })
+    const days = screen.getByRole('list', { name: 'Numero di giorni per livello massimo' })
     expect(within(days).getAllByRole('listitem').map((b) => b.getAttribute('aria-label'))).toEqual(['0: 0 giorni', '1: 0 giorni', '2: 0 giorni', '3: 0 giorni', '4: 0 giorni', '5: 0 giorni', '6: 1 giorno', '7: 0 giorni', '8: 1 giorno', '9: 0 giorni', '10: 0 giorni'])
-    expect(days.closest('.card')).toHaveTextContent('mediana 7 · 2 giorni letti su 30')
     expect(screen.queryByText('Giorni ≥ 5')).toBeNull()
     expect(tile('Episodi')).toHaveTextContent('1')
     expect(tile('Episodi')).toHaveTextContent('mediana 2h')
@@ -84,7 +86,7 @@ describe('Trends summary', () => {
     await addEntry({ at: at(-2), ...legs(9, { tags: ['rest'] }) })
     await openTrends()
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
-    await waitFor(() => expect(meanLine()).toHaveTextContent('max 3'))
+    await waitFor(() => expect(figure('Massimo')).toHaveTextContent(/^3$/))
     expect(screen.queryByText('Riposo')).toBeNull()
   })
 
@@ -103,7 +105,7 @@ describe('Trends summary', () => {
     expect(field.max).toBe(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)
     await fireEvent.change(field, { target: { value: ymd } })
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('2 voci'))
-    expect(meanLine()).toHaveTextContent('max 4')
+    expect(figure('Massimo')).toHaveTextContent(/^4$/)
     const chip = screen.getByRole('button', { name: `Dal ${new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' }).format(day)}` })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: '30 giorni' })).toHaveAttribute('aria-pressed', 'false')
@@ -145,11 +147,11 @@ describe('Trends summary', () => {
     await addEntry({ at: at(0), ...legs(2) })
     await openTrends()
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('2 voci'))
-    await waitFor(() => expect(meanLine()).toHaveTextContent('max 9'))
+    await waitFor(() => expect(figure('Massimo')).toHaveTextContent(/^9$/))
     await fireEvent.click(screen.getByRole('button', { name: '7 giorni' }))
     expect(screen.getByRole('button', { name: '7 giorni' })).toHaveAttribute('aria-pressed', 'true')
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
-    expect(meanLine()).toHaveTextContent('max 2')
+    await waitFor(() => expect(figure('Massimo')).toHaveTextContent(/^2$/))
     // A year of columns: the median dots would smear, so the legend drops them.
     expect(screen.getByText('mediana')).toBeInTheDocument()
     await since(364)
@@ -168,19 +170,18 @@ describe('Trends by any symptom (#38)', () => {
     const chips = within(await picker()).getAllByRole('button')
     expect(chips.map((c) => c.textContent)).toEqual(['Dolore', 'Gonfiore'])
     expect(chips[0]).toHaveAttribute('aria-pressed', 'true')
-    await waitFor(() => expect(meanLine()).toHaveTextContent('2,5'))
+    await waitFor(() => expect(figure('Mediana')).toHaveTextContent(/^2,5$/))
     expect(screen.getByRole('img', { name: 'Dolore per giorno' })).toBeInTheDocument()
     await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
-    expect(meanLine()).toHaveTextContent('5')
-    expect(meanLine()).toHaveTextContent('max 6')
-    expect(screen.getByRole('list', { name: 'Giorni per livello peggiore' }).closest('.card')).toHaveTextContent('mediana 5')
+    expect(figure('Mediana')).toHaveTextContent(/^5$/)
+    expect(figure('Massimo')).toHaveTextContent(/^6$/)
     expect(screen.getByRole('img', { name: 'Gonfiore per giorno' })).toBeInTheDocument()
     await waitFor(() => expect(document.querySelector('[data-region="152"]')!.getAttribute('style')).toContain(`fill: ${intensityColor(5)}`))
     // The tiles count the whole diary, above the picker; the card under it is the symptom's, named after it (#120).
     const first = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
     expect(first(tile('Episodi'), await picker())).toBe(true)
     expect(first(tile('Cronico'), await picker())).toBe(true)
-    expect(meanLine().closest('.card')).toContainElement(screen.getByRole('list', { name: 'Giorni per livello peggiore' }))
+    expect(figure('Mediana').closest('.card')).toContainElement(screen.getByRole('list', { name: 'Numero di giorni per livello massimo' }))
     // Three questions about the symptom picked (#120): how much and where name it; when names it on its chart, since
     // the folds under the chart do not follow the pick.
     expect([...document.querySelectorAll('.screen > .card > .label')].map((l) => l.textContent)).toEqual(['Quanto (Gonfiore)', 'Dove (Gonfiore)', 'Quando'])
@@ -194,7 +195,7 @@ describe('Trends by any symptom (#38)', () => {
     await swollen(0, 6, 2)
     await openTrends()
     expect(within(await picker()).getByRole('button', { name: 'Gonfiore' })).toHaveAttribute('aria-pressed', 'true')
-    await waitFor(() => expect(meanLine()).toHaveTextContent('6'))
+    await waitFor(() => expect(figure('Mediana')).toHaveTextContent(/^6$/))
   })
 
   it('without a reading in range, leaves out the figures of a symptom but keeps counting entries', async () => {
@@ -202,8 +203,8 @@ describe('Trends by any symptom (#38)', () => {
     await openTrends()
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
     expect(screen.queryByRole('group', { name: 'Sintomo' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Media giornaliera')).not.toBeInTheDocument()
-    expect(screen.queryByRole('list', { name: 'Giorni per livello peggiore' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Mediana')).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Numero di giorni per livello massimo' })).not.toBeInTheDocument()
     expect(screen.queryByText('Quando')).not.toBeInTheDocument()
   })
 
@@ -214,7 +215,7 @@ describe('Trends by any symptom (#38)', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
     expect(within(report).getByRole('heading', { level: 2, name: 'Quanto (Gonfiore)' })).toBeInTheDocument()
-    expect(within(report).getByText('Media giornaliera').parentElement!).toHaveTextContent('6')
+    expect(within(report).getByText('Mediana').nextElementSibling).toHaveTextContent(/^6$/)
   })
 })
 

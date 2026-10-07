@@ -38,7 +38,7 @@
   const counts = $derived(tagCounts(entries, tags))
   const others = $derived(symptomMedians(entries, symptoms, sid))
   /** The symptom's figures only when something in range reads it (#36). */
-  const read = $derived(summary.mean !== null)
+  const read = $derived(summary.median !== null)
   const heat = $derived(regionHeat(entries, sid))
   const whole = $derived(fullBody(entries, sid))
   const strokes = $derived(allStrokes(entries, sid))
@@ -112,8 +112,6 @@
     {#if read && symptom}
       <section>
         <h2>{t('trends.howMuch', { name: tl(symptom.label) })}</h2>
-        <p class="mean"><span>{t('trends.mean')}</span> <b>{fmt1(summary.mean)}</b> <span>· {t('trends.maxPain', { n: summary.max ?? '–' })}</span></p>
-        <span class="k">{t('trends.worst')}</span>
         <WorstDays worst={summary.worst} median={summary.median} {days} />
       </section>
     {/if}
@@ -195,8 +193,6 @@
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); margin: 10px 0 6px; }
   .k { font-size: 13px; color: var(--ink-2); display: block; }
   .figures { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .mean { margin-bottom: 8px; }
-  .mean b { font-size: 20px; }
   .figures > div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
   .figures b { font-size: 22px; display: block; line-height: 1.2; }
   .two { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; }

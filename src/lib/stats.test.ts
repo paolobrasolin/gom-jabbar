@@ -35,8 +35,6 @@ describe('stats', () => {
     // The chronic readings apart, as the log form's Tipo has them (#120): two entries on one day.
     expect(s.chronicEntries).toBe(2)
     expect(s.chronicDays).toBe(1)
-    // Days 8, 6 and (2 + 4) / 2.
-    expect(s.mean).toBeCloseTo(17 / 3)
     expect(s.max).toBe(8)
     // Each day counted once at its worst: 8, 6 and 4; the median of those.
     expect(s.worst).toEqual([0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0])
@@ -45,7 +43,9 @@ describe('stats', () => {
     // Both ended: 3h and 2h.
     expect(s.medianEpisodeMs).toBe(2.5 * 3_600_000)
     expect(s.ongoing).toBe(0)
-    expect(summarize([]).mean).toBeNull()
+    expect(summarize([]).median).toBeNull()
+    // No mean: a level is ordinal (#120).
+    expect(s).not.toHaveProperty('mean')
   })
 
   it('episode durations: the median of the ended ones; one still going on is counted apart, never as its time so far', () => {
@@ -74,12 +74,14 @@ describe('stats', () => {
     expect(summarize([e('1', 3), e('2', 9), e('3', 4)]).median).toBe(4)
   })
 
-  it('averages per day, then across days: a day logged twenty times weighs as much as a day logged once', () => {
+  it('counts each day once at its highest: a day logged twenty times weighs as much as a day logged once', () => {
     // 29 quiet days at 3 and one migraine day: the start at 8, then twenty updates at 8.
     const quiet = Array.from({ length: 29 }, (_, i) => makeEntry({ at: new Date(2026, 2, i + 1, 12).toISOString(), readings: { pain: 3 } }))
     const migraine = Array.from({ length: 21 }, () => makeEntry({ at: new Date(2026, 2, 30, 12).toISOString(), readings: { pain: 8 } }))
     const s = summarize([...quiet, ...migraine])
-    expect(s.mean).toBeCloseTo((29 * 3 + 8) / 30)
+    expect(s.worst[3]).toBe(29)
+    expect(s.worst[8]).toBe(1)
+    expect(s.median).toBe(3)
     expect(s.max).toBe(8)
     // The other symptoms too, each day once at its highest: three readings of 2 on one day are one day at 2.
     const fog = (d: string, v: number) => makeEntry({ at: at(d), layers: [{ regions: ['mind'], readings: { fog: v } }] })
@@ -104,8 +106,8 @@ describe('stats', () => {
     const from = new Date(2026, 2, 1)
     expect(dailySeries([e('1', 6), mind('1', 2), mind('2', 3)], from, 2).map((p) => [p.max, p.median, p.count])).toEqual([[6, 6, 1], [null, null, 0]])
     const s = summarize([e('1', 6), mind('1', 2), mind('2', 3)])
-    expect(s).toMatchObject({ entries: 3, mean: 6, max: 6, median: 6 })
-    expect(summarize([mind('1', 2)])).toMatchObject({ entries: 1, mean: null, max: null, median: null, worst: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] })
+    expect(s).toMatchObject({ entries: 3, max: 6, median: 6 })
+    expect(summarize([mind('1', 2)])).toMatchObject({ entries: 1, max: null, median: null, worst: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] })
   })
 
   it('computes region heat for one symptom, an entry counting once per region at the max over its layers', () => {
@@ -215,7 +217,7 @@ describe('stats', () => {
     const sw = (day: string, swelling: number, tags: string[] = []) => makeEntry({ at: at(day), layers: [{ regions: ['152'], readings: { pain: 1, swelling }, tags }] })
     const entries = [sw('1', 3), sw('1', 7), sw('3', 5), e('4', 9)]
     expect(dailySeries(entries, new Date(2026, 2, 1), 4, 'swelling').map((p) => p.max)).toEqual([7, null, 5, null])
-    expect(summarize(entries, 'swelling')).toMatchObject({ entries: 4, mean: 5, max: 7, median: 6 })
+    expect(summarize(entries, 'swelling')).toMatchObject({ entries: 4, max: 7, median: 6 })
   })
 
   it('lists the symptoms read in range in vocabulary order, a reading of 0 included, disabled ones too', () => {
