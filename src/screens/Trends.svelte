@@ -15,7 +15,7 @@
   import { allStrokes } from '../lib/strokes'
   import { PAIN } from '../lib/types'
 
-  const RANGES = [7, 30, 90, 365]
+  const RANGES = [7, 30, 90]
   let fixed = $state(30)
   /**
    * "Dal…" (§6.3, #114): a first day picked, the range running from it to today, for "since the last visit". A date
@@ -189,7 +189,7 @@
 {/if}
 
 <style>
-  /* Five chips: the row wraps, so none is ever out of sight, the picked day least of all. */
+  /* Four chips, one line on a phone (#120); with a large font the row wraps, so none is ever out of sight, the picked day least of all. */
   .ranges { flex: none; flex-wrap: wrap; }
   .since { font: inherit; padding: 10px 12px; border-radius: var(--radius-s); border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

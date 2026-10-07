@@ -33,12 +33,21 @@ async function openTrends() {
   await go('Andamento')
 }
 const tile = (label: string) => screen.getByText(label).closest('.tile')!
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+/** The long ranges are Dal… a day picked (#120): a year is 365 days, today included. */
+async function since(n: number) {
+  await fireEvent.click(screen.getByRole('button', { name: /^Dal/ }))
+  await fireEvent.change(screen.getByLabelText('Dal giorno'), { target: { value: ymd(daysAgo(n)) } })
+}
 /** The symptom card's first line, "Media giornaliera 3,9 · max 9" (#120). */
 const meanLine = () => screen.getByText('Media giornaliera').parentElement!
 
 describe('Trends summary', () => {
   it('says so when the range is empty, with the 30-day range selected', async () => {
     await openTrends()
+    // Three fixed ranges and Dal…, one row: a year is Dal… a year ago (#120).
+    const ranges = screen.getByRole('button', { name: '7 giorni' }).parentElement!
+    expect([...ranges.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['7 giorni', '30 giorni', '90 giorni', 'Dal…'])
     expect(await screen.findByText('Nessuna voce in questo periodo.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '30 giorni' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: '7 giorni' })).toHaveAttribute('aria-pressed', 'false')
@@ -143,7 +152,7 @@ describe('Trends summary', () => {
     expect(meanLine()).toHaveTextContent('max 2')
     // A year of columns: the mean dots would smear, so the legend drops them.
     expect(screen.getByText('media')).toBeInTheDocument()
-    await fireEvent.click(screen.getByRole('button', { name: '365 giorni' }))
+    await since(364)
     await waitFor(() => expect(screen.queryByText('media')).not.toBeInTheDocument())
   })
 })
@@ -294,7 +303,7 @@ describe('Trends heatmap and chart', () => {
     await waitFor(() => expect(chart.querySelectorAll('.zero')).toHaveLength(1))
     expect(chart.querySelector('.zero')).toHaveAttribute('fill', intensityColor(0))
     expect(chart.querySelectorAll('path.col')).toHaveLength(1)
-    await fireEvent.click(screen.getByRole('button', { name: '365 giorni' }))
+    await since(364)
     await waitFor(() => expect(screen.getByRole('img', { name: 'Dolore per giorno' }).querySelectorAll('.zero')).toHaveLength(1))
   })
 
@@ -304,8 +313,9 @@ describe('Trends heatmap and chart', () => {
     onTestFinished(() => width.mockRestore())
     await addEntry({ at: at(0), ...legs(3) })
     await openTrends()
-    for (const r of ['7 giorni', '30 giorni', '90 giorni', '365 giorni']) {
-      await fireEvent.click(screen.getByRole('button', { name: r }))
+    for (const r of ['7 giorni', '30 giorni', '90 giorni', 'a year']) {
+      if (r === 'a year') await since(364)
+      else await fireEvent.click(screen.getByRole('button', { name: r }))
       const chart = await screen.findByRole('img', { name: 'Dolore per giorno' })
       await waitFor(() => expect(chart.querySelectorAll('text.date').length).toBeGreaterThan(1))
       const xs = Array.from(chart.querySelectorAll('text.date')).map((el) => Number(el.getAttribute('x')))
