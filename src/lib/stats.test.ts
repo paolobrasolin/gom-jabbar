@@ -316,7 +316,9 @@ describe('rangeEnd', () => {
       const autumn = rangeEnd(rangeStart(30, new Date(2026, 10, 8, 12)), 30)
       expect([autumn.getDate(), autumn.getMonth(), autumn.getHours()]).toEqual([8, 10, 23])
     } finally {
-      process.env.TZ = tz
+      // Unset stays unset: `process.env.TZ = undefined` would set the string "undefined", which is UTC for every test after.
+      if (tz === undefined) delete process.env.TZ
+      else process.env.TZ = tz
     }
   })
 })
