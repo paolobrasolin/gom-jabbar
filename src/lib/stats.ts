@@ -177,16 +177,17 @@ export type SymptomMean = { symptom: Symptom; mean: number; count: number }
 
 /**
  * Mean of every symptom but `except` (the one picked, §6.3), per day then across days, over the entries reading it, a 0
- * included: the same number the tile shows when that symptom is picked (#114; until then a 0 was left out here).
+ * included: the same number the tile shows when that symptom is picked (#114; until then a 0 was left out here). In
+ * vocabulary order, as the picker lists them: sorted by mean, a symptom read on one bad day led one read on twenty (#120).
  */
 export function symptomMeans(entries: Entry[], symptoms: Symptom[], except = PAIN): SymptomMean[] {
-  return symptoms
+  return [...symptoms]
+    .sort((a, b) => a.order - b.order)
     .filter((s) => s.id !== except)
     .flatMap((symptom) => {
       const m = dailyMean(withLevel(entries, symptom.id).map(({ e, v }) => ({ at: e.at, v })))
       return m ? [{ symptom, mean: m.mean, count: m.days }] : []
     })
-    .sort((a, b) => b.mean - a.mean)
 }
 
 /**

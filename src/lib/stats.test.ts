@@ -187,9 +187,13 @@ describe('stats', () => {
       { symptom: DEFAULT_SYMPTOMS[0], mean: 5, count: 1 },
       { symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), mean: 0, count: 1 },
     ])
-    // The highest mean first.
-    const more = [...entries, makeEntry({ at: at('4'), layers: [{ regions: ['mind'], readings: { fog: 9 } }] })]
-    expect(symptomMeans(more, DEFAULT_SYMPTOMS, 'swelling').map((m) => [m.symptom.id, m.mean])).toEqual([['pain', 5], ['fog', 4.5]])
+  })
+
+  it("lists other symptoms in the vocabulary's order, not by mean: a symptom read on one bad day does not lead (#120)", () => {
+    const entries = [e('1', 2), e('2', 3), e('3', 2), makeEntry({ at: at('4'), layers: [{ regions: ['mind'], readings: { anxiety: 9, fog: 1 } }] })]
+    // Handed in any order, listed by `order`, as the Sintomo picker is.
+    const shuffled = [...DEFAULT_SYMPTOMS].reverse()
+    expect(symptomMeans(entries, shuffled, 'swelling').map((m) => [m.symptom.id, m.count])).toEqual([['pain', 3], ['fog', 1], ['anxiety', 1]])
   })
 
   it('measures any symptom the way it measures pain (#38)', () => {
