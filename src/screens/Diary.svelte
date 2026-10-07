@@ -120,7 +120,7 @@
         <div class="list">
           {#each g.items as e (e.id)}
             {@const r = rowOf(e)}
-            <button class="entry card row" class:hit={searching} onclick={() => (isHead(e) ? (episode = e) : r.head ? (episode = r.head) : (editing = e))}>
+            <button class="entry card row" class:hit={searching} aria-describedby={r.note ? `diary-note-${e.id}` : undefined} onclick={() => (isHead(e) ? (episode = e) : r.head ? (episode = r.head) : (editing = e))}>
               <span class="time muted small">{formatTime(e.at, locale())}</span>
               <span class="pill" style="background: {intensityColor(r.hl.value)}; color: {intensityInk(r.hl.value)}">{r.read ? r.hl.value : '–'}</span>
               <span class="grow body">
@@ -130,7 +130,8 @@
                   <span class="small muted">{t('episode.title')} · {isActive(e) ? t('diary.ongoing') : formatDuration(r.dur, units)}{#if r.levels.length}{` · ${r.levels.join(' → ')}`}{/if}</span>
                 {/if}
                 {#if r.head}<span class="small muted">{t('diary.update')} · {t('diary.started', { when: r.started })}</span>{/if}
-                {#if r.note}<span class="small muted note">{r.note}</span>{/if}
+                <!-- The note is the row's description, not its name (#34): read aloud in full, a long one kept the row from being skipped. -->
+                {#if r.note}<span class="small muted note" id="diary-note-{e.id}" aria-hidden="true">{r.note}</span>{/if}
               </span>
             </button>
           {/each}

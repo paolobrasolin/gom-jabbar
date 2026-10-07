@@ -248,6 +248,10 @@ describe('what an update carries', () => {
     sheet = await openEpisode()
     expect(lines(sheet)[2]).toMatch(/^\d\d:\d\d 4 dolore · coscia sx · meglio dopo il caffè$/)
     expect(within(sheet).getByRole('textbox', { name: 'Note' })).toHaveValue('')
+    // Read aloud, the line is named without its note, which follows as the description (#34).
+    const line = within(within(sheet).getByLabelText('Letture')).getAllByRole('button')[2]
+    expect(line).toHaveAccessibleName(/^\d\d:\d\d.*4.*dolore · coscia sx$/)
+    expect(line).toHaveAccessibleDescription('meglio dopo il caffè')
   })
 
   it('an episode over more than one day says the day on its readings', async () => {

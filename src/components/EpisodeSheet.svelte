@@ -254,10 +254,10 @@
       <ol class="history" aria-label={t('episode.readings')}>
         {#each points as p (p.entry.id)}
           <li>
-            <button class="point" onclick={() => edit(p.entry)}>
+            <button class="point" aria-describedby={p.note ? `reading-note-${p.entry.id}` : undefined} onclick={() => edit(p.entry)}>
               <span class="time">{when(p.entry.at)}</span>
               <span class="pill" style="--c: {intensityColor(p.value)}; --ink-on: {intensityInk(p.value)}">{p.value}</span>
-              <span class="what">{[p.name, ...p.where, ...(p.done.length ? [p.done.join(', ')] : [])].join(' · ')}{#if p.note}{' · '}<i>{p.note}</i>{/if}</span>
+              <span class="what">{[p.name, ...p.where, ...(p.done.length ? [p.done.join(', ')] : [])].join(' · ')}{#if p.note}<span aria-hidden="true">{' · '}<i id="reading-note-{p.entry.id}">{p.note}</i></span>{/if}</span>
               <!-- The line opens its reading's form (#115): read as plain text, nothing said it could be tapped. -->
               <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
             </button>

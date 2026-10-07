@@ -74,6 +74,17 @@ describe('Diary list', () => {
     expect(episode).toHaveTextContent('dopo la corsa')
   })
 
+  it('names a row by its time, level and place, and gives its note as the description (#34)', async () => {
+    const note = 'Giornata lunga, poi la sera peggio, ' + 'e ancora '.repeat(30)
+    await addEntry({ at: ago(10), layers: [L(['152'], 5)], note })
+    await openDiary()
+    await waitFor(() => expect(rows()).toHaveLength(1))
+    const row = rows()[0]
+    expect(row).toHaveAccessibleName(/^\d\d:\d\d.*5.*coscia sx$/)
+    expect(row).toHaveAccessibleDescription(note.trim())
+    expect(row).toHaveTextContent('Giornata lunga')
+  })
+
   it('names every symptom but the lead one, which follows the vocabulary, not pain (#36)', async () => {
     await db.symptoms.update('pain', { enabled: false })
     await addEntry({ at: ago(30), layers: [{ regions: ['152'], readings: { pain: 5 }, tags: [] }] })
