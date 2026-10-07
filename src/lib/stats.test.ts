@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
 import { dailySeries, rangeDays, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, rangeStart, rangeEnd, tagCounts, ringWidth, ringStyle } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
-import { presetSeries } from './stats'
+import { presetSeries, chronicRows, episodeLanes, episodeCounts } from './stats'
 import type { Preset } from './types'
 
 const at = (d: string, h = 12) => new Date(2026, 2, Number(d), h).toISOString() // March 2026, local time
@@ -320,5 +320,77 @@ describe('rangeEnd', () => {
       if (tz === undefined) delete process.env.TZ
       else process.env.TZ = tz
     }
+  })
+})
+
+describe('The Preset cronici and Preset episodici folds (#120)', () => {
+  // Built inside each test, never when the file loads: the dates belong to the timezone of the moment they are made.
+  const march = () => new Date(2026, 2, 1)
+  const at = (d: number, h = 12) => new Date(2026, 2, d, h).toISOString()
+
+  it('draws each chronic preset by day, its highest reading of the day, and leaves episode presets to their bars', () => {
+    const presets: Preset[] = [
+      { id: 'back', name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic', order: 0 },
+      { id: 'mig', name: 'Emicrania', layers: [{ regions: ['100'], asks: ['pain'] }], kind: 'episode', order: 1 },
+    ]
+    const entries = [
+      { ...makeEntry({ at: at(1, 9), readings: { pain: 2 }, presetId: 'back' }), id: '1' },
+      { ...makeEntry({ at: at(1, 20), readings: { pain: 5 }, presetId: 'back' }), id: '2' },
+      { ...makeEntry({ at: at(3), readings: { pain: 0 }, presetId: 'back' }), id: '3' },
+      { ...makeEntry({ at: at(2), readings: { pain: 8 }, presetId: 'mig', kind: 'episode' }), id: '4' },
+    ]
+    const rows = chronicRows(entries, presets, [], DEFAULT_SYMPTOMS, march(), 4)
+    expect(rows.map((r) => [r.preset.id, r.count])).toEqual([['back', 3]])
+    // A day without a reading stays empty; a 0 is a day.
+    expect(rows[0].series.map((p) => p.max)).toEqual([5, null, 0, null])
+  })
+
+  it('makes each episode one bar over the days it touched, coloured by the level shown for it, one lane per episode preset and the rest last', () => {
+    const presets: Preset[] = [
+      { id: 'mig', name: 'Emicrania', layers: [{ regions: ['100'], asks: ['pain'] }], kind: 'episode', order: 1 },
+      { id: 'flare', name: 'Gambe', layers: [{ regions: ['152'], asks: ['pain'] }], kind: 'episode', order: 0 },
+    ]
+    const head = (id: string, d: number, end: string | null, pain: number, presetId?: string) => ({ ...makeEntry({ at: at(d, 18), kind: 'episode', readings: { pain }, presetId }), id, episodeId: id, endedAt: end })
+    const upd = (of: string, d: number, pain: number) => ({ ...makeEntry({ at: at(d, 9), kind: 'episode', readings: { pain } }), id: `${of}-${d}`, episodeId: of })
+    const chains = [
+      // Three days, worst at its start: shown at its highest once ended.
+      head('long', 2, at(4, 10), 7), upd('long', 3, 5), upd('long', 4, 2),
+      head('m1', 5, at(5, 22), 6, 'mig'),
+      head('f1', 6, at(6, 22), 5, 'flare'),
+      // Overlaps the long one: a second row of its lane.
+      head('short', 3, at(3, 20), 4),
+      // Begun before the range, ended in it: drawn from the first day, and counted with the lane's bars.
+      head('old', -1, at(1, 8), 9),
+      // Still going on: up to today's column, at its latest reading.
+      head('now', 6, null, 8), upd('now', 7, 3),
+    ]
+    const lanes = episodeLanes(chains, presets, march(), 8, 'pain', new Date(2026, 2, 7, 12).getTime())
+    expect(lanes.map((l) => [l.preset?.id ?? null, l.count, l.rows])).toEqual([['flare', 1, 1], ['mig', 1, 1], [null, 4, 2]])
+    const bar = (id: string) => lanes.flatMap((l) => l.bars).find((b) => b.id === id)!
+    expect(bar('long')).toMatchObject({ first: 1, last: 3, level: 7, row: 0 })
+    expect(bar('short')).toMatchObject({ first: 2, last: 2, level: 4, row: 1 })
+    expect(bar('old')).toMatchObject({ first: 0, last: 0, level: 9 })
+    expect(bar('now')).toMatchObject({ first: 5, last: 6, level: 3 })
+    expect(bar('m1')).toMatchObject({ first: 4, last: 4, level: 6, row: 0 })
+  })
+
+  it('leaves out an episode over before the range or begun after it, and a preset that asks nothing has no row', () => {
+    const head = (id: string, d: number, end: number | null) => ({ ...makeEntry({ at: at(d), kind: 'episode', readings: { pain: 5 } }), id, episodeId: id, endedAt: end === null ? null : at(end) })
+    const lanes = episodeLanes([head('before', -5, -3), head('after', 12, 13), head('in', 2, 3)], [], march(), 8, 'pain', new Date(2026, 2, 8, 12).getTime())
+    expect(lanes.flatMap((l) => l.bars.map((b) => b.id))).toEqual(['in'])
+    const mute: Preset = { id: 'm', name: 'Niente', layers: [{ regions: ['224'], asks: [] }], kind: 'chronic', order: 0 }
+    expect(chronicRows([{ ...makeEntry({ at: at(1), readings: {}, presetId: 'm' }), id: '1' }], [mute], [], [], march(), 4)).toEqual([])
+  })
+
+  it('counts the episodes begun per week from the range\'s first day, per calendar month past four months', () => {
+    const heads = [at(1), at(2), at(9), at(20), new Date(2026, 1, 20, 12).toISOString()].map((iso) => makeEntry({ at: iso, kind: 'episode', readings: { pain: 5 } }))
+    const weeks = episodeCounts(heads, march(), 30)
+    expect(weeks.per).toBe('week')
+    // 1–7, 8–14, 15–21, 22–28, and the week still going, 29–30. The one begun in February is not in range.
+    expect(weeks.buckets.map((b) => [b.start.getDate(), b.count])).toEqual([[1, 2], [8, 1], [15, 1], [22, 0], [29, 0]])
+    const months = episodeCounts(heads, new Date(2025, 9, 15), 168)
+    expect(months.per).toBe('month')
+    expect(months.buckets.map((b) => [b.start.getMonth(), b.count])).toEqual([[9, 0], [10, 0], [11, 0], [0, 0], [1, 1], [2, 4]])
+    expect(months.buckets[0].start.getDate()).toBe(15)
   })
 })

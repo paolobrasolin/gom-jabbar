@@ -4,17 +4,20 @@
   import WorstDays from '../components/WorstDays.svelte'
   import DailyChart from '../components/DailyChart.svelte'
   import Report from '../components/Report.svelte'
-  import PresetLines from '../components/PresetLines.svelte'
+  import EpisodeLanes from '../components/EpisodeLanes.svelte'
   import TagLanes from '../components/TagLanes.svelte'
+  import Fold from '../components/Fold.svelte'
   import { tick } from 'svelte'
   import { t, tl, num, tn, locale } from '../i18n/index.svelte'
   import { db } from '../lib/db'
   import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, tagCounts, presetSeries, type Summary } from '../lib/stats'
+  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, tagCounts, chronicRows, episodeLanes, episodeCounts, type Summary } from '../lib/stats'
   import { formatDuration } from '../lib/time'
   import { allStrokes } from '../lib/strokes'
   import { PAIN } from '../lib/types'
+  import { isHead } from '../lib/entries'
+  import { leadSymptom } from '../lib/vocabulary'
 
   const RANGES = [7, 30, 90]
   let fixed = $state(30)
@@ -65,7 +68,18 @@
     return [...new Set(entries.value.flatMap((e) => (e.episodeId && !ids.has(e.episodeId) ? [e.episodeId] : [])))]
   })
   const earlier = live(() => outside, async () => (await db.entries.bulkGet(outside)).filter((e) => e !== undefined), [])
-  const byPreset = $derived(presetSeries(entries.value, presets.value, earlier.value, symptoms.value))
+  /** The preset folds under the chart (#120): the chronic presets by day, then every episode that touched the range, whole. */
+  const chronic = $derived(chronicRows(entries.value, presets.value, earlier.value, symptoms.value, from, days))
+  const chains = live(
+    () => [fixed, since],
+    async () => {
+      const heads = await db.entries.where('at').belowOrEqual(rangeEnd(from, days).toISOString()).filter((e) => isHead(e) && (!e.endedAt || e.endedAt >= from.toISOString())).toArray()
+      return db.entries.where('episodeId').anyOf(heads.map((h) => h.id)).toArray()
+    },
+    [],
+  )
+  const lanes = $derived(episodeLanes(chains.value, presets.value, from, days, leadSymptom(symptoms.value)))
+  const begun = $derived(episodeCounts(chains.value.filter(isHead), from, days))
 
   /**
    * The screen reads one symptom at a time (§6.3, #38): the tiles, the map, the chart and the tag comparison. The picker
@@ -146,20 +160,35 @@
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
 
-    <!-- The chart, and under it on its days the tags, folded by group (#120): until then the tags were chips in a card of their own. -->
-    {#if (read && symptom) || counts.length}
+    <!--
+      The chart, and under it on its days, each behind a fold (#120): the chronic presets by day, the episodes as bars, then
+      the tags by group. Until then the presets had a card of their own, Per preset, and the tags were chips in another.
+    -->
+    {#if (read && symptom) || counts.length || chronic.length || lanes.length}
       <div class="card">
         <p class="small muted label">{t('trends.overTime')}</p>
         {#if read && symptom}<DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} />{/if}
-        {#if counts.length}<TagLanes {counts} {from} {days} />{/if}
-      </div>
-    {/if}
-
-    {#if byPreset.length}
-      <div class="card">
-        <p class="small muted label">{t('trends.presets')}</p>
-        <PresetLines rows={byPreset} {from} {days} />
-        <p class="small muted top">{t('trends.presetsHint')}</p>
+        <div class="folds">
+          {#if chronic.length}
+            <Fold label={`${t('trends.chronicPresets')} (${chronic.length})`} summary={chronic.map((r) => `${r.preset.name} ${r.count}`).join(' · ')}>
+              <div class="rows">
+                {#each chronic as r (r.preset.id)}
+                  <div>
+                    <div class="phead"><span>{r.preset.name}</span><span class="muted">{tn('trends.entryCount', r.count)}</span></div>
+                    <DailyChart series={r.series} label={r.preset.name} height={64} compact />
+                  </div>
+                {/each}
+                <p class="small muted">{t('trends.presetsHint')}</p>
+              </div>
+            </Fold>
+          {/if}
+          {#if lanes.length}
+            <Fold label={`${t('trends.episodePresets')} (${lanes.length})`} summary={lanes.map((l) => `${l.preset?.name ?? t('trends.otherEpisodes')} ${l.count}`).join(' · ')}>
+              <div class="rows"><EpisodeLanes {lanes} counts={begun} {from} {days} /></div>
+            </Fold>
+          {/if}
+          {#if counts.length}<TagLanes {counts} {from} {days} />{/if}
+        </div>
       </div>
     {/if}
 
@@ -196,7 +225,9 @@
     height: 300px;
     background: var(--bg); border-radius: 12px; padding: 8px 8px 4px;
   }
-  .top { margin-top: 10px; }
+  .folds { margin-top: 12px; }
+  .rows { display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px; }
+  .phead { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; margin-bottom: 2px; }
   /* A scrolling row in the screen's column: without `flex: none` it may shrink to nothing. */
   .pick { flex: none; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .pick::-webkit-scrollbar { display: none; }

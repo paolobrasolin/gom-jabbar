@@ -1,10 +1,11 @@
 import { PAIN, type Entry, type Preset, type Symptom, type Tag } from './types'
 import { FULL_BODY } from './regions'
-import { durationMs, isHead } from './entries'
+import { durationMs, episodesOf, isHead, shownReading } from './entries'
 import { presetOf } from './presets'
 import { mergedReadings, mergedTags } from './layers'
 import { dayKey } from './time'
 import { leadSymptom } from './vocabulary'
+import { entryHeadline } from './summary'
 
 const readings = (e: Entry) => mergedReadings(e.layers)
 /**
@@ -45,11 +46,16 @@ export type DayPoint = { day: string; date: Date; max: number | null; mean: numb
 
 /** One point per calendar day in [from, from + days), over the entries reading the symptom. Days without any have null values. */
 export function dailySeries(entries: Entry[], from: Date, days: number, symptom = PAIN): DayPoint[] {
+  return daySeries(withLevel(entries, symptom).map(({ e, v }) => ({ at: e.at, value: v })), from, days)
+}
+
+/** The same days from readings already picked: a chronic preset's own, in the Preset cronici fold (#120). */
+function daySeries(readings: { at: string; value: number }[], from: Date, days: number): DayPoint[] {
   const byDay = new Map<string, number[]>()
-  for (const { e, v } of withLevel(entries, symptom)) {
-    const k = dayKey(e.at)
+  for (const { at, value } of readings) {
+    const k = dayKey(at)
     if (!byDay.has(k)) byDay.set(k, [])
-    byDay.get(k)!.push(v)
+    byDay.get(k)!.push(value)
   }
   const out: DayPoint[] = []
   for (let i = 0; i < days; i++) {
@@ -250,4 +256,76 @@ export function presetSeries(entries: Entry[], presets: Preset[], earlier: Entry
       return { preset, points }
     })
     .filter((r) => r.points.length > 0)
+}
+
+/**
+ * The chronic presets with samples in range, each by day as Nel tempo draws a symptom (#120): the day's highest reading
+ * of its symptom (`presetSeries`), a day without one empty. Episode presets have their bars (`episodeLanes`).
+ */
+export function chronicRows(entries: Entry[], presets: Preset[], earlier: Entry[], symptoms: Symptom[], from: Date, days: number): { preset: Preset; count: number; series: DayPoint[] }[] {
+  return presetSeries(entries, presets, earlier, symptoms)
+    .filter((r) => r.preset.kind === 'chronic')
+    .map((r) => ({ preset: r.preset, count: r.points.length, series: daySeries(r.points.map((p) => ({ at: new Date(p.at).toISOString(), value: p.value })), from, days) }))
+}
+
+/** One episode as a bar over the range's days (#120): its first and last day as column indexes, its level, its row in its lane. */
+export type EpisodeBar = { id: string; first: number; last: number; level: number; row: number }
+/** The episodes opened from one episode preset, or, with `preset` null, every other one; `count` the bars it draws. */
+export type EpisodeLane = { preset: Preset | null; count: number; rows: number; bars: EpisodeBar[] }
+
+/**
+ * Every episode that touched the range, `chains` holding each one whole (head and updates), as a bar from the day it
+ * began to the day it ended, today while it goes on, clipped to the range; at the level shown for it everywhere (§5.5,
+ * `shownReading`): its latest reading while it goes on, its highest once ended. One lane per episode preset, in their
+ * order, then the rest; bars that overlap take another row.
+ */
+export function episodeLanes(chains: Entry[], presets: Preset[], from: Date, days: number, lead?: string, now = Date.now()): EpisodeLane[] {
+  const keys = rangeDays(from, days)
+  const index = new Map(keys.map((k, i) => [k, i]))
+  const day = (iso: string): number => index.get(dayKey(iso)) ?? (dayKey(iso) < keys[0] ? -1 : days)
+  const lanes = new Map<string, EpisodeBar[]>()
+  for (const ep of [...episodesOf(chains).values()].sort((a, b) => a.head.at.localeCompare(b.head.at))) {
+    const start = day(ep.head.at)
+    const end = day(ep.head.endedAt ?? new Date(now).toISOString())
+    if (end < 0 || start >= days) continue
+    const own = presets.find((p) => p.id === ep.head.presetId && p.kind === 'episode')
+    const lane = lanes.get(own?.id ?? '') ?? []
+    lanes.set(own?.id ?? '', lane)
+    const first = Math.max(0, start)
+    const last = Math.min(days - 1, end)
+    const taken = lane.filter((b) => b.last >= first).map((b) => b.row)
+    let row = 0
+    while (taken.includes(row)) row++
+    lane.push({ id: ep.head.id, first, last, level: entryHeadline(shownReading(ep), lead).value, row })
+  }
+  const order = [...presets.filter((p) => p.kind === 'episode').sort((a, b) => a.order - b.order), null]
+  return order.flatMap((preset) => {
+    const lane = lanes.get(preset?.id ?? '')
+    return lane ? [{ preset, count: lane.length, rows: Math.max(...lane.map((b) => b.row)) + 1, bars: lane }] : []
+  })
+}
+
+/**
+ * The episodes begun in range (`heads`), counted per week from the range's first day, the last week the one still
+ * going on, or past four months per calendar month, the first from the range's first day (#120).
+ */
+export function episodeCounts(heads: Entry[], from: Date, days: number): { per: 'week' | 'month'; buckets: { start: Date; count: number }[] } {
+  const keys = rangeDays(from, days)
+  const per = days > 120 ? 'month' : 'week'
+  const starts: Date[] = []
+  for (let i = 0; i < days; i++) {
+    const d = new Date(from)
+    d.setDate(from.getDate() + i)
+    if (per === 'week' ? i % 7 === 0 : i === 0 || d.getDate() === 1) starts.push(d)
+  }
+  const startKeys = starts.map((d) => dayKey(d.toISOString()))
+  const counts = starts.map(() => 0)
+  for (const h of heads) {
+    const k = dayKey(h.at)
+    if (k < keys[0] || k > keys[days - 1]) continue
+    let b = 0
+    while (b + 1 < startKeys.length && startKeys[b + 1] <= k) b++
+    counts[b]++
+  }
+  return { per, buckets: starts.map((start, i) => ({ start, count: counts[i] })) }
 }

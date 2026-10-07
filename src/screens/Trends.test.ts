@@ -413,40 +413,88 @@ describe('Trends report', () => {
   })
 })
 
-describe('Trends presets', () => {
-  it('draws one line per preset with samples in range', async () => {
+describe('Trends presets and episodes (#120)', () => {
+  /** Nel tempo, with the fold of that name opened: the chronic or episode presets, beside the tags' (#120). */
+  async function fold(name: 'Preset cronici' | 'Preset episodici') {
+    const button = await screen.findByRole('button', { name: new RegExp(`^${name} \\(`) })
+    if (button.getAttribute('aria-expanded') === 'false') await fireEvent.click(button)
+    return button.closest('.card') as HTMLElement
+  }
+
+  it("draws each chronic preset by day in the Preset cronici fold under the chart, a column at the day's highest reading, its readings counted", async () => {
     const p = await addPreset({ name: 'Schiena', layers: [{ regions: ['224'], asks: ['pain'] }], kind: 'chronic' })
-    await logPreset(p, [{ pain: 4 }])
-    await logPreset(p, [{ pain: 6 }])
-    render(App)
-    await go('Andamento')
-    const card = (await screen.findByText('Per preset')).closest('.card')!
-    expect(card).toHaveTextContent('Schiena')
-    expect(card.querySelectorAll('circle')).toHaveLength(2)
+    await logPreset(p, [{ pain: 4 }], at(1))
+    await logPreset(p, [{ pain: 6 }], at(0, 9))
+    await logPreset(p, [{ pain: 3 }], at(0, 10))
+    await openTrends()
+    // Closed, the fold lists the presets with their readings, after the chart's and before the tags'.
+    const closed = await screen.findByRole('button', { name: /^Preset cronici \(1\)/ })
+    expect(closed).toHaveTextContent(/^Preset cronici \(1\)\s*Schiena 3$/)
+    const c = await fold('Preset cronici')
+    expect(c).toHaveTextContent('Nel tempo')
+    expect(c).toHaveTextContent('Schiena3 voci')
+    const chart = await within(c).findByRole('img', { name: 'Schiena' })
+    await waitFor(() => expect(chart.querySelectorAll('path.col')).toHaveLength(2))
+    expect([...chart.querySelectorAll('path.col')].map((col) => col.getAttribute('fill'))).toEqual([intensityColor(4), intensityColor(6)])
+    // Compact: no legend, no mean, no dates; the card is the screen's last.
+    expect(chart.closest('.chart')!.querySelector('.legend')).toBeNull()
+    expect(chart.querySelectorAll('circle.mean, text.date')).toHaveLength(0)
+    // On the chart's days: each column starts where Nel tempo's column of that day does.
+    const left = (chart: Element) => [...chart.querySelectorAll('path.col')].map((col) => col.getAttribute('d')!.split(' ')[1])
+    expect(left(chart)).toEqual(left(within(c).getByRole('img', { name: 'Dolore per giorno' })))
   })
 
-  it('keeps a preset line empty of readings it lacks: no dot at 0', async () => {
+  it("keeps a day without the preset's symptom empty: no column at 0", async () => {
     const p = await addPreset({ name: 'Gonfiore', layers: [{ regions: ['152'], asks: ['swelling'] }], kind: 'chronic' })
     await logPreset(p, [{ swelling: 5 }])
     await addEntry({ at: at(1), presetId: p.id, layers: [{ regions: ['152'], readings: { pain: 4 } }] })
-    render(App)
-    await go('Andamento')
-    const card = (await screen.findByText('Per preset')).closest('.card')!
-    await waitFor(() => expect(card.querySelectorAll('circle')).toHaveLength(1))
-    expect(card.querySelector('circle')).toHaveAttribute('fill', intensityColor(5))
+    await openTrends()
+    const chart = await within(await fold('Preset cronici')).findByRole('img', { name: 'Gonfiore' })
+    await waitFor(() => expect(chart.querySelectorAll('path.col')).toHaveLength(1))
+    expect(chart.querySelector('path.col')).toHaveAttribute('fill', intensityColor(5))
+    expect(chart.querySelector('.zero')).toBeNull()
   })
 
-  it("counts an episode's updates in range when the episode, opened from a preset, began before it", async () => {
+  it('draws an episode opened from a preset as one bar over its days, begun before the range, at its latest level while it goes on', async () => {
     const p = await addPreset({ name: 'Emicrania', layers: [{ regions: ['100'], asks: ['pain'] }], kind: 'episode' })
     const head = await logPreset(p, [{ pain: 7 }], at(9))
     await logUpdate(head.id, [{ pain: 5 }], at(3))
     await logUpdate(head.id, [{ pain: 2 }], at(1))
-    render(App)
-    await go('Andamento')
-    await fireEvent.click(await screen.findByRole('button', { name: '7 giorni' }))
-    const card = (await screen.findByText('Per preset')).closest('.card')!
-    expect(card).toHaveTextContent('Emicrania')
-    await waitFor(() => expect(card.querySelectorAll('circle')).toHaveLength(2))
+    await openTrends()
+    await fireEvent.click(screen.getByRole('button', { name: '7 giorni' }))
+    expect(await screen.findByRole('button', { name: /^Preset episodici \(1\)/ })).toHaveTextContent(/Emicrania 1$/)
+    const c = await fold('Preset episodici')
+    await waitFor(() => expect(c).toHaveTextContent('Emicrania1 episodio'))
+    const bar = c.querySelector('rect.ep')!
+    expect(bar).toHaveAttribute('data-from', ymd(daysAgo(6)))
+    expect(bar).toHaveAttribute('data-to', ymd(daysAgo(0)))
+    expect(bar).toHaveAttribute('fill', intensityColor(2))
+    // An episode preset has its bars, not a chart of its own.
+    expect(within(c).queryByRole('img', { name: 'Emicrania' })).toBeNull()
+  })
+
+  it('puts episodes logged by hand last, a multi-day one as one bar at its highest once ended, and counts those begun per week, or per month on a year', async () => {
+    await addEntry({ at: at(2, 18), kind: 'episode', endedAt: at(0, 8), ...legs(6) })
+    const ep = (await db.entries.toArray())[0]
+    await logUpdate(ep.id, [{ pain: 3 }], at(1, 9))
+    await openTrends()
+    const c = await fold('Preset episodici')
+    await waitFor(() => expect(c).toHaveTextContent('Altri episodi1 episodio'))
+    const bar = c.querySelector('rect.ep')!
+    expect(bar).toHaveAttribute('data-from', ymd(daysAgo(2)))
+    expect(bar).toHaveAttribute('data-to', ymd(daysAgo(0)))
+    expect(bar).toHaveAttribute('fill', intensityColor(6))
+    const weeks = within(c).getByRole('img', { name: 'Episodi iniziati per settimana' })
+    expect([...weeks.querySelectorAll('text.n')].map((n) => n.textContent)).toEqual(['0', '0', '0', '1', '0'])
+    await since(364)
+    await waitFor(() => expect(within(c).getByRole('img', { name: 'Episodi iniziati per mese' })).toBeInTheDocument())
+  })
+
+  it('has no preset folds without presets or episodes in range', async () => {
+    await addEntry({ at: at(0), ...legs(4) })
+    await openTrends()
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
+    expect(screen.queryByRole('button', { name: /^Preset (cronici|episodici) \(/ })).toBeNull()
   })
 })
 

@@ -9,8 +9,11 @@
   import { intensityColor } from '../lib/color'
   import type { DayPoint } from '../lib/stats'
 
-  /** `label` names the chart for assistive tech: the symptom it reads, "Gonfiore per giorno". */
-  let { series, label, height = 170, interactive = true }: { series: DayPoint[]; label: string; height?: number; interactive?: boolean } = $props()
+  /**
+   * `label` names the chart for assistive tech: the symptom it reads, "Gonfiore per giorno". `compact`, a chronic preset in
+   * the Preset cronici fold under it (#120): the columns alone, no legend, mean, dates or taps, on the same day columns.
+   */
+  let { series, label, height = 170, interactive = true, compact = false }: { series: DayPoint[]; label: string; height?: number; interactive?: boolean; compact?: boolean } = $props()
 
   let width = $state(360)
   let sel = $state<number | null>(null)
@@ -18,7 +21,7 @@
   const padL = PAD_L
   const padR = PAD_R
   const padT = 10
-  const padB = 22
+  const padB = $derived(compact ? 4 : 22)
   const plotW = $derived(Math.max(10, width - padL - padR))
   const plotH = $derived(height - padT - padB)
   const n = $derived(series.length)
@@ -41,7 +44,7 @@
   }
 
   /** Mean as a dot per day with data. Skipped on long ranges where dots would smear. */
-  const showMean = $derived(n <= 100)
+  const showMean = $derived(!compact && n <= 100)
   const dotR = $derived(n <= 35 ? 4 : 3)
 
   /**
@@ -55,10 +58,12 @@
 </script>
 
 <div class="chart" bind:clientWidth={width}>
-  <div class="legend small muted">
-    <span><i class="key bar"></i>{t('trends.legendMax')}</span>
-    {#if showMean}<span><i class="key dot"></i>{t('trends.legendMean')}</span>{/if}
-  </div>
+  {#if !compact}
+    <div class="legend small muted">
+      <span><i class="key bar"></i>{t('trends.legendMax')}</span>
+      {#if showMean}<span><i class="key dot"></i>{t('trends.legendMean')}</span>{/if}
+    </div>
+  {/if}
   <svg {width} {height} role="img" aria-label={label}>
     {#each [0, 5, 10] as g (g)}
       <line class="grid" x1={padL} x2={width - padR} y1={y(g)} y2={y(g)} />
@@ -71,10 +76,10 @@
         <!-- A day read at 0 is a day, not a gap: a flat mark on the baseline, on every range (§6.3). -->
         <rect class="zero" x={x(i) - barW / 2} y={padT + plotH - ZERO_H} width={barW} height={ZERO_H} rx={Math.min(1.5, barW / 2)} fill={intensityColor(0)} />
       {/if}
-      {#if i % tickEvery === 0 && (n <= 10 || i < n - tickEvery / 2)}
+      {#if !compact && i % tickEvery === 0 && (n <= 10 || i < n - tickEvery / 2)}
         <text class="tick date" x={x(i)} y={height - 6} text-anchor="middle">{fmtTick(p.date)}</text>
       {/if}
-      {#if interactive}
+      {#if interactive && !compact}
         <rect
           class="hit"
           role="button"

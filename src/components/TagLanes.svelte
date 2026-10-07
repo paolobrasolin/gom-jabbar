@@ -28,7 +28,7 @@
       <div class="rows">
         {#each rows as r (r.tag.id)}
           <div class="lane">
-            <div class="head" style="padding: 0 {PAD_R}px 0 {PAD_L}px"><span>{tl(r.tag.label)}</span><span class="muted">{tn('diary.days', r.days)}</span></div>
+            <div class="head"><span>{tl(r.tag.label)}</span><span class="muted">{tn('diary.days', r.days)}</span></div>
             <svg {width} height="14" aria-hidden="true">
               <line x1={PAD_L} x2={width - PAD_R} y1="12.5" y2="12.5" />
               {#each r.on as day (day)}
@@ -45,7 +45,6 @@
 </div>
 
 <style>
-  .lanes { margin-top: 12px; }
   .rows { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; }
   .head { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; }
   svg { display: block; }
