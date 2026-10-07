@@ -154,11 +154,12 @@ describe('Report page', () => {
   it('has the sections a doctor reads: map, chart, symptoms, tags, episodes and notes', () => {
     open()
     const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(names).toEqual(['Quanto (Dolore)', 'Dove (Dolore)', 'Quando', 'Altri sintomi', 'Rimedi', 'Episodi e note'])
+    expect(names).toEqual(['Quanto (Dolore)', 'Dove (Dolore)', 'Quando', 'Altri sintomi (mediana)', 'Rimedi', 'Episodi e note'])
     expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
     // The chart is static on paper: no tap targets.
     expect(screen.queryAllByRole('button', { name: /\d/ })).toHaveLength(0)
-    const sym = screen.getByRole('heading', { name: 'Altri sintomi' }).nextElementSibling!
+    // The heading says what the first number is, the median of the symptom's days (#120); the second says "gg".
+    const sym = screen.getByRole('heading', { name: 'Altri sintomi (mediana)' }).nextElementSibling!
     expect(sym).toHaveTextContent('Gonfiore')
     expect(sym).toHaveTextContent('5')
     expect(sym).toHaveTextContent('1 gg')
@@ -253,8 +254,8 @@ describe('Report for another symptom (#38)', () => {
     // Swelling was read without a place: the map stays empty.
     expect(document.querySelector('[data-region="152"]')).not.toHaveClass('on')
     // Altri sintomi: pain among them now.
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toContain('Altri sintomi')
-    expect(screen.getByText('Altri sintomi').nextElementSibling).toHaveTextContent('Dolore')
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toContain('Altri sintomi (mediana)')
+    expect(screen.getByText('Altri sintomi (mediana)').nextElementSibling).toHaveTextContent('Dolore')
   })
 
   it('leaves out the figures of a symptom nothing in range read', () => {

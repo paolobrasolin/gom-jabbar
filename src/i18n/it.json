@@ -233,7 +233,7 @@
   "trends.nEntries": "{n} voci",
   "trends.nEntries.one": "{n} voce",
   "trends.tags": "Tag",
-  "trends.symptoms": "Altri sintomi",
+  "trends.symptoms": "Altri sintomi (mediana)",
   "trends.report": "Riepilogo del diario",
   "report.title": "Diario dei sintomi",
   "report.range": "Dal {a} al {b}",

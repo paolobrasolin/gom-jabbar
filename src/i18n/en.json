@@ -233,7 +233,7 @@
   "trends.nEntries": "{n} entries",
   "trends.nEntries.one": "{n} entry",
   "trends.tags": "Tags",
-  "trends.symptoms": "Other symptoms",
+  "trends.symptoms": "Other symptoms (median)",
   "trends.report": "Diary summary",
   "report.title": "Symptom diary",
   "report.range": "From {a} to {b}",
