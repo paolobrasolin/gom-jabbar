@@ -32,6 +32,15 @@ export function rangeEnd(from: Date, days: number): Date {
   return d
 }
 
+/** The range's calendar days as day keys, in order: the chart's columns and the tag rows' marks (#120). */
+export function rangeDays(from: Date, days: number): string[] {
+  return Array.from({ length: days }, (_, i) => {
+    const date = new Date(from)
+    date.setDate(from.getDate() + i)
+    return dayKey(date.toISOString())
+  })
+}
+
 export type DayPoint = { day: string; date: Date; max: number | null; mean: number | null; count: number }
 
 /** One point per calendar day in [from, from + days), over the entries reading the symptom. Days without any have null values. */
@@ -204,13 +213,14 @@ export function symptomsRead(entries: Entry[], symptoms: Symptom[]): Symptom[] {
 
 /**
  * Tag use in the range, in **days** (§6.3): three doses on one day are one day of medication, as clinicians count it
- * (days per month). Medications first, then remedies, then context; the most used first within each.
+ * (days per month). Medications first, then remedies, then context; the most used first within each. `on` is the days
+ * themselves, in order, where the rows under the chart put their marks (#120).
  */
-export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; days: number }[] {
+export function tagCounts(entries: Entry[], tags: Tag[]): { tag: Tag; days: number; on: string[] }[] {
   const days = new Map<string, Set<string>>()
   for (const e of entries) for (const t of mergedTags(e.layers)) days.set(t, (days.get(t) ?? new Set()).add(dayKey(e.at)))
   return tags
-    .map((tag) => ({ tag, days: days.get(tag.id)?.size ?? 0 }))
+    .map((tag) => ({ tag, days: days.get(tag.id)?.size ?? 0, on: [...(days.get(tag.id) ?? [])].sort() }))
     .filter((x) => x.days > 0)
     .sort((a, b) => GROUP_RANK[a.tag.group] - GROUP_RANK[b.tag.group] || b.days - a.days)
 }

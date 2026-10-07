@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
-import { dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, rangeStart, rangeEnd, tagCounts, ringWidth, ringStyle } from './stats'
+import { dailySeries, rangeDays, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, rangeStart, rangeEnd, tagCounts, ringWidth, ringStyle } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
 import { presetSeries } from './stats'
 import type { Preset } from './types'
@@ -171,11 +171,17 @@ describe('stats', () => {
     expect(tagCounts(entries, DEFAULT_TAGS).map((x) => [x.tag.id, x.days])).toEqual([['badsleep', 6], ['stress', 1]])
   })
 
+  it('names the days of a range across a clock change, the 23-hour day included (#120)', () => {
+    expect(rangeDays(new Date(2026, 2, 28), 4)).toEqual(['2026-03-28', '2026-03-29', '2026-03-30', '2026-03-31'])
+  })
+
   it('counts tags in days, not entries, medications first: three doses on one day are one day of medication', () => {
     const tagged = (d: string, h: number, tags: string[]) => makeEntry({ at: at(d, h), layers: [{ regions: ['152'], readings: { pain: 4 }, tags }] })
     const entries = [tagged('1', 8, ['ibuprofen']), tagged('1', 14, ['ibuprofen']), tagged('1', 20, ['ibuprofen']), tagged('2', 9, ['ibuprofen']), tagged('1', 9, ['stress']), tagged('2', 9, ['stress']), tagged('3', 9, ['stress'])]
     const tags = [...DEFAULT_TAGS, { id: 'ibuprofen', label: 'Ibuprofene', group: 'medication' as const, enabled: true, order: 99 }]
     expect(tagCounts(entries, tags).map((x) => [x.tag.id, x.days])).toEqual([['ibuprofen', 2], ['stress', 3]])
+    // And which days, in order, for the rows under the chart (#120).
+    expect(tagCounts(entries, tags).map((x) => x.on)).toEqual([['2026-03-01', '2026-03-02'], ['2026-03-01', '2026-03-02', '2026-03-03']])
   })
 
   it('averages other symptoms where recorded, a 0 included', () => {

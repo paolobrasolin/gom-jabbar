@@ -1,3 +1,9 @@
+<script lang="ts" module>
+  /** The plot's margins, shared with the tag rows under it so a mark sits under its day's column (#120). */
+  export const PAD_L = 22
+  export const PAD_R = 8
+</script>
+
 <script lang="ts">
   import { t, locale, num, tn } from '../i18n/index.svelte'
   import { intensityColor } from '../lib/color'
@@ -9,8 +15,8 @@
   let width = $state(360)
   let sel = $state<number | null>(null)
 
-  const padL = 22
-  const padR = 8
+  const padL = PAD_L
+  const padR = PAD_R
   const padT = 10
   const padB = 22
   const plotW = $derived(Math.max(10, width - padL - padR))

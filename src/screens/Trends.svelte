@@ -5,6 +5,7 @@
   import DailyChart from '../components/DailyChart.svelte'
   import Report from '../components/Report.svelte'
   import PresetLines from '../components/PresetLines.svelte'
+  import TagLanes from '../components/TagLanes.svelte'
   import { tick } from 'svelte'
   import { t, tl, num, tn, locale } from '../i18n/index.svelte'
   import { db } from '../lib/db'
@@ -145,10 +146,12 @@
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
 
-    {#if read && symptom}
+    <!-- The chart, and under it on its days the tags, folded by group (#120): until then the tags were chips in a card of their own. -->
+    {#if (read && symptom) || counts.length}
       <div class="card">
         <p class="small muted label">{t('trends.overTime')}</p>
-        <DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} />
+        {#if read && symptom}<DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} />{/if}
+        {#if counts.length}<TagLanes {counts} {from} {days} />{/if}
       </div>
     {/if}
 
@@ -157,16 +160,6 @@
         <p class="small muted label">{t('trends.presets')}</p>
         <PresetLines rows={byPreset} {from} {days} />
         <p class="small muted top">{t('trends.presetsHint')}</p>
-      </div>
-    {/if}
-
-    <!-- Tag use in days (§6.3). No comparison of days with and without: it could not be read honestly (#114, #120). -->
-    {#if counts.length}
-      <div class="card">
-        <p class="small muted label">{t('trends.tags')}</p>
-        <div class="chips">
-          {#each counts as c (c.tag.id)}<span class="chip small outline">{tl(c.tag.label)} · {tn('diary.days', c.days)}</span>{/each}
-        </div>
       </div>
     {/if}
 

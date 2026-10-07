@@ -5,7 +5,7 @@ import { prefs } from '../lib/prefs.svelte'
 import { addPreset, logPreset } from '../lib/presets'
 import { addEntry, endEpisode, logUpdate, type EntryInput } from '../lib/entries'
 import { intensityColor } from '../lib/color'
-import { go } from '../test/nav'
+import { go, back } from '../test/nav'
 import App from '../App.svelte'
 import type { GomJabbarDB } from '../lib/db'
 
@@ -341,22 +341,51 @@ describe('Trends heatmap and chart', () => {
 })
 
 describe('Trends tags and symptoms', () => {
-  it('shows tag use in days, most used first within its group, and never compares days with and without (#114, #120)', async () => {
+  it("shows each tag on the chart's days, under folds closed each time, a closed fold listing its tags (#120)", async () => {
     for (let n = 0; n < 6; n++) await addEntry({ at: at(n), ...legs(8, { tags: n < 2 ? ['rest', 'stress'] : ['rest'] }) })
     for (let n = 6; n < 12; n++) await addEntry({ at: at(n), ...legs(2) })
     await openTrends()
-    const card = (await screen.findByText('Riposo · 6 giorni')).closest('.card') as HTMLElement
-    expect([...card.querySelectorAll('.chip')].map((c) => c.textContent)).toEqual(['Riposo · 6 giorni', 'Stress · 2 giorni'])
-    // Five days a side was noise, and a dose is taken because the pain is high: the comparison is gone (#120).
-    expect(card).not.toHaveTextContent(/con|senza|descrittivo/)
-    expect(card.querySelector('.bar')).toBeNull()
+    const chart = await screen.findByRole('img', { name: 'Dolore per giorno' })
+    // One fold per group used, most used first inside, each closed and listing its tags with their days.
+    const remedies = await screen.findByRole('button', { name: /^Rimedi \(1\)/ })
+    expect(remedies).toHaveAttribute('aria-expanded', 'false')
+    expect(remedies).toHaveTextContent(/^Rimedi \(1\)\s*Riposo 6$/)
+    expect(screen.getByRole('button', { name: /^Contesto \(1\)/ })).toHaveTextContent(/Stress 2$/)
+    expect(screen.queryByRole('button', { name: /^Farmaci/ })).toBeNull()
+    expect(document.querySelector('.lane')).toBeNull()
+    // Open, the fold names its group alone and shows a row per tag: a mark on each day it was used.
+    await fireEvent.click(remedies)
+    expect(remedies).toHaveAttribute('aria-expanded', 'true')
+    expect(remedies).toHaveTextContent(/^Rimedi \(1\)$/)
+    const lane = screen.getByText('Riposo').closest('.lane') as HTMLElement
+    expect(lane).toHaveTextContent('6 giorni')
+    expect(lane.querySelectorAll('.mark')).toHaveLength(6)
+    // The chart's time scale: today's mark is centred on today's column.
+    const centre = (el: Element) => Number(el.getAttribute('x')) + Number(el.getAttribute('width')) / 2
+    const day = chart.querySelector(`rect.hit[aria-label="${fmtFull(daysAgo(0))}"]`)!
+    expect(centre(lane.querySelector(`.mark[data-day="${ymd(daysAgo(0))}"]`)!)).toBeCloseTo(centre(day))
+    // Five days a side was noise, and a dose is taken because the pain is high: no comparison (#114, #120), and no tag card.
+    expect(chart.closest('.card')).not.toHaveTextContent(/con |senza|descrittivo/)
+    expect(screen.queryByText('Tag')).toBeNull()
+    // Closed again the next time the screen opens.
+    await back()
+    await go('Andamento')
+    expect(await screen.findByRole('button', { name: /^Rimedi \(1\)/ })).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('has no tag card when no tag was used in range', async () => {
+  it('shows the tags over time even when nothing in range reads a symptom', async () => {
+    await addEntry({ at: at(0), layers: [{ regions: ['152'], readings: {}, tags: ['rest'] }] })
+    await openTrends()
+    await fireEvent.click(await screen.findByRole('button', { name: /^Rimedi \(1\)/ }))
+    expect(screen.getByText('Riposo').closest('.card')).toHaveTextContent('Nel tempo')
+    expect(screen.queryByRole('img', { name: /per giorno/ })).toBeNull()
+  })
+
+  it('has no tag folds when no tag was used in range', async () => {
     await addEntry({ at: at(0), ...legs(4) })
     await openTrends()
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
-    expect(screen.queryByText('Tag')).toBeNull()
+    expect(screen.queryByRole('button', { name: /^(Farmaci|Rimedi|Contesto)/ })).toBeNull()
   })
 
   it('shows the mean of every other symptom that was recorded, at 0 too (#114)', async () => {
