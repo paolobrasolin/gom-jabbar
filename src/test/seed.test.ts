@@ -95,6 +95,22 @@ describe('the demo seed (scripts/seed.mjs)', () => {
     expect(entries.some((e) => e.note)).toBe(true)
   })
 
+  it('runs for as many days as asked, a year with months that differ, for the long ranges of Trends (#120)', () => {
+    const year = buildSeed({ now: NOW, figures: FIGURES, symptoms: DEFAULT_SYMPTOMS, tags: DEFAULT_TAGS, days: 365 })
+    const day = 24 * 3600_000
+    const first = Math.min(...year.entries.map((e) => Date.parse(e.at)))
+    expect(NOW.getTime() - first).toBeGreaterThan(360 * day)
+    expect(NOW.getTime() - first).toBeLessThan(366 * day)
+    // Episodes begun per 30 days: not the same count every month, or a year reads as one flat line.
+    const perMonth = Array<number>(12).fill(0)
+    for (const h of year.entries.filter(isHead)) {
+      const m = Math.floor((NOW.getTime() - Date.parse(h.at)) / (30 * day))
+      if (m < 12) perMonth[m]++
+    }
+    expect(Math.max(...perMonth) - Math.min(...perMonth)).toBeGreaterThanOrEqual(3)
+    expect(parseImport(JSON.stringify(year))).toEqual(year)
+  })
+
   it('is the same file every time for the same day', () => {
     expect(buildSeed({ now: NOW, figures: FIGURES, symptoms: DEFAULT_SYMPTOMS, tags: DEFAULT_TAGS })).toEqual(seed)
   })

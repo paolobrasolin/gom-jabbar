@@ -1,4 +1,4 @@
-// The demo diary behind `node scripts/seed.mjs`: 60 days of realistic logging, for screenshot reviews and
+// The demo diary behind `node scripts/seed.mjs`: 60 days of realistic logging (or as many as asked), for screenshot reviews and
 // upgrade rehearsals. Only type imports, so Node runs this file as it is (type stripping): what it needs from the app
 // comes in as arguments. seed.test.ts holds it to the current export format.
 import type { ExportFile } from '../lib/backup'
@@ -6,11 +6,11 @@ import type { FigureId, FigureView } from '../lib/figures'
 import type { Entry, Layer, Preset, Stroke, Symptom, Tag } from '../lib/types'
 
 type Figures = Record<FigureId, Record<FigureView, Record<string, [number, number][]>>>
-export type SeedInput = { now: Date; figures: Figures; symptoms: Symptom[]; tags: Tag[] }
+/** `days`: how far back the diary goes, 60 unless asked; a year shows the long ranges of Trends (#120). */
+export type SeedInput = { now: Date; figures: Figures; symptoms: Symptom[]; tags: Tag[]; days?: number }
 
 /** Bump with EXPORT_VERSION (a test says when): the seed writes the current format, never an old one. */
 const VERSION = 10
-const DAYS = 60
 const MIN = 60_000
 const HOUR = 60 * MIN
 
@@ -36,7 +36,7 @@ type Step = { after: number; readings: Record<string, number>[]; tags?: string[]
 
 const byOrder = <T extends { id: string; order: number }>(a: T, b: T) => a.order - b.order || (a.id < b.id ? -1 : 1)
 
-export function buildSeed({ now, figures, symptoms: baseSymptoms, tags: baseTags }: SeedInput): ExportFile {
+export function buildSeed({ now, figures, symptoms: baseSymptoms, tags: baseTags, days = 60 }: SeedInput): ExportFile {
   let state = 7
   const rnd = () => (state = (state * 16807) % 2147483647) / 2147483647
   const int = (lo: number, hi: number) => lo + Math.floor(rnd() * (hi - lo + 1))
@@ -112,13 +112,16 @@ export function buildSeed({ now, figures, symptoms: baseSymptoms, tags: baseTags
 
   const day0 = new Date(now)
   day0.setHours(0, 0, 0, 0)
-  for (let d = DAYS - 1; d >= 0; d--) {
+  for (let d = days - 1; d >= 0; d--) {
     const day = day0.getTime() - d * 24 * HOUR
     const at = (h: number, m = int(0, 59)) => day + h * HOUR + m * MIN
     const stiff = d >= 30 // switched off a month ago: its readings stay in history
 
-    // A migraine about once a week, from its preset: worst at the start, eased by a pill, over in a few hours.
-    if (d % 7 === 3) {
+    // A migraine about once a week, from its preset: worst at the start, eased by a pill, over in a few hours. Before the
+    // last 60 days, months differ: twice a week in some, every other week in others, so a year is not one flat line.
+    const month = Math.floor(d / 30) % 3
+    const migraine = d < 60 || month === 1 ? d % 7 === 3 : month === 0 ? d % 7 === 3 || d % 7 === 0 : d % 14 === 3
+    if (migraine) {
       const start = at(int(14, 18))
       const pain = int(6, 9)
       const steps: Step[] = [
