@@ -40,11 +40,11 @@ describe('i18n', () => {
   })
   it("counts in the app's language: the singular for one, the plural for the rest, zero included", () => {
     prefs.lang = 'it'
-    expect([0, 1, 2, 12].map((n) => tn('trends.onDays', n))).toEqual(['in 0 giorni', 'in 1 giorno', 'in 2 giorni', 'in 12 giorni'])
+    expect([0, 1, 2, 12].map((n) => tn('diary.days', n))).toEqual(['0 giorni', '1 giorno', '2 giorni', '12 giorni'])
     expect(tn('import.summary', 1, { d: '10 set' })).toBe('1 voce nel file del 10 set.')
     expect(tn('vocab.presets', 1)).toBe('1 preset')
     prefs.lang = 'en'
-    expect([0, 1, 2].map((n) => tn('trends.onDays', n))).toEqual(['on 0 days', 'on 1 day', 'on 2 days'])
+    expect([0, 1, 2].map((n) => tn('diary.days', n))).toEqual(['0 days', '1 day', '2 days'])
     expect(tn('vocab.presets', 1)).toBe('1 preset')
     expect(tn('vocab.presets', 2)).toBe('2 presets')
   })

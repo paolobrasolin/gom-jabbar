@@ -44,6 +44,8 @@
   const strokes = $derived(allStrokes(entries, sid))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
+  /** Under the chronic days: the range and the chronic entries (#120). */
+  const chronicLine = (s: Summary) => `${tn('trends.ofDays', s.chronicDays, { d: days })} · ${tn('trends.entryCount', s.chronicEntries)}`
   /** Under the episode count: the median length of the ended ones, and how many are still going on (§6.3). */
   const episodeLine = (s: Summary) =>
     [s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '', s.ongoing ? tn('episode.count', s.ongoing) : ''].filter(Boolean).join(' · ')
@@ -99,19 +101,18 @@
     <header>
       <h1>{t('report.title')}</h1>
       <p class="muted">{t('report.range', { a: fmtDate(from), b: fmtDate(to) })} · {t('report.generated', { d: fmtDate(new Date()) })}</p>
-      {#if read && symptom}<p class="muted">{t('report.symptom', { name: tl(symptom.label) })}</p>{/if}
     </header>
 
+    <!-- The whole diary first, then the symptom picked under its own heading, as on Trends (#120). -->
     <section class="figures">
-      <div><span class="k">{t('trends.entries')}</span><b>{summary.entries}</b><span class="k">{tn('trends.onDays', summary.daysWithEntries)}</span></div>
-      {#if read}
-        <div><span class="k">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="k">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
-      {/if}
+      <div><span class="k">{t('trends.chronic')}</span><b>{summary.chronicDays}</b><span class="k">{chronicLine(summary)}</span></div>
       <div><span class="k">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="k">{episodeLine(summary)}</span></div>
     </section>
 
-    {#if read}
-      <section class="worst">
+    {#if read && symptom}
+      <section>
+        <h2>{t('report.symptom', { name: tl(symptom.label) })}</h2>
+        <p class="mean"><span>{t('trends.mean')}</span> <b>{fmt1(summary.mean)}</b> <span>· {t('trends.maxPain', { n: summary.max ?? '–' })}</span></p>
         <span class="k">{t('trends.worst')}</span>
         <WorstDays worst={summary.worst} median={summary.median} {days} />
       </section>
@@ -193,8 +194,9 @@
   h1 { font-size: 22px; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); margin: 10px 0 6px; }
   .k { font-size: 13px; color: var(--ink-2); display: block; }
-  .figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .worst { margin-top: 12px; }
+  .figures { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mean { margin-bottom: 8px; }
+  .mean b { font-size: 20px; }
   .figures > div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
   .figures b { font-size: 22px; display: block; line-height: 1.2; }
   .two { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; }
@@ -207,9 +209,6 @@
   .pill { min-width: 26px; height: 22px; font-size: 12px; }
   .note { color: var(--ink-2); font-style: italic; }
   @media (max-width: 520px) {
-    .figures { grid-template-columns: 1fr 1fr; }
-    /* Three figures two by two: the last takes the row rather than leaving a hole. */
-    .figures > div:last-child:nth-child(odd) { grid-column: span 2; }
     .two { grid-template-columns: 1fr; }
   }
   @media print {
@@ -219,8 +218,6 @@
     .page { max-width: none; padding: 0; font-size: 13px; }
     .k, th { font-size: 11px; }
     .two { grid-template-columns: 1fr 1.3fr; }
-    .figures { grid-template-columns: repeat(3, 1fr); }
-    .figures > div:last-child:nth-child(odd) { grid-column: auto; }
     section { break-inside: avoid; }
   }
   .disclaimer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 12px; }

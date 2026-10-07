@@ -30,7 +30,9 @@ describe('stats', () => {
     eps[0].endedAt = at('2', 13)
     const s = summarize([...eps, e('6', 2), e('6', 4)], 'pain', now)
     expect(s.entries).toBe(4)
-    expect(s.daysWithEntries).toBe(3)
+    // The chronic readings apart, as the log form's Tipo has them (#120): two entries on one day.
+    expect(s.chronicEntries).toBe(2)
+    expect(s.chronicDays).toBe(1)
     // Days 8, 6 and (2 + 4) / 2.
     expect(s.mean).toBeCloseTo(17 / 3)
     expect(s.max).toBe(8)
@@ -99,7 +101,7 @@ describe('stats', () => {
     const from = new Date(2026, 2, 1)
     expect(dailySeries([e('1', 6), mind('1', 2), mind('2', 3)], from, 2).map((p) => [p.max, p.mean, p.count])).toEqual([[6, 6, 1], [null, null, 0]])
     const s = summarize([e('1', 6), mind('1', 2), mind('2', 3)])
-    expect(s).toMatchObject({ entries: 3, daysWithEntries: 2, mean: 6, max: 6, median: 6 })
+    expect(s).toMatchObject({ entries: 3, mean: 6, max: 6, median: 6 })
     expect(summarize([mind('1', 2)])).toMatchObject({ entries: 1, mean: null, max: null, median: null, worst: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] })
   })
 
@@ -200,7 +202,7 @@ describe('stats', () => {
     const sw = (day: string, swelling: number, tags: string[] = []) => makeEntry({ at: at(day), layers: [{ regions: ['152'], readings: { pain: 1, swelling }, tags }] })
     const entries = [sw('1', 3), sw('1', 7), sw('3', 5), e('4', 9)]
     expect(dailySeries(entries, new Date(2026, 2, 1), 4, 'swelling').map((p) => p.max)).toEqual([7, null, 5, null])
-    expect(summarize(entries, 'swelling')).toMatchObject({ entries: 4, daysWithEntries: 3, mean: 5, max: 7, median: 6 })
+    expect(summarize(entries, 'swelling')).toMatchObject({ entries: 4, mean: 5, max: 7, median: 6 })
   })
 
   it('lists the symptoms read in range in vocabulary order, a reading of 0 included, disabled ones too', () => {

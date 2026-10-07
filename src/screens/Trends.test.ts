@@ -33,6 +33,8 @@ async function openTrends() {
   await go('Andamento')
 }
 const tile = (label: string) => screen.getByText(label).closest('.tile')!
+/** The symptom card's first line, "Media giornaliera 3,9 · max 9" (#120). */
+const meanLine = () => screen.getByText('Media giornaliera').parentElement!
 
 describe('Trends summary', () => {
   it('says so when the range is empty, with the 30-day range selected', async () => {
@@ -49,20 +51,21 @@ describe('Trends summary', () => {
     const ep = await addEntry({ at: at(1, 9), kind: 'episode', ...legs(6) })
     await endEpisode(ep.id, at(1, 11))
     await openTrends()
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('3'))
-    expect(tile('Voci')).toHaveTextContent('in 2 giorni')
-    expect(tile('Media giornaliera')).toHaveTextContent('6')
-    expect(tile('Media giornaliera')).toHaveTextContent('max 8')
+    // The two kinds of the log form (#120): the chronic readings in days, their entries in the small print, the episode apart.
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('giorno su 30 · 2 voci'))
+    expect(tile('Cronico').querySelector('b')).toHaveTextContent(/^1$/)
+    expect(screen.queryByText('Voci')).toBeNull()
+    await waitFor(() => expect(meanLine()).toHaveTextContent('Media giornaliera 6 · max 8'))
     // Each day at its worst (#114): 8 today, 6 yesterday.
     const days = screen.getByRole('list', { name: 'Giorni per livello peggiore' })
     expect(within(days).getAllByRole('listitem').map((b) => b.getAttribute('aria-label'))).toEqual(['0: 0 giorni', '1: 0 giorni', '2: 0 giorni', '3: 0 giorni', '4: 0 giorni', '5: 0 giorni', '6: 1 giorno', '7: 0 giorni', '8: 1 giorno', '9: 0 giorni', '10: 0 giorni'])
     expect(days.closest('.card')).toHaveTextContent('mediana 7 · 2 giorni letti su 30')
     expect(screen.queryByText('Giorni ≥ 5')).toBeNull()
     expect(tile('Episodi')).toHaveTextContent('1')
-    expect(tile('Episodi')).toHaveTextContent('durata mediana 2h')
+    expect(tile('Episodi')).toHaveTextContent('mediana 2h')
     // One begun and not ended: counted apart, not as a length.
     await addEntry({ at: at(0, 8), kind: 'episode', ...legs(5) })
-    await waitFor(() => expect(tile('Episodi')).toHaveTextContent('durata mediana 2h · 1 in corso'))
+    await waitFor(() => expect(tile('Episodi')).toHaveTextContent(/^Episodi2mediana 2h · 1 in corso$/))
     expect(tile('Episodi')).toHaveTextContent('2')
   })
 
@@ -71,8 +74,8 @@ describe('Trends summary', () => {
     // A clock set wrong, a backup from a phone ahead in time: it is not part of the last 30 days.
     await addEntry({ at: at(-2), ...legs(9, { tags: ['rest'] }) })
     await openTrends()
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
-    expect(tile('Media giornaliera')).toHaveTextContent('max 3')
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
+    await waitFor(() => expect(meanLine()).toHaveTextContent('max 3'))
     expect(screen.queryByText('Riposo')).toBeNull()
   })
 
@@ -81,7 +84,7 @@ describe('Trends summary', () => {
     await addEntry({ at: at(3), ...legs(2) })
     await addEntry({ at: at(0), ...legs(4) })
     await openTrends()
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('3'))
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('3 voci'))
     await fireEvent.click(screen.getByRole('button', { name: 'Dal…' }))
     const field = screen.getByLabelText('Dal giorno') as HTMLInputElement
     const day = daysAgo(5)
@@ -90,8 +93,8 @@ describe('Trends summary', () => {
     const today = daysAgo(0)
     expect(field.max).toBe(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)
     await fireEvent.change(field, { target: { value: ymd } })
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('2'))
-    expect(tile('Media giornaliera')).toHaveTextContent('max 4')
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('2 voci'))
+    expect(meanLine()).toHaveTextContent('max 4')
     const chip = screen.getByRole('button', { name: `Dal ${new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' }).format(day)}` })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: '30 giorni' })).toHaveAttribute('aria-pressed', 'false')
@@ -101,7 +104,7 @@ describe('Trends summary', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }))
     // A fixed range again: the picked day is let go.
     await fireEvent.click(screen.getByRole('button', { name: '30 giorni' }))
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('3'))
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('3 voci'))
     expect(screen.getByRole('button', { name: 'Dal…' })).toHaveAttribute('aria-pressed', 'false')
   })
 
@@ -123,8 +126,8 @@ describe('Trends summary', () => {
     await addEntry({ at: at(0), ...legs(4) })
     await openTrends()
     const button = await screen.findByRole('button', { name: 'Riepilogo del diario' })
-    await waitFor(() => expect(tile('Voci')).toBeInTheDocument())
-    expect(button.compareDocumentPosition(tile('Voci')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await waitFor(() => expect(tile('Cronico')).toBeInTheDocument())
+    expect(button.compareDocumentPosition(tile('Cronico')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByRole('button', { name: '7 giorni' }).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
@@ -132,12 +135,12 @@ describe('Trends summary', () => {
     await addEntry({ at: at(10), ...legs(9) })
     await addEntry({ at: at(0), ...legs(2) })
     await openTrends()
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('2'))
-    expect(tile('Media giornaliera')).toHaveTextContent('max 9')
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('2 voci'))
+    await waitFor(() => expect(meanLine()).toHaveTextContent('max 9'))
     await fireEvent.click(screen.getByRole('button', { name: '7 giorni' }))
     expect(screen.getByRole('button', { name: '7 giorni' })).toHaveAttribute('aria-pressed', 'true')
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
-    expect(tile('Media giornaliera')).toHaveTextContent('max 2')
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
+    expect(meanLine()).toHaveTextContent('max 2')
     // A year of columns: the mean dots would smear, so the legend drops them.
     expect(screen.getByText('media')).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: '365 giorni' }))
@@ -156,14 +159,20 @@ describe('Trends by any symptom (#38)', () => {
     const chips = within(await picker()).getAllByRole('button')
     expect(chips.map((c) => c.textContent)).toEqual(['Dolore', 'Gonfiore'])
     expect(chips[0]).toHaveAttribute('aria-pressed', 'true')
-    await waitFor(() => expect(tile('Media giornaliera')).toHaveTextContent('2,5'))
+    await waitFor(() => expect(meanLine()).toHaveTextContent('2,5'))
     expect(screen.getByRole('img', { name: 'Dolore per giorno' })).toBeInTheDocument()
     await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
-    expect(tile('Media giornaliera')).toHaveTextContent('5')
-    expect(tile('Media giornaliera')).toHaveTextContent('max 6')
+    expect(meanLine()).toHaveTextContent('5')
+    expect(meanLine()).toHaveTextContent('max 6')
     expect(screen.getByRole('list', { name: 'Giorni per livello peggiore' }).closest('.card')).toHaveTextContent('mediana 5')
     expect(screen.getByRole('img', { name: 'Gonfiore per giorno' })).toBeInTheDocument()
     await waitFor(() => expect(document.querySelector('[data-region="152"]')!.getAttribute('style')).toContain(`fill: ${intensityColor(5)}`))
+    // The tiles count the whole diary, above the picker; the card under it is the symptom's, named after it (#120).
+    const first = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(first(tile('Episodi'), await picker())).toBe(true)
+    expect(first(tile('Cronico'), await picker())).toBe(true)
+    expect(meanLine().closest('.card')!.querySelector('.label')).toHaveTextContent(/^Gonfiore$/)
+    expect(meanLine().closest('.card')).toContainElement(screen.getByRole('list', { name: 'Giorni per livello peggiore' }))
     // Altri sintomi: the others, pain among them.
     const others = screen.getByText('Altri sintomi').closest('.card')!
     expect(others).toHaveTextContent('Dolore')
@@ -175,13 +184,13 @@ describe('Trends by any symptom (#38)', () => {
     await swollen(0, 6, 2)
     await openTrends()
     expect(within(await picker()).getByRole('button', { name: 'Gonfiore' })).toHaveAttribute('aria-pressed', 'true')
-    await waitFor(() => expect(tile('Media giornaliera')).toHaveTextContent('6'))
+    await waitFor(() => expect(meanLine()).toHaveTextContent('6'))
   })
 
   it('without a reading in range, leaves out the figures of a symptom but keeps counting entries', async () => {
     await addEntry({ at: at(0), layers: [{ regions: ['152'], readings: {}, tags: [] }] })
     await openTrends()
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
     expect(screen.queryByRole('group', { name: 'Sintomo' })).not.toBeInTheDocument()
     expect(screen.queryByText('Media giornaliera')).not.toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Giorni per livello peggiore' })).not.toBeInTheDocument()
@@ -194,7 +203,7 @@ describe('Trends by any symptom (#38)', () => {
     await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
-    expect(within(report).getByText('Sintomo: Gonfiore')).toBeInTheDocument()
+    expect(within(report).getByRole('heading', { level: 2, name: 'Sintomo: Gonfiore' })).toBeInTheDocument()
     expect(within(report).getByText('Media giornaliera').parentElement!).toHaveTextContent('6')
   })
 })
@@ -336,7 +345,7 @@ describe('Trends tags and symptoms', () => {
   it('has no tag card when no tag was used in range', async () => {
     await addEntry({ at: at(0), ...legs(4) })
     await openTrends()
-    await waitFor(() => expect(tile('Voci')).toHaveTextContent('1'))
+    await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
     expect(screen.queryByText('Tag')).toBeNull()
   })
 

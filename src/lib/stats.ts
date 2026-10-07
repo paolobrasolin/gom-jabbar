@@ -80,7 +80,9 @@ const median = (vs: number[]): number | null => {
 
 export type Summary = {
   entries: number
-  daysWithEntries: number
+  /** The chronic readings and the days they were on, apart from episodes, as the log form's Tipo has them (#120). */
+  chronicEntries: number
+  chronicDays: number
   /** The symptom's mean per day, then across days, and its max, over the entries reading it; null when none does. */
   mean: number | null
   max: number | null
@@ -101,17 +103,18 @@ export type Summary = {
 }
 
 export function summarize(entries: Entry[], symptom = PAIN, now = Date.now()): Summary {
-  const series = new Set(entries.map((e) => dayKey(e.at)))
   const read = withLevel(entries, symptom)
   const vs = read.map((r) => r.v)
   const dayMax = new Map<string, number>()
   for (const { e, v } of read) dayMax.set(dayKey(e.at), Math.max(dayMax.get(dayKey(e.at)) ?? 0, v))
+  const chronic = entries.filter((e) => e.kind === 'chronic')
   const heads = entries.filter(isHead)
   const ended = heads.filter((e) => e.endedAt).map((e) => durationMs(e, now)!).sort((a, b) => a - b)
   const mid = ended.length >> 1
   return {
     entries: entries.length,
-    daysWithEntries: series.size,
+    chronicEntries: chronic.length,
+    chronicDays: new Set(chronic.map((e) => dayKey(e.at))).size,
     mean: dailyMean(read.map(({ e, v }) => ({ at: e.at, v })))?.mean ?? null,
     max: vs.length ? Math.max(...vs) : null,
     worst: [...dayMax.values()].reduce((n, v) => (n[Math.min(10, Math.max(0, Math.round(v)))]++, n), Array<number>(11).fill(0)),
@@ -177,7 +180,7 @@ export type SymptomMean = { symptom: Symptom; mean: number; count: number }
 
 /**
  * Mean of every symptom but `except` (the one picked, §6.3), per day then across days, over the entries reading it, a 0
- * included: the same number the tile shows when that symptom is picked (#114; until then a 0 was left out here). In
+ * included: the same number its card shows when that symptom is picked (#114; until then a 0 was left out here). In
  * vocabulary order, as the picker lists them: sorted by mean, a symptom read on one bad day led one read on twenty (#120).
  */
 export function symptomMeans(entries: Entry[], symptoms: Symptom[], except = PAIN): SymptomMean[] {

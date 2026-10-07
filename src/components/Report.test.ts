@@ -84,23 +84,26 @@ describe('Report page', () => {
     const to = new Date(from.getTime() + 7 * 86_400_000 - 1)
     expect(screen.getByText(`Dal ${fmt(from)} al ${fmt(to)} · generato il ${fmt(new Date())}`)).toBeInTheDocument()
     const box = (k: string) => screen.getByText(k).parentElement!
-    // Every reading counts, the episode's update too.
-    expect(box('Voci')).toHaveTextContent('4')
-    expect(box('Voci')).toHaveTextContent('in 3 giorni')
+    // The two kinds of the log form (#120): the chronic readings in days, the episode apart.
+    expect(box('Cronico').querySelector('b')).toHaveTextContent(/^2$/)
+    expect(box('Cronico')).toHaveTextContent('giorni su 7 · 2 voci')
     expect(box('Media giornaliera')).toHaveTextContent('4,8')
     expect(box('Media giornaliera')).toHaveTextContent('max 8')
-    expect(screen.getByText('Sintomo: Dolore')).toBeInTheDocument()
+    // The symptom's part under its own heading, after the whole diary's figures (#120); every reading counts, the episode's update too.
+    const heading = screen.getByRole('heading', { level: 2, name: 'Sintomo: Dolore' })
+    expect(box('Episodi').compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(heading.compareDocumentPosition(box('Media giornaliera')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     const days = screen.getByRole('list', { name: 'Giorni per livello peggiore' })
     expect(within(days).getAllByRole('listitem').filter((b) => !b.getAttribute('aria-label')!.endsWith(': 0 giorni')).map((b) => b.getAttribute('aria-label'))).toEqual(['2: 1 giorno', '6: 1 giorno', '8: 1 giorno'])
     expect(days.parentElement).toHaveTextContent('mediana 6 · 3 giorni letti su 7')
     expect(box('Episodi')).toHaveTextContent('1')
-    expect(box('Episodi')).toHaveTextContent('durata mediana 2h')
+    expect(box('Episodi')).toHaveTextContent('mediana 2h')
   })
 
   it('has the sections a doctor reads: map, chart, symptoms, tags, episodes and notes', () => {
     open()
     const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(names).toEqual(['Dove', 'Nel tempo', 'Altri sintomi', 'Tag', 'Episodi e note'])
+    expect(names).toEqual(['Sintomo: Dolore', 'Dove', 'Nel tempo', 'Altri sintomi', 'Tag', 'Episodi e note'])
     expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
     // The chart is static on paper: no tap targets.
     expect(screen.queryAllByRole('button', { name: /\d/ })).toHaveLength(0)

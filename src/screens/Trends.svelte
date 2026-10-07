@@ -86,6 +86,8 @@
   const counts = $derived(tagCounts(entries.value, tags.value))
   const units = $derived({ d: prefs.lang === 'en' ? 'd' : 'g', h: 'h', m: 'm' })
   const fmt1 = (v: number | null) => (v === null ? '–' : num(v))
+  /** Under the chronic days: the range and the chronic entries (#120). */
+  const chronicLine = (s: Summary) => `${tn('trends.ofDays', s.chronicDays, { d: days })} · ${tn('trends.entryCount', s.chronicEntries)}`
   /** Under the episode count: the median length of the ended ones, and how many are still going on (§6.3). */
   const episodeLine = (s: Summary) =>
     [s.medianEpisodeMs !== null ? t('trends.episodeMedian', { d: formatDuration(s.medianEpisodeMs, units) }) : '', s.ongoing ? tn('episode.count', s.ongoing) : ''].filter(Boolean).join(' · ')
@@ -111,6 +113,12 @@
     <!-- Before a visit the report is the point (#114): it comes first, under the ranges. -->
     <button class="btn primary block" onclick={() => (showReport = true)}>{t('trends.report')}</button>
 
+    <!-- The whole diary, above the picker: the two kinds of the log form, whatever symptom is picked (#120). -->
+    <div class="tiles">
+      <div class="card tile"><span class="small muted">{t('trends.chronic')}</span><b>{summary.chronicDays}</b><span class="small muted">{chronicLine(summary)}</span></div>
+      <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="small muted">{episodeLine(summary)}</span></div>
+    </div>
+
     {#if choices.length}
       <div class="chips pick" role="group" aria-label={t('trends.heatSymptom')}>
         {#each choices as s (s.id)}
@@ -119,17 +127,12 @@
       </div>
     {/if}
 
-    <div class="tiles">
-      <div class="card tile"><span class="small muted">{t('trends.entries')}</span><b>{summary.entries}</b><span class="small muted">{tn('trends.onDays', summary.daysWithEntries)}</span></div>
-      {#if read}
-        <div class="card tile"><span class="small muted">{t('trends.mean')}</span><b>{fmt1(summary.mean)}</b><span class="small muted">{t('trends.maxPain', { n: summary.max ?? '–' })}</span></div>
-      {/if}
-      <div class="card tile"><span class="small muted">{t('trends.episodes')}</span><b>{summary.episodes}</b><span class="small muted">{episodeLine(summary)}</span></div>
-    </div>
-
-    {#if read}
+    <!-- The symptom picked, named: its mean and its days by their worst level (#120). -->
+    {#if read && symptom}
       <div class="card">
-        <p class="small muted label">{t('trends.worst')}</p>
+        <p class="small muted label">{tl(symptom.label)}</p>
+        <p class="mean"><span>{t('trends.mean')}</span> <b>{fmt1(summary.mean)}</b> <span>· {t('trends.maxPain', { n: summary.max ?? '–' })}</span></p>
+        <p class="small muted">{t('trends.worst')}</p>
         <WorstDays worst={summary.worst} median={summary.median} {days} />
       </div>
     {/if}
@@ -190,10 +193,10 @@
   .ranges { flex: none; flex-wrap: wrap; }
   .since { font: inherit; padding: 10px 12px; border-radius: var(--radius-s); border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  /* Three tiles: the last takes the whole row rather than leaving a hole. */
-  .tile:last-child:nth-child(odd) { grid-column: span 2; }
   .tile { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
   .tile b { font-size: 28px; line-height: 1.1; }
+  .mean { margin-bottom: 12px; }
+  .mean b { font-size: 22px; }
   .label { margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
   /* The theme's own ground: a cream panel in the dark theme glared in a dark room, and with every region with data edged the ramp reads on either (#23). */
   .map {
