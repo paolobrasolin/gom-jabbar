@@ -43,7 +43,7 @@
     return `M ${x0} ${base} V ${top + r} Q ${x0} ${top} ${x0 + r} ${top} H ${x0 + barW - r} Q ${x0 + barW} ${top} ${x0 + barW} ${top + r} V ${base} Z`
   }
 
-  /** Mean as a dot per day with data. Skipped on long ranges where dots would smear. */
+  /** The day's median as a dot per day with data (#120: the mean until then). Skipped on long ranges where dots would smear. */
   const showMean = $derived(!compact && n <= 100)
   const dotR = $derived(n <= 35 ? 4 : 3)
 
@@ -63,7 +63,7 @@
     <div class="legend small muted">
       {#if name}<b class="name">{name}:</b>{/if}
       <span><i class="key bar"></i>{t('trends.legendMax')}</span>
-      {#if showMean}<span><i class="key dot"></i>{t('trends.legendMean')}</span>{/if}
+      {#if showMean}<span><i class="key dot"></i>{t('trends.legendMedian')}</span>{/if}
     </div>
   {/if}
   <svg {width} {height} role="img" aria-label={label}>
@@ -93,8 +93,8 @@
     {/each}
     {#if showMean}
       {#each series as p, i (p.day)}
-        {#if p.mean !== null}
-          <circle class="mean" cx={x(i)} cy={y(p.mean)} r={dotR} />
+        {#if p.median !== null}
+          <circle class="median" cx={x(i)} cy={y(p.median)} r={dotR} />
         {/if}
       {/each}
     {/if}
@@ -109,7 +109,7 @@
       {#if tooltip.max === null}
         <span class="muted">{t('trends.noEntries')}</span>
       {:else}
-        <span>{t('trends.legendMax')} {tooltip.max} · {t('trends.legendMean')} {num(tooltip.mean!, true)} · {tn('trends.nEntries', tooltip.count)}</span>
+        <span>{t('trends.legendMax')} {tooltip.max} · {t('trends.legendMedian')} {num(tooltip.median!)} · {tn('trends.nEntries', tooltip.count)}</span>
       {/if}
     </div>
   {/if}
@@ -125,7 +125,7 @@
   .key.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); box-sizing: content-box; }
   .grid { stroke: var(--border); stroke-width: 1; }
   .tick { fill: var(--ink-2); font-size: 12px; }
-  .mean { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+  .median { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
   .hit { fill: transparent; cursor: pointer; }
   .cursor { stroke: var(--ink-2); stroke-width: 1; }
   .tip {

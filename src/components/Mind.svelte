@@ -22,7 +22,7 @@
     layers?: Layer[]
     cur?: number
     /** Heatmap mode: mean intensity, the fill, and weight (0..1), the width of the ring inside (§6.3). Overrides `layers`. */
-    heat?: Map<string, { mean: number; weight: number }>
+    heat?: Map<string, { median: number; weight: number }>
     readonly?: boolean
     label?: string
     onToggle?: (id: string) => void
@@ -34,7 +34,7 @@
   const uid = $props.id()
   const ringClip = `${uid}-ring`
   const mindHeat = $derived(heat?.get(MIND))
-  const color = $derived(heat ? (mindHeat ? intensityColor(mindHeat.mean) : undefined) : mindLayer ? intensityColor(layerLevel(mindLayer)) : undefined)
+  const color = $derived(heat ? (mindHeat ? intensityColor(mindHeat.median) : undefined) : mindLayer ? intensityColor(layerLevel(mindLayer)) : undefined)
   const outlined = $derived(mindCur)
   const ghost = $derived(!heat && layers.length > 1 && !!mindLayer && !mindCur)
 </script>

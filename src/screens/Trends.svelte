@@ -155,7 +155,7 @@
       <p class="small muted label">{symptom ? t('trends.where', { name: tl(symptom.label) }) : t('trends.heatmap')}</p>
       <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       <RampKey />
-      {#if whole}<p class="small">{tn('trends.fullBody', whole.count, { m: num(whole.mean) })}</p>{/if}
+      {#if whole}<p class="small">{tn('trends.fullBody', whole.count, { m: num(whole.median) })}</p>{/if}
       <p class="small muted">{t('trends.heatmapHint')}</p>
     </div>
 

@@ -32,7 +32,7 @@
     /** Index of the layer being edited: its regions get an outline (all of them only when other layers are there to tell apart), and the other layers fade. */
     cur?: number
     /** Heatmap mode: per-region mean intensity, the fill, and weight (0..1, on a log scale, §6.3), the width of a ring inside the region. Overrides `layers`. */
-    heat?: Map<string, { mean: number; weight: number }>
+    heat?: Map<string, { median: number; weight: number }>
     /** Heatmap mode: strokes to shade over the figure, each with its level. Otherwise the layers' own are drawn. */
     strokes?: HeatStroke[]
     /** The stroke being drawn right now, in figure coordinates, and its colour. */
@@ -103,7 +103,7 @@
   {#each regions as r (r.id)}
     {@const h = heat?.get(r.id)}
     {@const own = fill.get(r.id)}
-    {@const color = heat ? (h ? intensityColor(h.mean) : undefined) : own?.color}
+    {@const color = heat ? (h ? intensityColor(h.median) : undefined) : own?.color}
     <path
       class="region{color ? ' on' : ''}{outlined.has(r.id) ? ' hi' : ''}{!heat && own?.ghost ? ' ghost' : ''}"
       data-region={r.id}

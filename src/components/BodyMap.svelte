@@ -15,7 +15,7 @@
     labels = { front: '', back: '' },
   }: {
     /** Per-region mean intensity and weight (0..1) driving opacity. */
-    heat?: Map<string, { mean: number; weight: number }>
+    heat?: Map<string, { median: number; weight: number }>
     /** Strokes to shade over the figures, each with its level. */
     strokes?: HeatStroke[]
     labels?: { front: string; back: string; mind?: string }

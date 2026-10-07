@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { makeEntry } from './entries'
-import { dailySeries, rangeDays, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, rangeStart, rangeEnd, tagCounts, ringWidth, ringStyle } from './stats'
+import { dailySeries, rangeDays, summarize, regionHeat, fullBody, symptomMedians, symptomsRead, rangeStart, rangeEnd, tagCounts, ringWidth, ringStyle } from './stats'
 import { DEFAULT_TAGS, DEFAULT_SYMPTOMS } from './vocabulary'
 import { presetSeries, chronicRows, episodeLanes, episodeCounts } from './stats'
 import type { Preset } from './types'
@@ -15,7 +15,9 @@ describe('stats', () => {
     const from = new Date(2026, 2, 1)
     const s = dailySeries([e('1', 3), e('1', 7), e('3', 5)], from, 4)
     expect(s.map((p) => p.max)).toEqual([7, null, 5, null])
-    expect(s[0].mean).toBe(5)
+    expect(s[0].median).toBe(5)
+    // A level is ordinal (#120): a day at 1, 2 and 9 is a day at 2, not at 4.
+    expect(dailySeries([e('1', 1), e('1', 2), e('1', 9)], from, 1)[0].median).toBe(2)
     expect(s[0].count).toBe(2)
     expect(s[3].day).toBe('2026-03-04')
   })
@@ -79,19 +81,20 @@ describe('stats', () => {
     const s = summarize([...quiet, ...migraine])
     expect(s.mean).toBeCloseTo((29 * 3 + 8) / 30)
     expect(s.max).toBe(8)
-    // The other symptoms too: two readings on one day count as that day's mean.
+    // The other symptoms too, each day once at its highest: three readings of 2 on one day are one day at 2.
     const fog = (d: string, v: number) => makeEntry({ at: at(d), layers: [{ regions: ['mind'], readings: { fog: v } }] })
-    expect(symptomMeans([fog('1', 2), fog('1', 2), fog('1', 2), fog('2', 8)], DEFAULT_SYMPTOMS)).toEqual([{ symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), mean: 5, count: 2 }])
+    expect(symptomMedians([fog('1', 2), fog('1', 2), fog('1', 2), fog('2', 8)], DEFAULT_SYMPTOMS)).toEqual([{ symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), median: 5, count: 2 }])
   })
 
-  it('one symptom, one average: a reading of 0 counts under Altri sintomi as it does when the symptom is picked (#114)', () => {
+  it('one symptom, one figure: a reading of 0 counts under Altri sintomi as it does when the symptom is picked (#114, #120)', () => {
     const swell = (day: string, pain: number, swelling: number) => makeEntry({ at: at(day), layers: [L(['152'], { pain, swelling })] })
     const entries = [swell('1', 4, 0), swell('2', 6, 6), swell('2', 2, 3), e('3', 5)]
-    const others = symptomMeans(entries, DEFAULT_SYMPTOMS, 'pain')
-    expect(others).toEqual([{ symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'swelling'), mean: (0 + 4.5) / 2, count: 2 }])
+    // Days at 0 and at 6 (the higher of 6 and 3): the median of each day's highest, as Quanto gives the symptom picked.
+    const others = symptomMedians(entries, DEFAULT_SYMPTOMS, 'pain')
+    expect(others).toEqual([{ symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'swelling'), median: 3, count: 2 }])
     for (const s of DEFAULT_SYMPTOMS) {
-      const picked = summarize(entries, s.id).mean
-      const listed = symptomMeans(entries, DEFAULT_SYMPTOMS, 'other').find((m) => m.symptom.id === s.id)?.mean ?? null
+      const picked = summarize(entries, s.id).median
+      const listed = symptomMedians(entries, DEFAULT_SYMPTOMS, 'other').find((m) => m.symptom.id === s.id)?.median ?? null
       expect(listed, s.id).toBe(picked)
     }
   })
@@ -99,7 +102,7 @@ describe('stats', () => {
   it('measures pain over the entries that read it: one without a pain reading is not a 0', () => {
     const mind = (day: string, fog: number) => makeEntry({ at: at(day), layers: [L(['mind'], { fog })] })
     const from = new Date(2026, 2, 1)
-    expect(dailySeries([e('1', 6), mind('1', 2), mind('2', 3)], from, 2).map((p) => [p.max, p.mean, p.count])).toEqual([[6, 6, 1], [null, null, 0]])
+    expect(dailySeries([e('1', 6), mind('1', 2), mind('2', 3)], from, 2).map((p) => [p.max, p.median, p.count])).toEqual([[6, 6, 1], [null, null, 0]])
     const s = summarize([e('1', 6), mind('1', 2), mind('2', 3)])
     expect(s).toMatchObject({ entries: 3, mean: 6, max: 6, median: 6 })
     expect(summarize([mind('1', 2)])).toMatchObject({ entries: 1, mean: null, max: null, median: null, worst: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] })
@@ -111,8 +114,10 @@ describe('stats', () => {
       e('2', 4, { layers: [L(['152', '110'], { pain: 4 })] }),
       e('3', 2, { layers: [L(['*'], { pain: 2 })] }),
     ])
-    expect(h.get('152')).toEqual({ mean: 6, count: 2, weight: 1 })
-    expect(h.get('110')).toEqual({ mean: 4, count: 1, weight: Math.log(2) / Math.log(3) })
+    expect(h.get('152')).toEqual({ median: 6, count: 2, weight: 1 })
+    expect(h.get('110')).toEqual({ median: 4, count: 1, weight: Math.log(2) / Math.log(3) })
+    // The median, not the mean (#120): one bad 9 among 2s does not tint the region, and the colour is a step of the key.
+    expect(regionHeat([e('1', 2, { layers: [L(['152'], { pain: 2 })] }), e('2', 2, { layers: [L(['152'], { pain: 2 })] }), e('3', 9, { layers: [L(['152'], { pain: 9 })] })]).get('152')?.median).toBe(2)
     // Full body is not every region at once (#114): one such entry would light all 74 and dilute each.
     expect(h.get('261')).toBeUndefined()
     expect(h.get('*')).toBeUndefined()
@@ -125,25 +130,27 @@ describe('stats', () => {
         e('6', 0, { layers: [L(['*', 'mind'], { pain: 2, fog: 4 })] }),
       ],
     )
-    expect(b.get('152')).toEqual({ mean: 7, count: 1, weight: 1 })
-    expect(b.get('110')).toEqual({ mean: 7, count: 1, weight: 1 })
+    expect(b.get('152')).toEqual({ median: 7, count: 1, weight: 1 })
+    expect(b.get('110')).toEqual({ median: 7, count: 1, weight: 1 })
     // The mind is one more region, beside full body as beside any other.
-    expect(b.get('mind')).toEqual({ mean: 2, count: 1, weight: 1 })
+    expect(b.get('mind')).toEqual({ median: 2, count: 1, weight: 1 })
     const f = regionHeat([e('4', 0, { layers: [L(['mind'], { fog: 6 })] }), e('6', 0, { layers: [L(['*', 'mind'], { pain: 2, fog: 4 })] })], 'fog')
-    expect(f.get('mind')).toEqual({ mean: 5, count: 2, weight: 1 })
+    expect(f.get('mind')).toEqual({ median: 5, count: 2, weight: 1 })
     expect(f.get('152')).toBeUndefined()
     expect(regionHeat([e('4', 0, { layers: [L(['mind'], { fog: 6 })] })], 'swelling').size).toBe(0)
   })
 
-  it('counts full body apart: the entries reading the symptom on the whole body, and their mean (#114)', () => {
+  it('counts full body apart: the entries reading the symptom on the whole body, and their median (#114, #120)', () => {
     const entries = [
       e('1', 0, { layers: [L(['*'], { pain: 2 })] }),
       e('2', 0, { layers: [L(['*', 'mind'], { pain: 6, fog: 3 }), L(['*'], { pain: 4 })] }),
       e('3', 0, { layers: [L(['*'], { swelling: 5 })] }),
       e('4', 8, { layers: [L(['152'], { pain: 8 })] }),
     ]
-    expect(fullBody(entries)).toEqual({ mean: 4, count: 2 })
-    expect(fullBody(entries, 'swelling')).toEqual({ mean: 5, count: 1 })
+    expect(fullBody(entries)).toEqual({ median: 4, count: 2 })
+    expect(fullBody(entries, 'swelling')).toEqual({ median: 5, count: 1 })
+    // 2, 2, 6 and 9: the median 4, where the mean said 4.75.
+    expect(fullBody([...entries, e('5', 0, { layers: [L(['*'], { pain: 9 })] }), e('6', 0, { layers: [L(['*'], { pain: 2 })] })])?.median).toBe(4)
     expect(fullBody(entries, 'fatigue')).toBeNull()
   })
 
@@ -184,16 +191,16 @@ describe('stats', () => {
     expect(tagCounts(entries, tags).map((x) => x.on)).toEqual([['2026-03-01', '2026-03-02'], ['2026-03-01', '2026-03-02', '2026-03-03']])
   })
 
-  it('averages other symptoms where recorded, a 0 included', () => {
+  it('gives the other symptoms where recorded, a 0 included', () => {
     const entries = [e('1', 5, { readings: { swelling: 6 } }), e('2', 5, { layers: [L(['152'], { swelling: 2 }), L(['110'], { swelling: 1, fog: 0 })] }), e('3', 5)]
-    expect(symptomMeans(entries, DEFAULT_SYMPTOMS)).toEqual([
-      { symptom: DEFAULT_SYMPTOMS[1], mean: 4, count: 2 },
-      { symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), mean: 0, count: 1 },
+    expect(symptomMedians(entries, DEFAULT_SYMPTOMS)).toEqual([
+      { symptom: DEFAULT_SYMPTOMS[1], median: 4, count: 2 },
+      { symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), median: 0, count: 1 },
     ])
     // "Other" than the symptom picked (#38): pain is one of them when swelling is picked.
-    expect(symptomMeans(entries, DEFAULT_SYMPTOMS, 'swelling')).toEqual([
-      { symptom: DEFAULT_SYMPTOMS[0], mean: 5, count: 1 },
-      { symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), mean: 0, count: 1 },
+    expect(symptomMedians(entries, DEFAULT_SYMPTOMS, 'swelling')).toEqual([
+      { symptom: DEFAULT_SYMPTOMS[0], median: 5, count: 1 },
+      { symptom: DEFAULT_SYMPTOMS.find((x) => x.id === 'fog'), median: 0, count: 1 },
     ])
   })
 
@@ -201,7 +208,7 @@ describe('stats', () => {
     const entries = [e('1', 2), e('2', 3), e('3', 2), makeEntry({ at: at('4'), layers: [{ regions: ['mind'], readings: { anxiety: 9, fog: 1 } }] })]
     // Handed in any order, listed by `order`, as the Sintomo picker is.
     const shuffled = [...DEFAULT_SYMPTOMS].reverse()
-    expect(symptomMeans(entries, shuffled, 'swelling').map((m) => [m.symptom.id, m.count])).toEqual([['pain', 3], ['fog', 1], ['anxiety', 1]])
+    expect(symptomMedians(entries, shuffled, 'swelling').map((m) => [m.symptom.id, m.count])).toEqual([['pain', 3], ['fog', 1], ['anxiety', 1]])
   })
 
   it('measures any symptom the way it measures pain (#38)', () => {

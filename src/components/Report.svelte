@@ -6,7 +6,7 @@
   import EntrySummary from './EntrySummary.svelte'
   import { t, tl, locale, num, tn } from '../i18n/index.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, tagCounts, rangeEnd, type Summary } from '../lib/stats'
+  import { dailySeries, summarize, regionHeat, fullBody, symptomMedians, symptomsRead, tagCounts, rangeEnd, type Summary } from '../lib/stats'
   import { durationMs, episodesOf, isHead, isUpdate, isActive, shownReading, chainLayers } from '../lib/entries'
   import { allStrokes } from '../lib/strokes'
   import { formatDuration, formatTime } from '../lib/time'
@@ -36,7 +36,7 @@
   const series = $derived(dailySeries(entries, from, days, sid))
   const summary = $derived(summarize(entries, sid))
   const counts = $derived(tagCounts(entries, tags))
-  const symMeans = $derived(symptomMeans(entries, symptoms, sid))
+  const others = $derived(symptomMedians(entries, symptoms, sid))
   /** The symptom's figures only when something in range reads it (#36). */
   const read = $derived(summary.mean !== null)
   const heat = $derived(regionHeat(entries, sid))
@@ -123,7 +123,7 @@
         <h2>{read && symptom ? t('trends.where', { name: tl(symptom.label) }) : t('trends.heatmap')}</h2>
         <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
         <RampKey />
-        {#if whole}<p>{tn('trends.fullBody', whole.count, { m: num(whole.mean) })}</p>{/if}
+        {#if whole}<p>{tn('trends.fullBody', whole.count, { m: num(whole.median) })}</p>{/if}
         <p class="muted">{t('trends.heatmapHint')}</p>
       </div>
       <div>
@@ -131,11 +131,11 @@
           <h2>{t('trends.overTime')}</h2>
           <DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} name={tl(symptom.label)} height={150} interactive={false} />
         {/if}
-        {#if symMeans.length}
+        {#if others.length}
           <h2>{t('trends.symptoms')}</h2>
           <table>
             <tbody>
-              {#each symMeans as s (s.symptom.id)}<tr><td>{tl(s.symptom.label)}</td><td class="num">{fmt1(s.mean)}</td><td class="num muted">{tn('diary.days', s.count)}</td></tr>{/each}
+              {#each others as s (s.symptom.id)}<tr><td>{tl(s.symptom.label)}</td><td class="num">{fmt1(s.median)}</td><td class="num muted">{tn('diary.days', s.count)}</td></tr>{/each}
             </tbody>
           </table>
         {/if}

@@ -150,10 +150,10 @@ describe('Trends summary', () => {
     expect(screen.getByRole('button', { name: '7 giorni' })).toHaveAttribute('aria-pressed', 'true')
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
     expect(meanLine()).toHaveTextContent('max 2')
-    // A year of columns: the mean dots would smear, so the legend drops them.
-    expect(screen.getByText('media')).toBeInTheDocument()
+    // A year of columns: the median dots would smear, so the legend drops them.
+    expect(screen.getByText('mediana')).toBeInTheDocument()
     await since(364)
-    await waitFor(() => expect(screen.queryByText('media')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('mediana')).not.toBeInTheDocument())
   })
 })
 
@@ -244,10 +244,10 @@ describe('Trends heatmap and chart', () => {
     await openTrends()
     await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
     expect(document.querySelector('[data-region="110"]')).not.toHaveClass('on')
-    expect(screen.getByText('Tutto il corpo: 2 volte, media 3,5')).toBeInTheDocument()
+    expect(screen.getByText('Tutto il corpo: 2 volte, mediana 3,5')).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
-    expect(within(report).getByText('Tutto il corpo: 2 volte, media 3,5')).toBeInTheDocument()
+    expect(within(report).getByText('Tutto il corpo: 2 volte, mediana 3,5')).toBeInTheDocument()
   })
 
   it('the map has its colour key, and the report its key and caption (#114)', async () => {
@@ -258,7 +258,7 @@ describe('Trends heatmap and chart', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
     expect(within(report).getByRole('img', { name: 'Scala dei colori: da 0 assente a 10 massimo' })).toBeInTheDocument()
-    expect(within(report).getByText('Colore: intensità media. Bordo: frequenza.')).toBeInTheDocument()
+    expect(within(report).getByText('Colore: intensità mediana. Bordo: frequenza.')).toBeInTheDocument()
   })
 
   it('says nothing of full body when no entry reads the symptom there', async () => {
@@ -268,10 +268,10 @@ describe('Trends heatmap and chart', () => {
     await waitFor(() => expect(document.querySelector('[data-region="152"]')).toHaveClass('on'))
     expect(screen.queryByText(/^Tutto il corpo/)).toBeNull()
     await fireEvent.click(within(await screen.findByRole('group', { name: 'Sintomo' })).getByRole('button', { name: 'Gonfiore' }))
-    expect(await screen.findByText('Tutto il corpo: 1 volta, media 4')).toBeInTheDocument()
+    expect(await screen.findByText('Tutto il corpo: 1 volta, mediana 4')).toBeInTheDocument()
   })
 
-  it('keeps colour for the mean and draws frequency as a ring inside the region, on a log scale (#23)', async () => {
+  it('keeps colour for the median and draws frequency as a ring inside the region, on a log scale (#23)', async () => {
     for (let n = 0; n < 4; n++) await addEntry({ at: at(n), ...legs(8) })
     await addEntry({ at: at(4), layers: [{ regions: ['153'], readings: { pain: 3 }, tags: [] }] })
     await openTrends()
@@ -333,7 +333,7 @@ describe('Trends heatmap and chart', () => {
     await fireEvent.pointerDown(today)
     const tip = document.querySelector('.tip')!
     expect(tip).toHaveTextContent(fmtFull(daysAgo(0)))
-    expect(tip).toHaveTextContent('max del giorno 8 · media 6,0 · 2 voci')
+    expect(tip).toHaveTextContent('max del giorno 8 · mediana 6 · 2 voci')
     await fireEvent.pointerDown(screen.getByRole('button', { name: fmtFull(daysAgo(1)) }))
     expect(document.querySelector('.tip')).toHaveTextContent('nessuna voce')
     await fireEvent.pointerDown(screen.getByRole('button', { name: fmtFull(daysAgo(1)) }))
@@ -424,9 +424,9 @@ describe('Trends presets and episodes (#120)', () => {
     const chart = await within(c).findByRole('img', { name: 'Schiena' })
     await waitFor(() => expect(chart.querySelectorAll('path.col')).toHaveLength(2))
     expect([...chart.querySelectorAll('path.col')].map((col) => col.getAttribute('fill'))).toEqual([intensityColor(4), intensityColor(6)])
-    // Compact: no legend, no mean, no dates; the card is the screen's last.
+    // Compact: no legend, no median, no dates.
     expect(chart.closest('.chart')!.querySelector('.legend')).toBeNull()
-    expect(chart.querySelectorAll('circle.mean, text.date')).toHaveLength(0)
+    expect(chart.querySelectorAll('circle.median, text.date')).toHaveLength(0)
     // On the chart's days: each column starts where the Quando chart's column of that day does.
     const left = (chart: Element) => [...chart.querySelectorAll('path.col')].map((col) => col.getAttribute('d')!.split(' ')[1])
     expect(left(chart)).toEqual(left(within(c).getByRole('img', { name: 'Dolore per giorno' })))

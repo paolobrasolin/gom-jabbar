@@ -42,7 +42,8 @@ export function rangeDays(from: Date, days: number): string[] {
   })
 }
 
-export type DayPoint = { day: string; date: Date; max: number | null; mean: number | null; count: number }
+/** A day of the chart: its highest reading, the median of its readings (a level is ordinal, #120), how many. */
+export type DayPoint = { day: string; date: Date; max: number | null; median: number | null; count: number }
 
 /** One point per calendar day in [from, from + days), over the entries reading the symptom. Days without any have null values. */
 export function dailySeries(entries: Entry[], from: Date, days: number, symptom = PAIN): DayPoint[] {
@@ -67,7 +68,7 @@ function daySeries(readings: { at: string; value: number }[], from: Date, days: 
       day: k,
       date,
       max: v ? Math.max(...v) : null,
-      mean: v ? v.reduce((a, b) => a + b, 0) / v.length : null,
+      median: v ? median(v) : null,
       count: v?.length ?? 0,
     })
   }
@@ -140,17 +141,18 @@ export function summarize(entries: Entry[], symptom = PAIN, now = Date.now()): S
   }
 }
 
-export type Heat = { mean: number; count: number; weight: number }
+export type Heat = { median: number; count: number; weight: number }
 
 /**
- * Per-region mean level of one symptom and how often it appeared, weight = ln(1 + count) / ln(1 + max count) (§6.3):
+ * Per-region median level of one symptom (#120: the mean until then; a level is ordinal, one 9 among 2s tinted the
+ * region, and a mean of 4.3 took a colour the key does not show) and how often it appeared, weight = ln(1 + count) / ln(1 + max count) (§6.3):
  * frequency is read in ratios, once against twice more than 18 against 20, and a diary's counts have a long tail. An entry
  * counts once per region, at the max over its layers that carry the symptom; layers without it contribute
  * nothing. The mind is one more region. Full body is no region: counted for every one, a single such entry lit all 74
  * and diluted each (#114). It is counted apart (`fullBody`).
  */
 export function regionHeat(entries: Entry[], symptom = PAIN): Map<string, Heat> {
-  const acc = new Map<string, { sum: number; count: number }>()
+  const acc = new Map<string, number[]>()
   for (const e of entries) {
     const best = new Map<string, number>()
     for (const l of e.layers) {
@@ -158,28 +160,23 @@ export function regionHeat(entries: Entry[], symptom = PAIN): Map<string, Heat> 
       if (typeof v !== 'number') continue
       for (const id of l.regions) if (id !== FULL_BODY) best.set(id, Math.max(best.get(id) ?? 0, v))
     }
-    for (const [id, v] of best) {
-      const c = acc.get(id) ?? { sum: 0, count: 0 }
-      c.sum += v
-      c.count++
-      acc.set(id, c)
-    }
+    for (const [id, v] of best) acc.set(id, [...(acc.get(id) ?? []), v])
   }
-  const maxCount = Math.max(1, ...[...acc.values()].map((c) => c.count))
+  const maxCount = Math.max(1, ...[...acc.values()].map((vs) => vs.length))
   const scale = Math.log(1 + maxCount)
-  return new Map([...acc].map(([id, c]) => [id, { mean: c.sum / c.count, count: c.count, weight: Math.log(1 + c.count) / scale }]))
+  return new Map([...acc].map(([id, vs]) => [id, { median: median(vs)!, count: vs.length, weight: Math.log(1 + vs.length) / scale }]))
 }
 
 /**
  * The entries that read the symptom on the whole body (§6.3), shown beside the map rather than on every region: how many,
- * and their mean, each entry at the max over its full-body layers that carry it. Null when there are none.
+ * and their median (#120), each entry at the max over its full-body layers that carry it. Null when there are none.
  */
-export function fullBody(entries: Entry[], symptom = PAIN): { mean: number; count: number } | null {
+export function fullBody(entries: Entry[], symptom = PAIN): { median: number; count: number } | null {
   const vs = entries.flatMap((e) => {
     const own = e.layers.filter((l) => l.regions.includes(FULL_BODY) && typeof l.readings[symptom] === 'number').map((l) => l.readings[symptom])
     return own.length ? [Math.max(...own)] : []
   })
-  return vs.length ? { mean: vs.reduce((a, b) => a + b, 0) / vs.length, count: vs.length } : null
+  return vs.length ? { median: median(vs)!, count: vs.length } : null
 }
 
 /** The heatmap's frequency ring (§6.3), in screen px inside the region: a hairline for once, 2.5px for the most frequent. */
@@ -191,20 +188,22 @@ export const ringStyle = (weight: number) => `stroke-width:${(2 * ringWidth(weig
 const GROUP_RANK: Record<Tag['group'], number> = { medication: 0, intervention: 1, context: 2 }
 
 /** `count`: the days the symptom was recorded on. */
-export type SymptomMean = { symptom: Symptom; mean: number; count: number }
+export type SymptomMedian = { symptom: Symptom; median: number; count: number }
 
 /**
- * Mean of every symptom but `except` (the one picked, §6.3), per day then across days, over the entries reading it, a 0
- * included: the same number its card shows when that symptom is picked (#114; until then a 0 was left out here). In
- * vocabulary order, as the picker lists them: sorted by mean, a symptom read on one bad day led one read on twenty (#120).
+ * Every symptom but `except` (the one picked, §6.3), for the report's Altri sintomi: the median of its days, each at its
+ * highest reading, over the entries reading it, a 0 included: the mediana Quanto gives it when it is picked (#114, #120;
+ * the mean per day then across days until #120). In vocabulary order, as the picker lists them: sorted by the figure, a
+ * symptom read on one bad day led one read on twenty (#120).
  */
-export function symptomMeans(entries: Entry[], symptoms: Symptom[], except = PAIN): SymptomMean[] {
+export function symptomMedians(entries: Entry[], symptoms: Symptom[], except = PAIN): SymptomMedian[] {
   return [...symptoms]
     .sort((a, b) => a.order - b.order)
     .filter((s) => s.id !== except)
     .flatMap((symptom) => {
-      const m = dailyMean(withLevel(entries, symptom.id).map(({ e, v }) => ({ at: e.at, v })))
-      return m ? [{ symptom, mean: m.mean, count: m.days }] : []
+      const dayMax = new Map<string, number>()
+      for (const { e, v } of withLevel(entries, symptom.id)) dayMax.set(dayKey(e.at), Math.max(dayMax.get(dayKey(e.at)) ?? 0, v))
+      return dayMax.size ? [{ symptom, median: median([...dayMax.values()])!, count: dayMax.size }] : []
     })
 }
 
