@@ -140,6 +140,8 @@
   "vocab.addPlaceholder": "New…",
   "vocab.delete": "Delete {name}",
   "vocab.rename": "Rename {name}",
+  "vocab.up": "Move {name} up",
+  "vocab.down": "Move {name} down",
   "vocab.deleted": "Deleted: {name}",
   "vocab.entries": "{n} entries",
   "vocab.entries.one": "{n} entry",

@@ -140,6 +140,8 @@
   "vocab.addPlaceholder": "Nuovo…",
   "vocab.delete": "Elimina {name}",
   "vocab.rename": "Rinomina {name}",
+  "vocab.up": "Sposta su {name}",
+  "vocab.down": "Sposta giù {name}",
   "vocab.deleted": "Eliminato: {name}",
   "vocab.entries": "{n} voci",
   "vocab.entries.one": "{n} voce",

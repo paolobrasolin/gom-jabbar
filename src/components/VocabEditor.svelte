@@ -114,8 +114,8 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></svg>
               </button>
             {/if}
-            <button class="arrow" aria-label="↑" onclick={() => move(table, item.id, -1)}>↑</button>
-            <button class="arrow" aria-label="↓" onclick={() => move(table, item.id, 1)}>↓</button>
+            <button class="arrow" aria-label={t('vocab.up', { name: tl(item.label) })} onclick={() => move(table, item.id, -1)}>↑</button>
+            <button class="arrow" aria-label={t('vocab.down', { name: tl(item.label) })} onclick={() => move(table, item.id, 1)}>↓</button>
           </div>
         {/each}
         <div class="item add">
