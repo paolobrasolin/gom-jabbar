@@ -90,7 +90,7 @@ describe('Report page', () => {
     expect(box('Media giornaliera')).toHaveTextContent('4,8')
     expect(box('Media giornaliera')).toHaveTextContent('max 8')
     // The symptom's part under its own heading, after the whole diary's figures (#120); every reading counts, the episode's update too.
-    const heading = screen.getByRole('heading', { level: 2, name: 'Sintomo: Dolore' })
+    const heading = screen.getByRole('heading', { level: 2, name: 'Quanto (Dolore)' })
     expect(box('Episodi').compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(heading.compareDocumentPosition(box('Media giornaliera')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     const days = screen.getByRole('list', { name: 'Giorni per livello peggiore' })
@@ -103,7 +103,7 @@ describe('Report page', () => {
   it('has the sections a doctor reads: map, chart, symptoms, tags, episodes and notes', () => {
     open()
     const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(names).toEqual(['Sintomo: Dolore', 'Dove', 'Nel tempo', 'Altri sintomi', 'Tag', 'Episodi e note'])
+    expect(names).toEqual(['Quanto (Dolore)', 'Dove (Dolore)', 'Quando', 'Altri sintomi', 'Tag', 'Episodi e note'])
     expect(document.querySelector('[data-region="152"]')).toHaveClass('on')
     // The chart is static on paper: no tap targets.
     expect(screen.queryAllByRole('button', { name: /\d/ })).toHaveLength(0)
@@ -195,7 +195,8 @@ describe('Report for another symptom (#38)', () => {
   it('reads the symptom it is given: numbers, map and chart, named once', () => {
     const { from, entries } = fixture()
     render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, symptom: 'swelling', onclose: vi.fn() })
-    expect(screen.getByText('Sintomo: Gonfiore')).toBeInTheDocument()
+    expect(screen.getByText('Quanto (Gonfiore)')).toBeInTheDocument()
+    expect(screen.getByText('Dove (Gonfiore)')).toBeInTheDocument()
     const box = (k: string) => screen.getByText(k).parentElement!
     expect(box('Media giornaliera')).toHaveTextContent('5')
     expect(screen.getByRole('list', { name: 'Giorni per livello peggiore' }).parentElement).toHaveTextContent('mediana 5')
@@ -213,8 +214,9 @@ describe('Report for another symptom (#38)', () => {
     render(Report, { days: 7, from, entries, tags: DEFAULT_TAGS, symptoms: DEFAULT_SYMPTOMS, onclose: vi.fn() })
     expect(screen.queryByText('Media giornaliera')).not.toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Giorni per livello peggiore' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/^Sintomo:/)).not.toBeInTheDocument()
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).not.toContain('Nel tempo')
+    expect(screen.queryByText(/^Quanto/)).not.toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toContain('Dove')
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).not.toContain('Quando')
   })
 })
 

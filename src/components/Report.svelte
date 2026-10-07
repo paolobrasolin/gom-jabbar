@@ -111,7 +111,7 @@
 
     {#if read && symptom}
       <section>
-        <h2>{t('report.symptom', { name: tl(symptom.label) })}</h2>
+        <h2>{t('trends.howMuch', { name: tl(symptom.label) })}</h2>
         <p class="mean"><span>{t('trends.mean')}</span> <b>{fmt1(summary.mean)}</b> <span>· {t('trends.maxPain', { n: summary.max ?? '–' })}</span></p>
         <span class="k">{t('trends.worst')}</span>
         <WorstDays worst={summary.worst} median={summary.median} {days} />
@@ -120,7 +120,7 @@
 
     <section class="two">
       <div>
-        <h2>{t('trends.heatmap')}</h2>
+        <h2>{read && symptom ? t('trends.where', { name: tl(symptom.label) }) : t('trends.heatmap')}</h2>
         <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
         <RampKey />
         {#if whole}<p>{tn('trends.fullBody', whole.count, { m: num(whole.mean) })}</p>{/if}
@@ -129,7 +129,7 @@
       <div>
         {#if read && symptom}
           <h2>{t('trends.overTime')}</h2>
-          <DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} height={150} interactive={false} />
+          <DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} name={tl(symptom.label)} height={150} interactive={false} />
         {/if}
         {#if symMeans.length}
           <h2>{t('trends.symptoms')}</h2>

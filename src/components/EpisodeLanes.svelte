@@ -7,7 +7,7 @@
   /**
    * The episodes over the range (§6.3, #120): one row per episode preset and one for the rest, each episode a bar over the
    * days it touched, in the colour of the level shown for it; then how many began per week, or per month on a long range.
-   * The day columns are those of the charts (DailyChart), so a bar spans the days it would on Nel tempo.
+   * The day columns are those of the charts (DailyChart), so a bar spans the days it would on the Quando chart.
    */
   let { lanes, counts, from, days }: { lanes: EpisodeLane[]; counts: { per: 'week' | 'month'; buckets: { start: Date; count: number }[] }; from: Date; days: number } = $props()
 

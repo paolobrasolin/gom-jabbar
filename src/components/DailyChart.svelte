@@ -13,7 +13,7 @@
    * `label` names the chart for assistive tech: the symptom it reads, "Gonfiore per giorno". `compact`, a chronic preset in
    * the Preset cronici fold under it (#120): the columns alone, no legend, mean, dates or taps, on the same day columns.
    */
-  let { series, label, height = 170, interactive = true, compact = false }: { series: DayPoint[]; label: string; height?: number; interactive?: boolean; compact?: boolean } = $props()
+  let { series, label, name, height = 170, interactive = true, compact = false }: { series: DayPoint[]; label: string; name?: string; height?: number; interactive?: boolean; compact?: boolean } = $props()
 
   let width = $state(360)
   let sel = $state<number | null>(null)
@@ -59,7 +59,9 @@
 
 <div class="chart" bind:clientWidth={width}>
   {#if !compact}
+    <!-- The symptom read, first in the legend: the card's title names no symptom, its folds follow none (#120). -->
     <div class="legend small muted">
+      {#if name}<b class="name">{name}:</b>{/if}
       <span><i class="key bar"></i>{t('trends.legendMax')}</span>
       {#if showMean}<span><i class="key dot"></i>{t('trends.legendMean')}</span>{/if}
     </div>
@@ -117,6 +119,7 @@
   .chart { position: relative; width: 100%; }
   svg { display: block; overflow: visible; }
   .legend { display: flex; gap: 14px; margin-bottom: 4px; }
+  .name { color: var(--ink); font-weight: 600; margin-right: -6px; }
   .key { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }
   .key.bar { background: var(--ink-3); }
   .key.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); box-sizing: content-box; }

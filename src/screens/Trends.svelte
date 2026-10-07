@@ -12,7 +12,7 @@
   import { db } from '../lib/db'
   import { live, reads } from '../lib/live.svelte'
   import { prefs } from '../lib/prefs.svelte'
-  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, fullBody, symptomMeans, symptomsRead, tagCounts, chronicRows, episodeLanes, episodeCounts, type Summary } from '../lib/stats'
+  import { rangeStart, rangeEnd, dailySeries, summarize, regionHeat, fullBody, symptomsRead, tagCounts, chronicRows, episodeLanes, episodeCounts, type Summary } from '../lib/stats'
   import { formatDuration } from '../lib/time'
   import { allStrokes } from '../lib/strokes'
   import { PAIN } from '../lib/types'
@@ -91,7 +91,6 @@
   const sid = $derived(symptom?.id ?? PAIN)
   const series = $derived(dailySeries(entries.value, from, days, sid))
   const summary = $derived(summarize(entries.value, sid))
-  const symMeans = $derived(symptomMeans(entries.value, symptoms.value, sid))
   /** The symptom's figures only when something in range reads it: an entry without the reading is not a 0 (#36). */
   const read = $derived(summary.mean !== null)
   const heat = $derived(regionHeat(entries.value, sid))
@@ -145,7 +144,7 @@
     <!-- The symptom picked, named: its mean and its days by their worst level (#120). -->
     {#if read && symptom}
       <div class="card">
-        <p class="small muted label">{tl(symptom.label)}</p>
+        <p class="small muted label">{t('trends.howMuch', { name: tl(symptom.label) })}</p>
         <p class="mean"><span>{t('trends.mean')}</span> <b>{fmt1(summary.mean)}</b> <span>· {t('trends.maxPain', { n: summary.max ?? '–' })}</span></p>
         <p class="small muted">{t('trends.worst')}</p>
         <WorstDays worst={summary.worst} median={summary.median} {days} />
@@ -153,7 +152,7 @@
     {/if}
 
     <div class="card">
-      <p class="small muted label">{t('trends.heatmap')}</p>
+      <p class="small muted label">{symptom ? t('trends.where', { name: tl(symptom.label) }) : t('trends.heatmap')}</p>
       <div class="map"><BodyMap {heat} {strokes} labels={{ front: t('log.front'), back: t('log.back') }} /></div>
       <RampKey />
       {#if whole}<p class="small">{tn('trends.fullBody', whole.count, { m: num(whole.mean) })}</p>{/if}
@@ -167,7 +166,7 @@
     {#if (read && symptom) || counts.length || chronic.length || lanes.length}
       <div class="card">
         <p class="small muted label">{t('trends.overTime')}</p>
-        {#if read && symptom}<DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} />{/if}
+        {#if read && symptom}<DailyChart {series} label={t('trends.chartLabel', { name: tl(symptom.label) })} name={tl(symptom.label)} />{/if}
         <div class="folds">
           {#if chronic.length}
             <Fold label={`${t('trends.chronicPresets')} (${chronic.length})`} summary={chronic.map((r) => `${r.preset.name} ${r.count}`).join(' · ')}>
@@ -188,17 +187,6 @@
             </Fold>
           {/if}
           {#if counts.length}<TagLanes {counts} {from} {days} />{/if}
-        </div>
-      </div>
-    {/if}
-
-    {#if symMeans.length}
-      <div class="card">
-        <p class="small muted label">{t('trends.symptoms')}</p>
-        <div class="sym">
-          {#each symMeans as s (s.symptom.id)}
-            <div class="row"><span class="name grow">{tl(s.symptom.label)}</span><span class="small muted">{tn('diary.days', s.count)}</span><b class="val">{fmt1(s.mean)}</b></div>
-          {/each}
         </div>
       </div>
     {/if}
@@ -231,6 +219,4 @@
   /* A scrolling row in the screen's column: without `flex: none` it may shrink to nothing. */
   .pick { flex: none; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .pick::-webkit-scrollbar { display: none; }
-  .sym { display: flex; flex-direction: column; gap: 8px; }
-  .val { font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
 </style>

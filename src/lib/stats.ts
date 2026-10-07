@@ -259,7 +259,7 @@ export function presetSeries(entries: Entry[], presets: Preset[], earlier: Entry
 }
 
 /**
- * The chronic presets with samples in range, each by day as Nel tempo draws a symptom (#120): the day's highest reading
+ * The chronic presets with samples in range, each by day as the Quando chart draws a symptom (#120): the day's highest reading
  * of its symptom (`presetSeries`), a day without one empty. Episode presets have their bars (`episodeLanes`).
  */
 export function chronicRows(entries: Entry[], presets: Preset[], earlier: Entry[], symptoms: Symptom[], from: Date, days: number): { preset: Preset; count: number; series: DayPoint[] }[] {

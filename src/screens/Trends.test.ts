@@ -180,12 +180,13 @@ describe('Trends by any symptom (#38)', () => {
     const first = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
     expect(first(tile('Episodi'), await picker())).toBe(true)
     expect(first(tile('Cronico'), await picker())).toBe(true)
-    expect(meanLine().closest('.card')!.querySelector('.label')).toHaveTextContent(/^Gonfiore$/)
     expect(meanLine().closest('.card')).toContainElement(screen.getByRole('list', { name: 'Giorni per livello peggiore' }))
-    // Altri sintomi: the others, pain among them.
-    const others = screen.getByText('Altri sintomi').closest('.card')!
-    expect(others).toHaveTextContent('Dolore')
-    expect(others).not.toHaveTextContent('Gonfiore')
+    // Three questions about the symptom picked (#120): how much and where name it; when names it on its chart, since
+    // the folds under the chart do not follow the pick.
+    expect([...document.querySelectorAll('.screen > .card > .label')].map((l) => l.textContent)).toEqual(['Quanto (Gonfiore)', 'Dove (Gonfiore)', 'Quando'])
+    expect(screen.getByRole('img', { name: 'Gonfiore per giorno' }).closest('.chart')!.querySelector('.legend')).toHaveTextContent(/^Gonfiore:/)
+    // The other symptoms are a chip away: no card of their own (the report keeps its table).
+    expect(screen.queryByText('Altri sintomi')).toBeNull()
   })
 
   it('leads with whatever the editor puts first, pain off or moved', async () => {
@@ -203,7 +204,7 @@ describe('Trends by any symptom (#38)', () => {
     expect(screen.queryByRole('group', { name: 'Sintomo' })).not.toBeInTheDocument()
     expect(screen.queryByText('Media giornaliera')).not.toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Giorni per livello peggiore' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Nel tempo')).not.toBeInTheDocument()
+    expect(screen.queryByText('Quando')).not.toBeInTheDocument()
   })
 
   it('hands the pick to the report, which names it', async () => {
@@ -212,7 +213,7 @@ describe('Trends by any symptom (#38)', () => {
     await fireEvent.click(within(await picker()).getByRole('button', { name: 'Gonfiore' }))
     await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
-    expect(within(report).getByRole('heading', { level: 2, name: 'Sintomo: Gonfiore' })).toBeInTheDocument()
+    expect(within(report).getByRole('heading', { level: 2, name: 'Quanto (Gonfiore)' })).toBeInTheDocument()
     expect(within(report).getByText('Media giornaliera').parentElement!).toHaveTextContent('6')
   })
 })
@@ -252,7 +253,7 @@ describe('Trends heatmap and chart', () => {
   it('the map has its colour key, and the report its key and caption (#114)', async () => {
     await addEntry({ at: at(0), ...legs(8) })
     await openTrends()
-    const map = (await screen.findByText('Dove')).closest('.card') as HTMLElement
+    const map = (await screen.findByText(/^Dove \(/)).closest('.card') as HTMLElement
     expect(within(map).getByRole('img', { name: 'Scala dei colori: da 0 assente a 10 massimo' })).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('button', { name: 'Riepilogo del diario' }))
     const report = document.querySelector('article.page') as HTMLElement
@@ -377,7 +378,7 @@ describe('Trends tags and symptoms', () => {
     await addEntry({ at: at(0), layers: [{ regions: ['152'], readings: {}, tags: ['rest'] }] })
     await openTrends()
     await fireEvent.click(await screen.findByRole('button', { name: /^Rimedi \(1\)/ }))
-    expect(screen.getByText('Riposo').closest('.card')).toHaveTextContent('Nel tempo')
+    expect(screen.getByText('Riposo').closest('.card')).toHaveTextContent('Quando')
     expect(screen.queryByRole('img', { name: /per giorno/ })).toBeNull()
   })
 
@@ -386,19 +387,6 @@ describe('Trends tags and symptoms', () => {
     await openTrends()
     await waitFor(() => expect(tile('Cronico')).toHaveTextContent('1 voce'))
     expect(screen.queryByRole('button', { name: /^(Farmaci|Rimedi|Contesto)/ })).toBeNull()
-  })
-
-  it('shows the mean of every other symptom that was recorded, at 0 too (#114)', async () => {
-    await addEntry({ at: at(0), readings: { pain: 3, swelling: 4 } })
-    await addEntry({ at: at(1), readings: { pain: 5, swelling: 6, fatigue: 0 } })
-    await openTrends()
-    const card = (await screen.findByText('Altri sintomi')).closest('.card')!
-    await waitFor(() => expect(card).toHaveTextContent('Gonfiore'))
-    expect(card).toHaveTextContent('2 giorni')
-    expect(within(card as HTMLElement).getByText('5')).toBeInTheDocument()
-    // Recorded at 0 is recorded: its mean is 0, as the tile would say with Stanchezza picked.
-    expect(card).toHaveTextContent('Stanchezza')
-    expect(card).toHaveTextContent('1 giorno')
   })
 })
 
@@ -414,7 +402,7 @@ describe('Trends report', () => {
 })
 
 describe('Trends presets and episodes (#120)', () => {
-  /** Nel tempo, with the fold of that name opened: the chronic or episode presets, beside the tags' (#120). */
+  /** Quando, with the fold of that name opened: the chronic or episode presets, beside the tags' (#120). */
   async function fold(name: 'Preset cronici' | 'Preset episodici') {
     const button = await screen.findByRole('button', { name: new RegExp(`^${name} \\(`) })
     if (button.getAttribute('aria-expanded') === 'false') await fireEvent.click(button)
@@ -431,7 +419,7 @@ describe('Trends presets and episodes (#120)', () => {
     const closed = await screen.findByRole('button', { name: /^Preset cronici \(1\)/ })
     expect(closed).toHaveTextContent(/^Preset cronici \(1\)\s*Schiena 3$/)
     const c = await fold('Preset cronici')
-    expect(c).toHaveTextContent('Nel tempo')
+    expect(c).toHaveTextContent('Quando')
     expect(c).toHaveTextContent('Schiena3 voci')
     const chart = await within(c).findByRole('img', { name: 'Schiena' })
     await waitFor(() => expect(chart.querySelectorAll('path.col')).toHaveLength(2))
@@ -439,7 +427,7 @@ describe('Trends presets and episodes (#120)', () => {
     // Compact: no legend, no mean, no dates; the card is the screen's last.
     expect(chart.closest('.chart')!.querySelector('.legend')).toBeNull()
     expect(chart.querySelectorAll('circle.mean, text.date')).toHaveLength(0)
-    // On the chart's days: each column starts where Nel tempo's column of that day does.
+    // On the chart's days: each column starts where the Quando chart's column of that day does.
     const left = (chart: Element) => [...chart.querySelectorAll('path.col')].map((col) => col.getAttribute('d')!.split(' ')[1])
     expect(left(chart)).toEqual(left(within(c).getByRole('img', { name: 'Dolore per giorno' })))
   })
